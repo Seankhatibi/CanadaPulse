@@ -1,0 +1,301 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum GeographyType {
+  COUNTRY
+  PROVINCE
+  TERRITORY
+  CITY
+}
+
+enum IndicatorFrequency {
+  DAILY
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum IndicatorDirection {
+  HIGHER_IS_BETTER
+  LOWER_IS_BETTER
+  NEUTRAL
+}
+
+enum SourceApiType {
+  STATCAN_WDS
+  STATCAN_DAILY
+  CMHC_TABLE
+  CKAN
+  XLSX
+  CSV
+  HTML
+  MANUAL
+}
+
+enum SourceUpdateStatus {
+  LIVE
+  SOURCE_LINKED
+  IMPORT_PENDING
+  NEEDS_SOURCE
+  LICENSED_SOURCE_NEEDED
+}
+
+enum DataStatus {
+  LIVE
+  STALE
+  FALLBACK
+  IMPORT_PENDING
+  ERROR
+}
+
+enum RefreshStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum SummaryStatus {
+  PENDING
+  GENERATED
+  FAILED
+  NOT_REQUIRED
+}
+
+model Geography {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  code        String        @unique
+  type        GeographyType
+  population  Int?
+  capital     String?
+  region      String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  values      TimeSeriesValue[]
+  scores      GeographyScore[]
+  cityMetrics CityMetric[]
+
+  @@index([type])
+}
+
+model IndicatorCategory {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  name        String
+  description String
+  sortOrder   Int         @default(0)
+  indicators  Indicator[]
+  scores      GeographyScore[]
+}
+
+model Indicator {
+  id          String             @id @default(cuid())
+  slug        String             @unique
+  name        String
+  description String
+  unit        String
+  categoryId  String
+  frequency   IndicatorFrequency
+  direction   IndicatorDirection @default(NEUTRAL)
+  sourceId    String?
+  isHot       Boolean            @default(false)
+  isYouth     Boolean            @default(false)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  category    IndicatorCategory  @relation(fields: [categoryId], references: [id])
+  source      DataSource?        @relation(fields: [sourceId], references: [id])
+  values      TimeSeriesValue[]
+  sourceMaps  IndicatorSourceMap[]
+
+  @@index([categoryId])
+  @@index([sourceId])
+  @@index([isHot, isYouth])
+}
+
+model TimeSeriesValue {
+  id          String    @id @default(cuid())
+  indicatorId String
+  geographyId String
+  period      DateTime
+  value       Decimal   @db.Decimal(18, 4)
+  label       String?
+  note        String?
+  isEstimate  Boolean   @default(false)
+  sourceDatasetId String?
+  sourceUrl   String?
+  fetchedAt   DateTime?
+  sourcePeriod String?
+  confidence  Decimal?  @db.Decimal(5, 2)
+  dataStatus  DataStatus @default(FALLBACK)
+  createdAt   DateTime  @default(now())
+  indicator   Indicator @relation(fields: [indicatorId], references: [id])
+  geography   Geography @relation(fields: [geographyId], references: [id])
+  sourceDataset SourceDataset? @relation(fields: [sourceDatasetId], references: [id])
+
+  @@unique([indicatorId, geographyId, period])
+  @@index([geographyId, period])
+  @@index([indicatorId, period])
+  @@index([sourceDatasetId])
+  @@index([dataStatus])
+}
+
+model DataSource {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  url         String
+  publisher   String
+  refreshNote String
+  indicators  Indicator[]
+}
+
+model SourceDataset {
+  id          String             @id @default(cuid())
+  slug        String             @unique
+  label       String
+  publisher   String
+  officialUrl String
+  apiType     SourceApiType
+  cadence     IndicatorFrequency
+  licenseNote String
+  updateStatus SourceUpdateStatus @default(SOURCE_LINKED)
+  latestKnownPeriod String?
+  lastCheckedAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  indicatorMaps IndicatorSourceMap[]
+  values      TimeSeriesValue[]
+  refreshRuns DataRefreshRun[]
+  releaseEvents ReleaseEvent[]
+
+  @@index([apiType])
+  @@index([updateStatus])
+}
+
+model IndicatorSourceMap {
+  id          String        @id @default(cuid())
+  indicatorId String
+  sourceDatasetId String
+  sourceIndicatorKey String?
+  productId   String?
+  vectorId    String?
+  fieldPath   String?
+  geographyMapping Json?
+  unitConversion String?
+  transformRule String?
+  importStatus SourceUpdateStatus @default(SOURCE_LINKED)
+  priority    Int           @default(1)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  indicator   Indicator     @relation(fields: [indicatorId], references: [id])
+  sourceDataset SourceDataset @relation(fields: [sourceDatasetId], references: [id])
+
+  @@unique([indicatorId, sourceDatasetId, priority])
+  @@index([indicatorId])
+  @@index([sourceDatasetId])
+  @@index([importStatus])
+}
+
+model DataRefreshRun {
+  id          String        @id @default(cuid())
+  jobName     String
+  sourceDatasetId String?
+  status      RefreshStatus @default(RUNNING)
+  startedAt   DateTime      @default(now())
+  finishedAt  DateTime?
+  rowsFetched Int           @default(0)
+  rowsChanged Int           @default(0)
+  sourceVersion String?
+  errorPayload Json?
+  metadata    Json?
+  sourceDataset SourceDataset? @relation(fields: [sourceDatasetId], references: [id])
+
+  @@index([jobName, startedAt])
+  @@index([status])
+  @@index([sourceDatasetId])
+}
+
+model ReleaseEvent {
+  id          String        @id @default(cuid())
+  sourceDatasetId String?
+  title       String
+  sourceUrl   String
+  releaseDate DateTime
+  referencePeriod String?
+  affectedIndicators Json?
+  facts       Json?
+  plainEnglishSummary String?
+  socialSummary String?
+  summaryStatus SummaryStatus @default(PENDING)
+  promoted    Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  sourceDataset SourceDataset? @relation(fields: [sourceDatasetId], references: [id])
+
+  @@unique([sourceUrl, releaseDate])
+  @@index([releaseDate])
+  @@index([promoted])
+  @@index([summaryStatus])
+}
+
+model GeographyScore {
+  id          String            @id @default(cuid())
+  geographyId String
+  categoryId  String
+  score       Int
+  grade       String
+  trend       String
+  period      DateTime
+  geography   Geography         @relation(fields: [geographyId], references: [id])
+  category    IndicatorCategory @relation(fields: [categoryId], references: [id])
+
+  @@unique([geographyId, categoryId, period])
+  @@index([score])
+}
+
+model CityMetric {
+  id          String    @id @default(cuid())
+  geographyId String
+  city        String
+  metricSlug  String
+  value       Decimal   @db.Decimal(18, 4)
+  unit        String
+  period      DateTime
+  geography   Geography @relation(fields: [geographyId], references: [id])
+
+  @@index([geographyId, city])
+  @@index([metricSlug, period])
+}
+
+model ShareCard {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  geography   String
+  category    String
+  headline    String
+  summary     String
+  score       Int?
+  payload     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model UserScenario {
+  id             String   @id @default(cuid())
+  scenarioType   String
+  provinceSlug   String
+  city           String?
+  householdSize  Int
+  annualIncome   Decimal  @db.Decimal(18, 2)
+  monthlyRent    Decimal? @db.Decimal(18, 2)
+  monthlyCosts   Json
+  affordability  Json
+  createdAt      DateTime @default(now())
+}

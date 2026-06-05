@@ -1,0 +1,51 @@
+export const dataSources = [
+  {
+    slug: "statistics-canada",
+    name: "Statistics Canada",
+    publisher: "Government of Canada",
+    url: "https://www.statcan.gc.ca/",
+    refreshNote: "Economic, labour, population, income, price, and social indicators.",
+  },
+  {
+    slug: "cmhc",
+    name: "CMHC",
+    publisher: "Canada Mortgage and Housing Corporation",
+    url: "https://www.cmhc-schl.gc.ca/",
+    refreshNote: "Housing starts, completions, rental market, vacancy, and market reports.",
+  },
+  {
+    slug: "bank-of-canada",
+    name: "Bank of Canada",
+    publisher: "Bank of Canada",
+    url: "https://www.bankofcanada.ca/",
+    refreshNote: "Interest rates, inflation context, exchange rates, and monetary indicators.",
+  },
+  {
+    slug: "open-government-canada",
+    name: "Open Government Canada",
+    publisher: "Treasury Board of Canada Secretariat",
+    url: "https://open.canada.ca/",
+    refreshNote: "Federal datasets, program spending, grants, contracts, and open APIs.",
+  },
+  {
+    slug: "canada-energy-regulator",
+    name: "Canada Energy Regulator",
+    publisher: "Canada Energy Regulator",
+    url: "https://www.cer-rec.gc.ca/",
+    refreshNote: "Energy production, pipelines, exports, imports, and electricity data.",
+  },
+  {
+    slug: "cihi",
+    name: "CIHI",
+    publisher: "Canadian Institute for Health Information",
+    url: "https://www.cihi.ca/",
+    refreshNote: "Health expenditure, system access, wait times, capacity, and outcomes.",
+  },
+  {
+    slug: "phac",
+    name: "Public Health Agency of Canada",
+    publisher: "Government of Canada",
+    url: "https://health-infobase.canada.ca/",
+    refreshNote: "Chronic disease, public health surveillance, risk factors, and outcomes.",
+  },
+] as const;

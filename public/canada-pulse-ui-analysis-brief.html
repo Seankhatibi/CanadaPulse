@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Canada Pulse UI Analysis Brief</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #050505; color: #f5f5f4; }
+    body { margin: 0; background: radial-gradient(circle at top left, rgba(220,38,38,.22), transparent 32%), #050505; }
+    main { width: min(1060px, calc(100% - 32px)); margin: 0 auto; padding: 32px 0 56px; }
+    a { color: #fecaca; }
+    code { color: #fff; overflow-wrap: anywhere; }
+    .panel { border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.07); border-radius: 10px; padding: 22px; margin-top: 16px; }
+    h1 { font-size: clamp(2rem, 8vw, 4rem); line-height: .98; margin: 10px 0 0; letter-spacing: 0; }
+    h2 { margin: 0 0 12px; font-size: 1.2rem; }
+    p, li { color: #d6d3d1; line-height: 1.65; }
+    .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+    .metric { border: 1px solid rgba(255,255,255,.1); background: rgba(0,0,0,.35); border-radius: 8px; padding: 16px; }
+    .metric strong { display: block; font-size: 1.7rem; color: white; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .tag { display: inline-block; border: 1px solid rgba(255,255,255,.12); background: rgba(220,38,38,.14); color: #fecaca; padding: 6px 10px; border-radius: 7px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
+    iframe { width: 100%; height: 780px; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; background: #000; }
+  </style>
+</head>
+<body>
+  <main>
+    <span class="tag">Canada Pulse UI Analysis</span>
+    <h1>Tax Dollar page snapshot and audit brief</h1>
+    <p>This file is designed for an AI or human UI reviewer. The actual captured UI is available as a standalone HTML snapshot and embedded below.</p>
+
+    <section class="panel">
+      <h2>Downloadable Files</h2>
+      <p><a href="/canada-pulse-tax-dollar-ui-snapshot.html" download>Download the Tax Dollar UI snapshot HTML</a></p>
+      <p><a href="/canada-pulse-tax-dollar-ui-snapshot.html" target="_blank" rel="noreferrer">Open the snapshot in a new tab</a></p>
+      <p>Snapshot source: <code>http://localhost:3001/tax-dollar?province=canada&income=92000</code><br>Generated: <code>2026-05-28T22:20:51.667Z</code></p>
+    </section>
+
+    <section class="panel grid">
+      <div class="metric"><strong>Strong</strong><p>Clear emotional hook: same income, different province. This is a real shareable premise.</p></div>
+      <div class="metric"><strong>Risk</strong><p>Income and province are URL-driven. A visible income slider/input would make the page feel more usable and viral.</p></div>
+      <div class="metric"><strong>Opportunity</strong><p>Add a one-click share card: “On $92k, my province ranks #X and pays $Y.”</p></div>
+      <div class="metric"><strong>Trust</strong><p>Methodology and source caveats should be visible near the calculator, not only in separate pages.</p></div>
+    </section>
+
+    <section class="panel">
+      <h2>UI Review Prompts For Your AI Agent</h2>
+      <ul>
+        <li>Does the first viewport make the tax-dollar idea instantly obvious?</li>
+        <li>Can a mobile user change province and income without reading instructions?</li>
+        <li>Which specific element would someone screenshot and share?</li>
+        <li>Are modeled/demo estimates labeled clearly enough to preserve trust?</li>
+        <li>What should be removed, moved, or enlarged for Canadian youth using the app on phone?</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>Embedded Snapshot</h2>
+      <iframe src="/canada-pulse-tax-dollar-ui-snapshot.html" title="Canada Pulse Tax Dollar UI Snapshot"></iframe>
+    </section>
+  </main>
+</body>
+</html>

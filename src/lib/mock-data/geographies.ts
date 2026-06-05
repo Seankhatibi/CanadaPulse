@@ -1,0 +1,16 @@
+export const geographies = [
+  { name: "Canada", slug: "canada", code: "CA", type: "COUNTRY", population: 41000000, capital: "Ottawa", region: "National" },
+  { name: "Alberta", slug: "alberta", code: "AB", type: "PROVINCE", population: 4800000, capital: "Edmonton", region: "West" },
+  { name: "British Columbia", slug: "british-columbia", code: "BC", type: "PROVINCE", population: 5600000, capital: "Victoria", region: "West" },
+  { name: "Manitoba", slug: "manitoba", code: "MB", type: "PROVINCE", population: 1500000, capital: "Winnipeg", region: "Prairies" },
+  { name: "New Brunswick", slug: "new-brunswick", code: "NB", type: "PROVINCE", population: 850000, capital: "Fredericton", region: "Atlantic" },
+  { name: "Newfoundland and Labrador", slug: "newfoundland-and-labrador", code: "NL", type: "PROVINCE", population: 540000, capital: "St. John's", region: "Atlantic" },
+  { name: "Nova Scotia", slug: "nova-scotia", code: "NS", type: "PROVINCE", population: 1070000, capital: "Halifax", region: "Atlantic" },
+  { name: "Ontario", slug: "ontario", code: "ON", type: "PROVINCE", population: 16000000, capital: "Toronto", region: "Central" },
+  { name: "Prince Edward Island", slug: "prince-edward-island", code: "PE", type: "PROVINCE", population: 180000, capital: "Charlottetown", region: "Atlantic" },
+  { name: "Quebec", slug: "quebec", code: "QC", type: "PROVINCE", population: 9000000, capital: "Quebec City", region: "Central" },
+  { name: "Saskatchewan", slug: "saskatchewan", code: "SK", type: "PROVINCE", population: 1240000, capital: "Regina", region: "Prairies" },
+  { name: "Northwest Territories", slug: "northwest-territories", code: "NT", type: "TERRITORY", population: 45000, capital: "Yellowknife", region: "North" },
+  { name: "Nunavut", slug: "nunavut", code: "NU", type: "TERRITORY", population: 41000, capital: "Iqaluit", region: "North" },
+  { name: "Yukon", slug: "yukon", code: "YT", type: "TERRITORY", population: 46000, capital: "Whitehorse", region: "North" },
+] as const;

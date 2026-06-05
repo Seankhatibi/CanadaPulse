@@ -1,4 +1,8 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Canada Pulse
+
+Canada Pulse is an interactive public dashboard for understanding Canada's economy, housing, population pressure, government spending, trade, energy, health, youth future, and quality of life.
+
+Current milestone: Phase 2, with a Next.js app shell, mock data layer, Prisma/PostgreSQL schema, source registry, seed script, and data-model page.
 
 ## Getting Started
 
@@ -16,21 +20,36 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+If port 3000 is busy, Next.js will automatically select the next available port.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Phase 2 Data Commands
 
-## Learn More
+```bash
+npm run db:generate
+npm run db:push
+npm run db:seed
+npm run db:studio
+```
 
-To learn more about Next.js, take a look at the following resources:
+Copy `.env.example` to `.env` and set `DATABASE_URL` before pushing or seeding a real database. The app itself still runs on mock data without database credentials.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Key Files
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `prisma/schema.prisma` defines the PostgreSQL-ready data model.
+- `prisma/seed.ts` loads the mock dataset into Prisma.
+- `src/lib/mock-data/` contains source-ready mock geographies, indicators, scores, and time-series rows.
+- `src/lib/data/mock-queries.ts` is the app-facing mock query layer.
+- `src/app/data-model/page.tsx` shows the Phase 2 data inventory.
 
-## Deploy on Vercel
+## Verification
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run lint
+npm run build
+npx prisma validate
+npx prisma generate
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Product Direction
+
+The app should stay neutral, data-first, mobile-first, and built around the emotional indicators Canadians care about: affordability, housing, wages, immigration pressure, taxes, healthcare access, productivity, debt, energy, and whether young people can build a future.
