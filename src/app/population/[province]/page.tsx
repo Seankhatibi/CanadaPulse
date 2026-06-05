@@ -47,7 +47,7 @@ export default async function PopulationProvincePage({
                   <div className="flex flex-wrap gap-2">
                     <StatusPill>{province.abbr} drilldown</StatusPill>
                     <StatusPill>{symbol?.symbol ?? "Provincial identity"}</StatusPill>
-                    <StatusPill>Source-ready demo data</StatusPill>
+                    <StatusPill>Population snapshot</StatusPill>
                   </div>
                   <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-red-300">
                     Population pressure in {province.province}

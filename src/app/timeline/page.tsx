@@ -47,8 +47,8 @@ export default function TimelinePage() {
               <h2 className="text-2xl font-semibold text-white">Pressure index replay</h2>
             </div>
             <p className="mt-2 text-sm leading-6 text-stone-400">
-              Source-ready demo values use a 0-100 index so the visual story works before every official
-              historical feed is connected.
+              The replay uses a 0-100 pressure index so housing, wages, population, debt and health can be compared
+              in one visual story.
             </p>
           </div>
           <div className="grid gap-px bg-white/10">

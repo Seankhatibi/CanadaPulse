@@ -23,13 +23,13 @@ export default function HealthPage() {
             <div className="flex flex-wrap gap-2">
               <StatusPill>Health system</StatusPill>
               <StatusPill>{healthSnapshot.period}</StatusPill>
-              <StatusPill>CIHI + PHAC-ready</StatusPill>
+              <StatusPill>CIHI + PHAC watch</StatusPill>
             </div>
             <div className="mt-7 grid gap-6 lg:grid-cols-[1fr_0.82fr] lg:items-end">
               <SectionHeader
                 eyebrow="Healthcare burden"
                 title="What is really hurting Canada’s health system?"
-                body="This phase connects spending, family doctor access, wait pressure, chronic disease, mental health, diabetes, cardiovascular disease, obesity-linked illness, vision loss, and preventable burden."
+                body="Track spending, family doctor access, wait pressure, chronic disease, mental health, diabetes, cardiovascular disease, obesity-linked illness, vision loss and preventable burden."
               />
               <div className="rounded-md border border-rose-300/20 bg-rose-500/10 p-4">
                 <div className="flex items-start justify-between gap-3">

@@ -10,9 +10,9 @@ export const dynamic = "force-dynamic";
 
 function statusCopy(status: string) {
   if (status === "live") return "Live";
-  if (status === "summary_only") return "Release detected";
-  if (status === "source_linked") return "Source linked";
-  return "Watch";
+  if (status === "summary_only") return "Tracked";
+  if (status === "source_linked") return "Watching";
+  return "Watching";
 }
 
 export default async function WeeklyPulsePage() {
@@ -44,8 +44,8 @@ export default async function WeeklyPulsePage() {
               Canada&apos;s newest data, translated.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-stone-300">
-              Weekly Pulse now reads the same multi-source release hub as the homepage: official feeds first, plain
-              English second, and internal Canada Pulse breakdowns before outside links.
+              Weekly Pulse turns the newest Canadian data into a plain-English briefing: what changed, why it
+              matters, and which chart to open next.
             </p>
             <div className="mt-6 grid gap-3 min-[480px]:grid-cols-3">
               {[
@@ -128,7 +128,7 @@ export default async function WeeklyPulsePage() {
               })
             ) : (
               <div className="rounded-md border border-white/10 bg-black/35 p-4 text-sm text-stone-400">
-                This release is source-linked, but its detailed chart payload is still import-pending.
+                This release is being monitored. A visual breakdown will appear once enough comparable facts are available.
               </div>
             )}
           </div>
@@ -137,11 +137,11 @@ export default async function WeeklyPulsePage() {
         <GlassPanel className="p-5 sm:p-6">
           <div className="flex items-center gap-2">
             <Zap className="size-5 text-amber-200" aria-hidden="true" />
-            <h2 className="text-xl font-semibold text-white">Source health</h2>
+            <h2 className="text-xl font-semibold text-white">Watching now</h2>
           </div>
           <p className="mt-3 text-sm leading-6 text-stone-400">
-            The app should never pretend all data has the same quality. Live imports, release-only summaries, and
-            source-linked monitors are labelled separately.
+            Canada Pulse keeps the source visible so readers know whether a release is live, tracked or being watched
+            for the next update.
           </p>
           <div className="mt-5 grid gap-3">
             {releaseHub.sourceStatuses.map((source) => (
@@ -160,7 +160,15 @@ export default async function WeeklyPulsePage() {
                     {statusCopy(source.status)}
                   </span>
                 </div>
-                <p className="mt-2 text-xs leading-5 text-stone-500">{source.note}</p>
+                <p className="mt-2 text-xs leading-5 text-stone-500">
+                  {source.source === "Statistics Canada"
+                    ? "Jobs, prices, GDP, productivity, trade and population releases"
+                    : source.source === "CMHC"
+                      ? "Housing construction, supply and rental-market signals"
+                      : source.source === "Bank of Canada"
+                        ? "Rates, bond yields, currency and household credit pressure"
+                        : "Canadian public-data releases"}
+                </p>
               </div>
             ))}
           </div>
@@ -221,17 +229,17 @@ export default async function WeeklyPulsePage() {
 
       <section className="mt-5 grid gap-5 lg:grid-cols-[0.88fr_1.12fr]">
         <GlassPanel className="p-5 sm:p-6">
-          <h2 className="text-xl font-semibold text-white">Do we need an LLM?</h2>
+          <h2 className="text-xl font-semibold text-white">Plain-English explanation layer</h2>
           <p className="mt-3 text-sm leading-6 text-stone-400">
-            Yes, but only after facts are locked. Fetchers get the official numbers, rules classify what changed, and
-            the LLM rewrites validated facts into plain-English summaries, chart captions, and social copy.
+            Canada Pulse separates facts from interpretation: first the official numbers are checked, then the
+            summary explains what changed in everyday language.
           </p>
           <div className="mt-4 grid gap-2">
             {[
-              "Fetch source data and metadata",
-              "Validate period, geography and source links",
-              "Build deterministic facts and chart payloads",
-              "Generate plain-English copy from locked facts",
+              "Confirm the release date, source and reference period",
+              "Identify what moved up, down or stayed flat",
+              "Turn the facts into charts and province comparisons",
+              "Explain the result in plain English",
             ].map((step, index) => (
               <div key={step} className="flex gap-3 rounded-md border border-white/10 bg-black/35 p-3">
                 <span className="grid size-7 shrink-0 place-items-center rounded-md bg-red-600 font-mono text-xs font-semibold text-white">
@@ -246,7 +254,7 @@ export default async function WeeklyPulsePage() {
         <GlassPanel className="p-5 sm:p-6">
           <h2 className="text-xl font-semibold text-white">Share cards ready for launch</h2>
           <p className="mt-3 text-sm leading-6 text-stone-400">
-            Every viral card should come from a release fact packet or a clearly labelled fallback dataset.
+            Share cards turn complicated data into one clean screenshot: a number, a claim and a next click.
           </p>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {shareCards.slice(0, 4).map((card) => (
@@ -271,9 +279,9 @@ export default async function WeeklyPulsePage() {
           <GlassPanel className="p-5 sm:p-6">
             <h2 className="text-xl font-semibold text-white">Official source trail</h2>
             <div className="mt-4 grid gap-2 md:grid-cols-2">
-              {promoted.sourceLinks.map((link) => (
+              {promoted.sourceLinks.map((link, index) => (
                 <a
-                  key={`${link.label}-${link.url}`}
+                  key={`${link.label}-${link.url}-${index}`}
                   href={link.url}
                   target="_blank"
                   rel="noreferrer"

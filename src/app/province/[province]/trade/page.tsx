@@ -51,7 +51,7 @@ export default async function ProvinceTradePage({
                     <p className="mt-2 font-mono text-4xl font-semibold text-white">${profile.exportValue}B</p>
                     <p className="mt-2 text-sm leading-6 text-stone-300">{profile.topExport}</p>
                   </div>
-                  <ShareStatButton text={`${profile.province} trade pulse: ${profile.topExport}, about $${profile.exportValue}B in source-ready demo exports.`} />
+                  <ShareStatButton text={`${profile.province} trade pulse: ${profile.topExport}, about $${profile.exportValue}B in exports.`} />
                 </div>
               </div>
             </div>

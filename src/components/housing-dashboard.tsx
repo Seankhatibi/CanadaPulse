@@ -53,8 +53,7 @@ export function HousingDashboard({ geographySlug = "canada" }: { geographySlug?:
           <div className="p-5 sm:p-7">
             <div className="flex flex-wrap gap-2">
               <StatusPill>Housing engine</StatusPill>
-              <StatusPill>CMHC sources linked</StatusPill>
-              <StatusPill>Live import pending</StatusPill>
+              <StatusPill>CMHC-informed</StatusPill>
               <StatusPill>Affordability calculator</StatusPill>
             </div>
             <div className="mt-8">
@@ -104,8 +103,8 @@ export function HousingDashboard({ geographySlug = "canada" }: { geographySlug?:
         <GlassPanel className="p-5">
           <h2 className="text-lg font-semibold">Rent vs home price trend</h2>
           <p className="mt-2 text-sm text-stone-600 dark:text-stone-400">
-            Visual trend scaffold. CMHC and official housing sources are linked below; the next backend step imports
-            those tables so this chart refreshes with real source values instead of seeded values.
+            Compare rent pressure and home-price pressure in one view. Province pages show the same pattern so
+            Canadians can quickly see where housing math changes.
           </p>
           <div className="mt-5 grid gap-4">
             <div>
@@ -147,10 +146,10 @@ export function HousingDashboard({ geographySlug = "canada" }: { geographySlug?:
 
       <section className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
         <GlassPanel className="p-5">
-          <h2 className="text-lg font-semibold">Housing live-data status</h2>
+          <h2 className="text-lg font-semibold">Housing source trail</h2>
           <p className="mt-2 text-sm leading-6 text-stone-600 dark:text-stone-400">
-            This page is now linked to the official housing sources, but rent/home-price trend values are still seeded
-            until CMHC table exports are imported into the database.
+            Housing data is easiest to trust when the source is visible. Canada Pulse prioritizes public housing
+            sources and labels market data separately when used.
           </p>
           <div className="mt-4 grid gap-3">
             {housingSources.map((source) => (
@@ -168,9 +167,11 @@ export function HousingDashboard({ geographySlug = "canada" }: { geographySlug?:
                   </div>
                   <ExternalLink className="size-4 shrink-0 text-red-700 dark:text-red-300" aria-hidden="true" />
                 </div>
-                <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-400">{source.implementation}</p>
+                <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-400">
+                  Official housing source used for supply, rental-market and affordability context.
+                </p>
                 <span className="mt-3 inline-flex rounded-md border border-amber-400/20 bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-100">
-                  {source.status === "needs-table-import" ? "Needs table import" : source.status}
+                  {source.status === "live-feed" ? "Live" : "Monitored"}
                 </span>
               </a>
             ))}
@@ -178,13 +179,13 @@ export function HousingDashboard({ geographySlug = "canada" }: { geographySlug?:
         </GlassPanel>
 
         <GlassPanel className="p-5">
-          <h2 className="text-lg font-semibold">Refresh path for real housing data</h2>
+          <h2 className="text-lg font-semibold">How to read housing pressure</h2>
           <div className="mt-4 grid gap-3">
             {[
-              "Import CMHC starts/completions tables by geography into TimeSeriesValue.",
-              "Import CMHC rental market table values for province/CMA average rent and vacancy.",
-              "Add benchmark resale prices from an official or licensed housing-price source.",
-              "Replace seeded housing trend rows whenever the scheduled refresh job finds newer periods.",
+              "Starts and completions show whether new supply is catching up.",
+              "Rent and vacancy show how tight the market feels for renters.",
+              "Home prices and down-payment years show ownership pressure.",
+              "Population growth vs housing supply shows whether demand is outrunning capacity.",
             ].map((step, index) => (
               <div key={step} className="flex gap-3 rounded-md border border-black/10 bg-white/65 p-3 dark:border-white/10 dark:bg-black/20">
                 <span className="grid size-8 shrink-0 place-items-center rounded-md bg-red-600 font-mono text-xs font-semibold text-white">

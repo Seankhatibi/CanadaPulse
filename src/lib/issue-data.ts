@@ -51,7 +51,7 @@ export const issues: Issue[] = [
       { province: "Ontario", abbr: "ON", slug: "ontario", value: "5.8%", numeric: 5.8, note: "urban grocery squeeze" },
       { province: "British Columbia", abbr: "BC", slug: "british-columbia", value: "5.6%", numeric: 5.6, note: "high rent plus food" },
       { province: "Alberta", abbr: "AB", slug: "alberta", value: "5.1%", numeric: 5.1, note: "wage offset stronger" },
-      { province: "Quebec", abbr: "QC", slug: "quebec", value: "4.9%", numeric: 4.9, note: "below national demo" },
+      { province: "Quebec", abbr: "QC", slug: "quebec", value: "4.9%", numeric: 4.9, note: "below national read" },
       { province: "Manitoba", abbr: "MB", slug: "manitoba", value: "4.7%", numeric: 4.7, note: "lower basket pressure" },
     ],
     components: [
@@ -81,7 +81,7 @@ export const issues: Issue[] = [
       { province: "Saskatchewan", abbr: "SK", slug: "saskatchewan", value: "27%", numeric: 27, note: "most survivable" },
     ],
     components: [
-      { label: "Rent", value: "$2,180", numeric: 2180, note: "national average demo" },
+      { label: "Rent", value: "$2,180", numeric: 2180, note: "national average estimate" },
       { label: "Utilities", value: "$230", numeric: 230, note: "monthly basics" },
       { label: "Insurance", value: "$55", numeric: 55, note: "renter coverage" },
       { label: "Transit/commute", value: "$260", numeric: 260, note: "getting to work" },
@@ -340,7 +340,7 @@ const componentProfiles: Record<string, Record<string, IssueComponent[]>> = {
     quebec: [
       { label: "Restaurant food", value: "7.1%", numeric: 7.1, note: "services pressure" },
       { label: "Bakery and grains", value: "5.4%", numeric: 5.4, note: "staples" },
-      { label: "Meat", value: "5.1%", numeric: 5.1, note: "below national demo" },
+      { label: "Meat", value: "5.1%", numeric: 5.1, note: "below national read" },
       { label: "Vegetables", value: "4.2%", numeric: 4.2, note: "less severe" },
     ],
   },
@@ -352,7 +352,7 @@ const componentProfiles: Record<string, Record<string, IssueComponent[]>> = {
       { label: "Insurance", value: "$62", numeric: 62, note: "renter cost" },
     ],
     "british-columbia": [
-      { label: "Rent", value: "$2,878", numeric: 2878, note: "highest demo rent" },
+      { label: "Rent", value: "$2,878", numeric: 2878, note: "highest rent signal" },
       { label: "Utilities", value: "$238", numeric: 238, note: "monthly basics" },
       { label: "Transit/commute", value: "$284", numeric: 284, note: "metro cost" },
       { label: "Insurance", value: "$68", numeric: 68, note: "renter cost" },

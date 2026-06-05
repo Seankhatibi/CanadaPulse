@@ -16,7 +16,6 @@ const navItems = [
   { href: "/youth", label: "Youth" },
   { href: "/quality-of-life", label: "Life" },
   { href: "/weekly-pulse", label: "Weekly" },
-  { href: "/data-status", label: "Data" },
   { href: "/compare", label: "Compare" },
 ];
 
@@ -60,8 +59,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </main>
 
       <footer className="mx-auto flex w-full max-w-7xl flex-col gap-3 overflow-x-clip px-3 pb-8 text-xs text-stone-500 sm:px-6 md:flex-row md:items-center md:justify-between">
-        <span>Canada Pulse connects official live feeds where available and labels datasets still awaiting table import.</span>
-        <span className="font-mono">StatCan WDS | CMHC | CIHI | CER | Open Canada</span>
+        <span>Canada Pulse turns Canadian public data into plain-English briefings on the economy, housing, health and affordability.</span>
+        <span className="font-mono">Official sources | Plain English | Province comparisons</span>
       </footer>
     </div>
   );

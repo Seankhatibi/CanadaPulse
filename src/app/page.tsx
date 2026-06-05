@@ -6,7 +6,6 @@ import { getWeeklyPulseSummary } from "@/lib/economic-releases";
 import { gasWizardFallbackPulse, getGasWizardPulse } from "@/lib/gaswizard";
 import { getMultiSourceReleaseHub } from "@/lib/release-hub";
 import { shareCards } from "@/lib/viral-data";
-import { EconomicReleaseHero } from "@/components/economic-release-hero";
 import {
   AppShell,
   GlassPanel,
@@ -19,6 +18,22 @@ import { ShareStatButton } from "@/components/share-stat-button";
 import { GlossaryStrip } from "@/components/term-tip";
 
 export const dynamic = "force-dynamic";
+
+const publicSourceNotes: Record<string, string> = {
+  "Statistics Canada": "Jobs, prices, GDP, productivity, trade and population releases",
+  CMHC: "Housing construction, supply and rental-market signals",
+  "Bank of Canada": "Rates, bond yields, currency and household credit pressure",
+  "IRCC / Open Government": "Immigration, temporary resident and newcomer data",
+  "CER / NRCan": "Energy production, electricity, resources and cost pressure",
+  PBO: "Budget watchdog reports and fiscal-risk signals",
+};
+
+function publicStatus(status: string) {
+  if (status === "live") return "Live";
+  if (status === "summary_only") return "Tracked";
+  if (status === "source_linked") return "Watching";
+  return "Watching";
+}
 
 export default async function Home() {
   const featuredIssues = issues.slice(0, 7);
@@ -58,7 +73,7 @@ export default async function Home() {
       tone: "from-emerald-300 to-white",
       href: "/government",
       releases: releaseHub.todayQueue.filter((release) => release.affectedAreas.includes("fiscal")),
-      promise: "Fiscal monitor, debt pressure, public accounts, PBO and tax-dollar signals.",
+      promise: "Debt pressure, budget watchdog reports, public accounts and tax-dollar signals.",
     },
     {
       label: "Energy",
@@ -111,15 +126,15 @@ export default async function Home() {
         <div className="grid gap-px bg-white/10 xl:grid-cols-[0.78fr_1.22fr]">
           <div className="bg-black/45 p-5 sm:p-7">
             <div className="flex flex-wrap gap-2">
-              <StatusPill>Live national intelligence feed</StatusPill>
+              <StatusPill>Live public data monitor</StatusPill>
               <StatusPill>{releaseHub.generatedAt.slice(0, 10)}</StatusPill>
             </div>
             <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-normal text-white sm:text-6xl">
               Today&apos;s Canada Data Drops
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-7 text-stone-300">
-              Canada Pulse watches official sources, turns releases into plain-English analysis, then shows the
-              federal and provincial pressure points Canadians are most likely to feel.
+              Canada Pulse watches Canadian public data and turns new releases into the numbers people actually
+              feel: jobs, prices, housing, rates, population, energy and public money.
             </p>
             <div className="mt-6 grid gap-2 min-[480px]:grid-cols-2">
               {releaseHub.sourceStatuses.slice(0, 6).map((source) => (
@@ -135,10 +150,12 @@ export default async function Home() {
                             : "bg-white/10 text-stone-300"
                       }`}
                     >
-                      {source.status}
+                      {publicStatus(source.status)}
                     </span>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-stone-500">{source.note}</p>
+                  <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-stone-500">
+                    {publicSourceNotes[source.source] ?? "Canadian public-data releases"}
+                  </p>
                 </div>
               ))}
             </div>
@@ -165,7 +182,7 @@ export default async function Home() {
                         <h2 className="mt-1 truncate text-xl font-semibold text-white">{group.label}</h2>
                       </div>
                       <span className="rounded-md border border-white/10 bg-white/10 px-2 py-1 font-mono text-xs font-semibold text-stone-300">
-                        {topRelease?.status ?? "watch"}
+                        {topRelease ? publicStatus(topRelease.status) : "Watching"}
                       </span>
                     </div>
                     <p className="mt-3 line-clamp-2 text-sm leading-6 text-stone-400">{group.promise}</p>
@@ -183,11 +200,11 @@ export default async function Home() {
                       </div>
                     ) : (
                       <div className="mt-4 rounded-md border border-white/10 bg-black/35 p-3 text-sm text-stone-500">
-                        Waiting for the next official release.
+                        No major update yet.
                       </div>
                     )}
                     <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-red-200">
-                      Open Canada Pulse breakdown
+                      Open breakdown
                       <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" aria-hidden="true" />
                     </span>
                   </Link>
@@ -203,9 +220,9 @@ export default async function Home() {
           <div className="grid gap-px bg-white/10 lg:grid-cols-[0.82fr_1.18fr]">
             <div className="bg-black/45 p-5 sm:p-6">
               <div className="flex flex-wrap gap-2">
-                <StatusPill>Latest Major Canada Pulse</StatusPill>
+                <StatusPill>Latest major release</StatusPill>
                 <StatusPill>{promotedRelease.publisher}</StatusPill>
-                <StatusPill>{promotedRelease.status}</StatusPill>
+                <StatusPill>{publicStatus(promotedRelease.status)}</StatusPill>
               </div>
               <PromotedIcon className="mt-5 size-8 text-amber-200" aria-hidden="true" />
               <h1 className="mt-5 max-w-3xl text-3xl font-semibold tracking-normal text-white sm:text-5xl">
@@ -217,7 +234,7 @@ export default async function Home() {
             </div>
             <div className="bg-black/35 p-5 sm:p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
-                Plain English
+                What it means
               </p>
               <p className="mt-3 text-base leading-7 text-stone-200">{promotedRelease.plainEnglishSummary}</p>
               {promotedRelease.chartPayloads[0]?.points.length ? (
@@ -261,7 +278,7 @@ export default async function Home() {
                   href={promotedRelease.href}
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-stone-950 transition hover:bg-stone-200"
                 >
-                  See Canada Pulse breakdown
+                  Open full breakdown
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
                 <a
@@ -288,7 +305,7 @@ export default async function Home() {
               <div>
                 <div className="flex flex-wrap gap-2">
                   <StatusPill>Housing Watch</StatusPill>
-                  <StatusPill>CMHC priority</StatusPill>
+                  <StatusPill>Supply pressure</StatusPill>
                 </div>
                 <h2 className="mt-4 text-2xl font-semibold text-white">{releaseHub.housingWatch.title}</h2>
               </div>
@@ -307,7 +324,7 @@ export default async function Home() {
               href={releaseHub.housingWatch.href}
               className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-stone-950 transition hover:bg-stone-200"
             >
-              Open CMHC breakdown
+              Open housing breakdown
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
           </div>
@@ -318,15 +335,15 @@ export default async function Home() {
             <div className="grid gap-px bg-white/10 lg:grid-cols-[0.7fr_1.3fr]">
               <div className="bg-black/45 p-5 sm:p-6">
                 <div className="flex flex-wrap gap-2">
-                  <StatusPill>Official data queue</StatusPill>
+                  <StatusPill>Latest monitored releases</StatusPill>
                   <StatusPill>{releaseHub.generatedAt.slice(0, 10)}</StatusPill>
                 </div>
                 <h2 className="mt-4 text-2xl font-semibold text-white">
-                  Every major source gets a Canada Pulse breakdown.
+                  The releases Canadians should not miss.
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-stone-400">
-                  The app watches StatCan, CMHC, Bank of Canada, IRCC, CER/NRCan and PBO, then
-                  promotes what Canadians are most likely to feel.
+                  Canada Pulse ranks official releases by household impact, then translates them into fast,
+                  readable briefings.
                 </p>
               </div>
 
@@ -353,7 +370,7 @@ export default async function Home() {
                             <span className="font-semibold text-white">{release.title}</span>
                             {isPromoted ? (
                               <span className="rounded-md bg-amber-300/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-100">
-                                promoted
+                                top story
                               </span>
                             ) : null}
                           </span>
@@ -388,8 +405,8 @@ export default async function Home() {
                   Which provinces feel the newest data first?
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-stone-400">
-                  Federal releases should always translate into provincial pressure when the source supports it.
-                  Housing starts with CMHC because rent and supply are what younger Canadians feel fastest.
+                  National releases hit provinces differently. This view highlights where the newest housing,
+                  jobs, rates and population signals are likely to matter first.
                 </p>
               </div>
               <div className="grid gap-px bg-white/10 sm:grid-cols-2 xl:grid-cols-4">
@@ -419,14 +436,12 @@ export default async function Home() {
         </section>
       ) : null}
 
-      <EconomicReleaseHero />
-
       <section className="mb-5">
         <GlassPanel className="overflow-hidden">
           <div className="grid gap-px bg-white/10 lg:grid-cols-[0.74fr_1.26fr]">
             <div className="bg-black/45 p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">
-                {weeklySummary.publishMode === "friday-weekly-summary" ? "Friday Weekly Pulse" : "Daily release watch"}
+                {weeklySummary.publishMode === "friday-weekly-summary" ? "Friday Weekly Pulse" : "Today’s release watch"}
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-white">{weeklySummary.title}</h2>
               <p className="mt-3 text-sm leading-6 text-stone-400">{weeklySummary.generatedFor}</p>
@@ -438,7 +453,7 @@ export default async function Home() {
                   href="/weekly-pulse"
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-stone-950 transition hover:bg-stone-200"
                 >
-                  Open full release summary
+                  Open Weekly Pulse
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
                 <ShareStatButton text={`${weeklySummary.title}: ${weeklySummary.summary}`} />
@@ -584,20 +599,20 @@ export default async function Home() {
         <GlassPanel className="p-5">
           <h2 className="text-lg font-semibold text-white">Glossary for normal people</h2>
           <p className="mt-2 text-sm leading-6 text-stone-400">
-            Canada Pulse should explain the language while people are looking at the number, not send them hunting
-            through methodology pages.
+            Clear definitions appear beside the numbers, so people can understand the point without hunting
+            through policy documents.
           </p>
           <div className="mt-4">
             <GlossaryStrip />
           </div>
         </GlassPanel>
         <GlassPanel className="p-5">
-          <h2 className="text-lg font-semibold text-white">Social proof layer</h2>
+          <h2 className="text-lg font-semibold text-white">Built to share</h2>
           <div className="mt-4 grid grid-cols-3 gap-3">
             {[
               ["13", "regions"],
-              ["7", "viral issues"],
-              ["1", "share loop"],
+              ["7", "hot issues"],
+              ["1", "share flow"],
             ].map(([value, label]) => (
               <div key={label} className="rounded-md border border-white/10 bg-black/35 p-3">
                 <p className="font-mono text-2xl font-semibold text-white">{value}</p>
@@ -625,7 +640,7 @@ export default async function Home() {
               <SectionHeader
                 eyebrow="Canada Pulse"
                 title="Pick the pressure point. See who feels it most."
-                body="Food inflation, rent burden, population pressure, youth jobs, productivity, and taxes should start as national headlines, then open into province comparisons and component breakdowns."
+                body="Start with the issue people feel first: food inflation, rent burden, population pressure, youth jobs, productivity or taxes. Then open the province comparison and component breakdown."
               />
             </div>
 
@@ -676,7 +691,7 @@ export default async function Home() {
                 Today&apos;s concern board
               </p>
               <h2 className="mt-1 text-xl font-semibold text-white">
-                The first click should be a problem, not a province.
+                Start with what people feel.
               </h2>
             </div>
             <Gauge className="size-5 text-red-300" aria-hidden="true" />
@@ -721,7 +736,7 @@ export default async function Home() {
               </div>
               <div className="inline-flex w-fit items-center gap-2 rounded-md border border-red-300/20 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-100">
                 <Radio className="size-4" aria-hidden="true" />
-                Source-ready live layer
+                Live and monitored
               </div>
               <ShareStatButton text="Canada Pulse live pressure trackers cover food inflation, rent burden, population pressure, youth jobs, mortgage stress, tax receipt, equalization, gas, and healthcare access." />
             </div>
@@ -858,7 +873,7 @@ export default async function Home() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">
-                  Viral launch layer
+                  Shareable stories
                 </p>
                 <h2 className="mt-1 text-2xl font-semibold text-white">
                   One number, one debate, one shareable card.
@@ -873,8 +888,8 @@ export default async function Home() {
               </Link>
             </div>
             <p className="mt-3 max-w-4xl text-sm leading-6 text-stone-400">
-              Canada Pulse now has dedicated routes for the weekly brief, myth-vs-reality checks, timeline replay,
-              and screenshot-sized share cards.
+              Weekly briefs, myth-vs-reality checks, timeline replay and screenshot-sized cards turn official
+              data into something people can actually talk about.
             </p>
           </div>
           <div className="grid gap-px bg-white/10 lg:grid-cols-[0.9fr_1.1fr]">
@@ -940,14 +955,14 @@ export default async function Home() {
         <GlassPanel className="p-5">
           <div className="flex items-center gap-2">
             <Users className="size-5 text-red-300" aria-hidden="true" />
-            <h2 className="text-lg font-semibold text-white">How every data point should work</h2>
+            <h2 className="text-lg font-semibold text-white">How to read Canada Pulse</h2>
           </div>
           <div className="mt-4 grid gap-3">
             {[
               "Start with a national concern people recognize instantly.",
               "Show the province comparison in one glance.",
               "Break down the components driving the headline.",
-              "Link to the official source and refresh cadence.",
+              "Check the official source and latest update date.",
             ].map((item, index) => (
               <div key={item} className="flex gap-3 rounded-md border border-white/10 bg-black/30 p-4">
                 <span className="grid size-8 shrink-0 place-items-center rounded-md bg-red-600 font-mono text-xs font-semibold text-white">
@@ -963,7 +978,7 @@ export default async function Home() {
           <div className="border-b border-white/10 p-5">
             <h2 className="text-lg font-semibold text-white">Province pulse board</h2>
             <p className="mt-2 text-sm leading-6 text-stone-400">
-              Province pages are now supporting context, not the starting point.
+              Every province has its own pulse, symbols and pressure points.
             </p>
           </div>
           <div className="p-4">

@@ -40,7 +40,7 @@ export default async function ProvinceGovernmentPage({
     {
       label: "Budget pressure proxy",
       value: province.pressure,
-      detail: "Source-ready placeholder until provincial budget APIs/tables are connected.",
+      detail: "A high-level signal combining fiscal stress, transfers and province-wide pressure.",
       width: provinceScore,
     },
   ];
@@ -54,14 +54,14 @@ export default async function ProvinceGovernmentPage({
             <div className="flex flex-wrap gap-2">
               <StatusPill>{province.name}</StatusPill>
               <StatusPill>{fiscalCapacityLabel}</StatusPill>
-              <StatusPill>Provincial budget route</StatusPill>
+              <StatusPill>Provincial money map</StatusPill>
             </div>
 
             <div className="mt-8">
               <SectionHeader
                 eyebrow="Provincial government money map"
                 title={`${province.name}: public money pressure`}
-                body="This route prepares each province for spending, revenue, transfers, debt-service, infrastructure, healthcare, and education breakdowns."
+                body="Compare spending, revenue, transfers, debt-service, infrastructure, healthcare and education pressure through a province-first lens."
               />
             </div>
           </div>
@@ -94,13 +94,13 @@ export default async function ProvinceGovernmentPage({
           <GlassPanel className="p-5">
             <div className="flex items-center gap-2">
               <Scale className="size-5 text-red-300" aria-hidden="true" />
-              <h2 className="text-lg font-semibold text-white">What needs real source wiring next</h2>
+              <h2 className="text-lg font-semibold text-white">What to watch in the province budget</h2>
             </div>
             <div className="mt-5 grid gap-3">
               {["Health spending", "Education spending", "Infrastructure capital plan", "Debt-service cost", "Own-source revenue"].map((item) => (
                 <div key={item} className="rounded-md border border-white/10 bg-black/35 p-4">
                   <p className="font-semibold text-white">{item}</p>
-                  <p className="mt-1 text-xs leading-5 text-stone-500">Connect to {province.name} budget/public accounts tables.</p>
+                  <p className="mt-1 text-xs leading-5 text-stone-500">{province.name} budget and public-accounts signal.</p>
                 </div>
               ))}
             </div>
@@ -110,8 +110,8 @@ export default async function ProvinceGovernmentPage({
         <GlassPanel className="p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm leading-6 text-stone-300">
-              This province route is intentionally source-ready. The federal page uses labelled federal fiscal table
-              data; this page is the scaffold for province budget ingestion.
+              Use this view to understand how federal transfers, fiscal capacity and provincial priorities show up
+              in {province.name}.
             </p>
             <Link
               href="/government"

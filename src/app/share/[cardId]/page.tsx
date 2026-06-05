@@ -66,7 +66,7 @@ export default async function ShareCardPage({
             <div className="mt-10 flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-sm text-stone-300">
                 <BadgeCheck className="size-4 text-emerald-300" aria-hidden="true" />
-                Public-data-ready demo, built for official feeds
+                Built from Canada Pulse public-data signals
               </div>
               <Link
                 href={card.href}
@@ -85,8 +85,7 @@ export default async function ShareCardPage({
             <h2 className="text-xl font-semibold text-white">How this becomes viral</h2>
           </div>
           <p className="mt-3 text-sm leading-6 text-stone-400">
-            This URL is intentionally screenshot-sized: one number, one claim, one next click. The next production
-            step is automated image export for Instagram stories, Reddit posts, X previews, and TikTok overlays.
+            This page is made to share: one number, one clear claim, and one next click into the full Canada Pulse view.
           </p>
         </GlassPanel>
       </section>

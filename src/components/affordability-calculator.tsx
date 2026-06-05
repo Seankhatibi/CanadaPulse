@@ -88,8 +88,8 @@ export function AffordabilityCalculator({
       <div className="mt-4 rounded-md border border-red-500/20 bg-red-500/10 p-4">
         <p className="text-sm font-semibold text-red-800 dark:text-red-200">{result.status}</p>
         <p className="mt-1 text-xs leading-5 text-stone-700 dark:text-stone-300">
-          Estimate assumes simplified taxes and spending. Connect StatCan, CMHC, and tax tables before treating
-          this as financial advice.
+          Estimate uses simplified taxes and household costs for comparison. Treat it as a planning snapshot, not
+          financial advice.
         </p>
       </div>
     </div>

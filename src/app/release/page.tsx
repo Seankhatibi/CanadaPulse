@@ -80,8 +80,8 @@ export default async function ReleaseExplainerPage({
             <h2 className="text-2xl font-semibold text-white">Quick visual read</h2>
           </div>
           <p className="mt-2 text-sm leading-6 text-stone-400">
-            This chart uses real Statistics Canada selected-table data when the release exposes table CSVs. If no
-            selected table is available, Canada Pulse falls back to source-summary signal extraction.
+            This chart uses Statistics Canada table data when the release includes comparable tables. If a table is
+            not available, Canada Pulse shows a source-summary read instead.
           </p>
           {explainer.tableIds?.length ? (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -103,7 +103,7 @@ export default async function ReleaseExplainerPage({
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-md border border-emerald-300/20 bg-emerald-400/10 px-2.5 py-1 font-mono text-xs text-emerald-100 transition hover:bg-emerald-400/15"
                   >
-                    WDS {download.productId}
+                    Official table {download.productId}
                     <ExternalLink className="size-3" aria-hidden="true" />
                   </a>
                 ) : (
@@ -111,7 +111,7 @@ export default async function ReleaseExplainerPage({
                     key={`${download.tableId}-${download.productId}`}
                     className="rounded-md border border-amber-300/20 bg-amber-400/10 px-2.5 py-1 font-mono text-xs text-amber-100"
                   >
-                    WDS pending {download.productId}
+                    Table unavailable {download.productId}
                   </span>
                 ),
               )}

@@ -54,7 +54,7 @@ export default async function BestProvincePage({
                       Score: {winner.stageScores[selectedStage]}/100 for {lifeStageLabels[selectedStage].toLowerCase()}.
                     </p>
                   </div>
-                  <ShareStatButton text={`Canada Pulse ranks ${winner.province} as the best province for a ${lifeStageLabels[selectedStage].toLowerCase()} in the source-ready demo model.`} />
+                  <ShareStatButton text={`Canada Pulse ranks ${winner.province} as the best province for a ${lifeStageLabels[selectedStage].toLowerCase()} in the current Canada Pulse model.`} />
                 </div>
               </div>
             </div>

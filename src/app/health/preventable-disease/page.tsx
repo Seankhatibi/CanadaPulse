@@ -112,7 +112,7 @@ export default function PreventableDiseasePage() {
               <CircleDollarSign className="size-5 text-red-300" aria-hidden="true" />
               <h2 className="text-lg font-semibold text-white">Provincial preventable burden</h2>
             </div>
-            <ShareStatButton text="Canada Pulse provincial preventable burden: Atlantic provinces, Manitoba, Saskatchewan, Nunavut, and remote regions show the most strained source-ready disease burden signals." />
+            <ShareStatButton text="Canada Pulse provincial preventable burden: Atlantic provinces, Manitoba, Saskatchewan, Nunavut, and remote regions show the most strained disease-burden signals." />
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {preventableRanking.map((profile) => (

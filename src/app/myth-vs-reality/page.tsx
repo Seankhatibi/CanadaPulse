@@ -17,7 +17,7 @@ export default function MythVsRealityPage() {
             <SectionHeader
               eyebrow="Myth vs Reality"
               title="Argue with the chart, not the slogan."
-              body="This page turns politically hot topics into inspectable public-data questions: what is the claim, what does the dashboard show, and which chart should people open next?"
+              body="Politically hot topics become inspectable public-data questions: the claim, the reality check, and the chart that helps people judge it for themselves."
             />
           </div>
           <div className="mt-6">

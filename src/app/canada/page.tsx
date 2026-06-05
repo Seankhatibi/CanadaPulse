@@ -27,12 +27,12 @@ export default function CanadaPage() {
             <SectionHeader
               eyebrow="Canada dashboard"
               title="Canada at a glance, without the noise."
-              body="A national command center for composite scores, provincial routes, hot indicators, and a visual system inspired by the flag, heraldry, and provincial symbols."
+              body="A national command center for Canada’s pressure points: economy, housing, health, public money, energy, youth future and province-by-province comparisons."
             />
           </div>
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             {[
-              { label: "Modeled indicators", value: hotIndicators.length + 16, icon: Activity },
+              { label: "Tracked indicators", value: hotIndicators.length + 16, icon: Activity },
               { label: "Province routes", value: provinces.length, icon: MapPinned },
               { label: "Score domains", value: scoreCards.length, icon: Landmark },
             ].map((stat) => {
@@ -55,7 +55,7 @@ export default function CanadaPage() {
         <GlassPanel className="p-4">
           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="text-sm font-semibold">Interactive Canada map shell</p>
+              <p className="text-sm font-semibold">Interactive Canada map</p>
               <p className="text-xs text-stone-600 dark:text-stone-400">
                 Click any province or territory to open its dashboard.
               </p>
@@ -74,7 +74,7 @@ export default function CanadaPage() {
         <GlassPanel className="p-5">
           <div className="flex flex-col gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
             <h2 className="text-lg font-semibold">National score domains</h2>
-            <StatusPill>Composite demo scores</StatusPill>
+            <StatusPill>Composite score</StatusPill>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {scoreCards.map((category) => {

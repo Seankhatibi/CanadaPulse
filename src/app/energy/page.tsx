@@ -16,7 +16,7 @@ export default function EnergyPage() {
           <div className="p-5 sm:p-7">
             <div className="flex flex-wrap gap-2">
               <StatusPill>Energy and resources</StatusPill>
-              <StatusPill>CER-ready</StatusPill>
+              <StatusPill>Energy source watch</StatusPill>
               <StatusPill>Province grid mix</StatusPill>
             </div>
             <div className="mt-7 grid gap-6 lg:grid-cols-[1fr_0.82fr] lg:items-end">
@@ -61,7 +61,7 @@ export default function EnergyPage() {
               <h2 className="text-lg font-semibold text-white">Oil and gas production signal</h2>
             </div>
             <p className="mt-2 text-sm leading-6 text-stone-400">
-              The map should make one thing obvious: production, consumption, and political pressure are not evenly distributed.
+              Production, consumption, exports and political pressure are not evenly distributed across Canada.
             </p>
             <div className="mt-5 grid gap-3">
               {provinceTradeEnergyProfiles
@@ -131,7 +131,7 @@ export default function EnergyPage() {
             <div>
               <h2 className="text-lg font-semibold text-white">Energy strength leaderboard</h2>
               <p className="mt-2 text-sm leading-6 text-stone-400">
-                Hydro, nuclear, oil and gas, electricity price, and resource exposure rolled into one source-ready view.
+                Hydro, nuclear, oil and gas, electricity price and resource exposure rolled into one province view.
               </p>
             </div>
             <ShareStatButton text="Canada Pulse energy leaderboard shows Alberta, Quebec, Saskatchewan, Ontario, and BC as major energy anchors in different ways." />

@@ -34,7 +34,7 @@ export type ProvinceHealthProfile = {
 };
 
 export const healthSnapshot = {
-  period: "2025-26 source-ready demo",
+  period: "2025-26 public-data snapshot",
   totalSpending: "$399B",
   spendingPerPerson: "$9,626",
   doctorAccess: "78%",

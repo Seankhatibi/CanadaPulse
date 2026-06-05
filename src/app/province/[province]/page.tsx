@@ -49,7 +49,7 @@ export default async function ProvincePage({
           <SectionHeader
             eyebrow={`${province.abbr} province dashboard`}
             title={`${province.name} Pulse`}
-            body="A province-level scorecard that keeps the national Canada Pulse design while adding local symbols, regional identity, and source-ready indicators."
+            body="A province-level scorecard with local symbols, regional identity, pressure indicators and direct links into housing, population, tax, health, trade and energy views."
           />
           <div className="flex flex-wrap gap-2">
             <StatusPill>{province.status}</StatusPill>

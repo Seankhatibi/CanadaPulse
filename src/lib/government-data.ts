@@ -81,7 +81,7 @@ export const governmentRefreshPlan = [
   {
     dataset: "Fiscal Monitor",
     cadence: "monthly",
-    source: "Federal fiscal table source pending live importer",
+    source: "Federal fiscal snapshot",
     nextStep: "Parse latest monthly revenue, expense, deficit, and debt-charge tables.",
   },
   {

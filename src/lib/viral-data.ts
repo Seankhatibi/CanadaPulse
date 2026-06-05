@@ -78,7 +78,7 @@ export const shareCards: ShareCard[] = [
     id: "energy-export-engine",
     title: "Canada's energy export engine",
     value: tradeEnergySnapshot.energyExports,
-    subtitle: "source-ready demo energy exports",
+    subtitle: "energy export signal",
     body: "Alberta drives oil and gas output, Quebec and BC anchor hydro, and Ontario anchors nuclear power.",
     href: "/energy",
     tone: "from-emerald-700 to-amber-500",

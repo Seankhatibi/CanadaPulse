@@ -94,7 +94,7 @@ export default async function ComparePage({
       leftNumeric: leftHousing.affordability.rentBurden,
       rightNumeric: rightHousing.affordability.rentBurden,
       winner: rentLeader,
-      note: `${formatCurrency(rentDelta)} monthly rent gap in the demo model`,
+      note: `${formatCurrency(rentDelta)} monthly rent gap in the Canada Pulse model`,
       lowerIsBetter: true,
     },
     {
@@ -116,7 +116,7 @@ export default async function ComparePage({
       leftNumeric: leftProvince.score,
       rightNumeric: rightProvince.score,
       winner: winnerLabel(false, leftProvince.score, rightProvince.score, leftProvince.name, rightProvince.name),
-      note: "Higher score means the province looks stronger across the demo score model",
+      note: "Higher score means the province looks stronger across the Canada Pulse score model",
       lowerIsBetter: false,
     },
   ];

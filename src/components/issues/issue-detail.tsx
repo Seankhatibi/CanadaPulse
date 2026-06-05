@@ -47,7 +47,7 @@ export function IssueDetail({ issue }: { issue: Issue }) {
               </div>
               <p className="mt-3 font-mono text-4xl font-semibold text-white sm:text-5xl">{issue.nationalValue}</p>
               <p className="mt-4 text-xs leading-5 text-stone-500">
-                Official-source-ready demo data. Connect live source tables before launch.
+                Canada Pulse snapshot. Open the breakdown below to compare provinces and components.
               </p>
             </div>
           </div>

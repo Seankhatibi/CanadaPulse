@@ -61,7 +61,7 @@ export default function YouthPage() {
                 <GraduationCap className="size-5 text-fuchsia-300" aria-hidden="true" />
                 <h2 className="text-lg font-semibold text-white">Best provinces for young adults</h2>
               </div>
-              <ShareStatButton text="Canada Pulse Youth Future ranking: Alberta, Saskatchewan, Quebec, Manitoba, and Yukon lead the source-ready demo model for young Canadians." />
+              <ShareStatButton text="Canada Pulse Youth Future ranking: Alberta, Saskatchewan, Quebec, Manitoba, and Yukon currently lead for young Canadians." />
             </div>
             <div className="mt-5 grid gap-3">
               {rankedYouth.map((profile, index) => (

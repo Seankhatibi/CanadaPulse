@@ -36,30 +36,30 @@ export default async function DataStatusPage() {
       <section className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
         <GlassPanel className="p-5 sm:p-7">
           <div className="flex flex-wrap gap-2">
-            <StatusPill>{livePayload.source}</StatusPill>
+            <StatusPill>Source transparency</StatusPill>
             <StatusPill>{livePayload.summary.live} live</StatusPill>
-            <StatusPill>{livePayload.summary.pending} pending</StatusPill>
+            <StatusPill>{livePayload.summary.pending} monitored</StatusPill>
           </div>
           <div className="mt-7">
             <SectionHeader
               eyebrow="Real data backbone"
-              title="Every indicator needs a source, status, and refresh path."
-              body={livePayload.summary.read}
+              title="Where Canada Pulse gets its numbers."
+              body="Canada Pulse prioritizes official Canadian public data and keeps source quality visible beside the charts."
             />
           </div>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/api/live-data"
+              href="/weekly-pulse"
               className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-stone-950 transition hover:bg-stone-200"
             >
-              Open live-data API
+              Open Weekly Pulse
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
             <Link
-              href="/api/indicators?geography=canada&category=housing"
+              href="/housing"
               className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15"
             >
-              Open indicator API
+              Open housing data
               <Database className="size-4" aria-hidden="true" />
             </Link>
           </div>
@@ -85,7 +85,7 @@ export default async function DataStatusPage() {
               ))
             ) : (
               <p className="rounded-md border border-white/10 bg-black/35 p-4 text-sm text-stone-400">
-                No persisted refresh runs yet. Run `/api/cron/refresh-data` after configuring `DATABASE_URL`.
+                Canada Pulse is watching official sources and will show refresh history here as updates arrive.
               </p>
             )}
           </div>
@@ -113,7 +113,7 @@ export default async function DataStatusPage() {
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-sm font-semibold text-white">{value.indicatorName}</p>
                         <span className="shrink-0 rounded-md border border-white/10 bg-white/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-stone-300">
-                          {value.status}
+                          {value.status === "live" ? "Live" : value.status === "stale" ? "Stale" : "Monitored"}
                         </span>
                       </div>
                       <p className="mt-2 text-xs leading-5 text-stone-500">

@@ -24,7 +24,7 @@ export type YouthQualityProvinceProfile = {
 };
 
 export const youthSnapshot = {
-  period: "2026 source-ready demo",
+  period: "2026 public-data snapshot",
   youthUnemployment: "13.4%",
   rentBurdenUnder35: "42%",
   downPaymentYears: "9.6",
@@ -34,7 +34,7 @@ export const youthSnapshot = {
 };
 
 export const qualitySnapshot = {
-  period: "2026 source-ready demo",
+  period: "2026 public-data snapshot",
   lifeSatisfaction: "6.8/10",
   violentCrimeRate: "1,080",
   commutePressure: "29 min",

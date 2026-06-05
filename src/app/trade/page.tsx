@@ -23,13 +23,13 @@ export default function TradePage() {
             <div className="flex flex-wrap gap-2">
               <StatusPill>Trade engine</StatusPill>
               <StatusPill>{tradeEnergySnapshot.period}</StatusPill>
-              <StatusPill>StatCan-ready</StatusPill>
+              <StatusPill>Trade source watch</StatusPill>
             </div>
             <div className="mt-7 grid gap-6 lg:grid-cols-[1fr_0.8fr] lg:items-end">
               <SectionHeader
                 eyebrow="What does Canada sell?"
                 title="The export map explains which provinces power the country."
-                body="Canada Pulse should make trade feel personal: who sells energy, who sells autos, who sells food, who depends on the US, and which province is carrying the export engine."
+                body="Canada Pulse makes trade feel personal: who sells energy, who sells autos, who sells food, who depends on the US, and which province carries the export engine."
               />
               <div className="rounded-md border border-sky-300/20 bg-sky-500/10 p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -66,7 +66,7 @@ export default function TradePage() {
               <h2 className="text-lg font-semibold text-white">Export sectors</h2>
             </div>
             <p className="mt-2 text-sm leading-6 text-stone-400">
-              This is the national split users should recognize before clicking into a province.
+              Start with the national split, then click into a province to see what it sells.
             </p>
             <div className="mt-5 grid gap-3">
               {nationalExportSectors.map((sector) => (
@@ -119,7 +119,7 @@ export default function TradePage() {
               <Ship className="size-5 text-sky-300" aria-hidden="true" />
               <h2 className="text-lg font-semibold text-white">Province export leaderboard</h2>
             </div>
-            <ShareStatButton text="Canada Pulse trade leaderboard: Alberta, Ontario, Quebec, BC, and Saskatchewan carry the biggest export engines in the demo model." />
+            <ShareStatButton text="Canada Pulse trade leaderboard: Alberta, Ontario, Quebec, BC, and Saskatchewan carry the biggest export engines." />
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {sortedProvinces.map((profile) => (

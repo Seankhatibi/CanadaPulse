@@ -7,6 +7,13 @@ import { findHubRelease } from "@/lib/release-hub";
 
 export const dynamic = "force-dynamic";
 
+function publicStatus(status: string) {
+  if (status === "live") return "Live";
+  if (status === "summary_only") return "Tracked";
+  if (status === "source_linked") return "Watching";
+  return "Watching";
+}
+
 export default async function PulseReleasePage({
   params,
 }: {
@@ -37,7 +44,7 @@ export default async function PulseReleasePage({
             <div className="flex flex-wrap gap-2">
               <StatusPill>Canada Pulse breakdown</StatusPill>
               <StatusPill>{release.publisher}</StatusPill>
-              <StatusPill>{release.status}</StatusPill>
+              <StatusPill>{publicStatus(release.status)}</StatusPill>
             </div>
             <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-normal text-white sm:text-6xl">
               {release.title}
@@ -77,8 +84,8 @@ export default async function PulseReleasePage({
               <div className={`h-full rounded-full ${score.tone}`} style={{ width: `${Math.min(100, score.value)}%` }} />
             </div>
             <p className="mt-3 text-xs leading-5 text-stone-500">
-              Canada Pulse uses this score to decide whether the release belongs on the homepage and which audiences
-              should see it first.
+              Higher scores mean the release is more likely to affect daily life, young Canadians, housing or
+              household finances.
             </p>
           </GlassPanel>
         ))}
@@ -164,8 +171,8 @@ export default async function PulseReleasePage({
                   {release.status === "live"
                     ? "Live values or report facts were fetched from the official source."
                     : release.status === "summary_only"
-                      ? "The release was detected, but detailed table extraction is still limited for this item."
-                      : "The source is monitored and linked; detailed importer work is still pending."}
+                      ? "Canada Pulse detected the release and built a briefing from the available source facts."
+                      : "Canada Pulse is watching this source for the next detailed update."}
                 </p>
               </div>
             </div>
@@ -196,9 +203,9 @@ export default async function PulseReleasePage({
           <GlassPanel className="p-5 sm:p-6">
             <h2 className="text-xl font-semibold text-white">Source trail</h2>
             <div className="mt-4 grid gap-2">
-              {release.sourceLinks.map((link) => (
+              {release.sourceLinks.map((link, index) => (
                 <a
-                  key={`${link.label}-${link.url}`}
+                  key={`${link.label}-${link.url}-${index}`}
                   href={link.url}
                   target="_blank"
                   rel="noreferrer"

@@ -66,7 +66,7 @@ export default function QualityOfLifePage() {
                 <Leaf className="size-5 text-teal-300" aria-hidden="true" />
                 <h2 className="text-lg font-semibold text-white">Livability ranking</h2>
               </div>
-              <ShareStatButton text="Canada Pulse Quality of Life ranking: BC, Quebec, Alberta, Yukon, Ontario, and Nova Scotia lead the source-ready demo livability model." />
+              <ShareStatButton text="Canada Pulse Quality of Life ranking: BC, Quebec, Alberta, Yukon, Ontario, and Nova Scotia currently lead the livability model." />
             </div>
             <div className="mt-5 grid gap-3">
               {rankedLife.map((profile, index) => (

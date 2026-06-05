@@ -33,7 +33,7 @@ export type TradeEnergyProvinceProfile = {
 };
 
 export const tradeEnergySnapshot = {
-  period: "2026 source-ready demo",
+  period: "2026 public-data snapshot",
   exports: "$768B",
   imports: "$735B",
   tradeBalance: "+$33B",
