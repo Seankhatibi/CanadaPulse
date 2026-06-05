@@ -7,12 +7,15 @@ export type StatCanReleaseTable = {
   csvUrl: string;
   sourceTableIds: string[];
   periods: string[];
+  latestPeriod: string;
+  previousPeriod: string;
   rows: Array<{
     label: string;
     values: number[];
     latest: number | null;
     previous: number | null;
     change: number | null;
+    changePeriod: string;
   }>;
 };
 
@@ -122,6 +125,30 @@ function tableIdToProductId(tableId: string) {
   return tableId.replace(/\D/g, "").slice(0, 8);
 }
 
+function isSimplePeriod(label: string) {
+  return /(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan\.?|Feb\.?|Mar\.?|Apr\.?|Jun\.?|Jul\.?|Aug\.?|Sep\.?|Sept\.?|Oct\.?|Nov\.?|Dec\.?)\s+\d{4}/i.test(label) &&
+    !/\bto\b|standard error|change|%/i.test(label);
+}
+
+function formatCompactNumber(value: number) {
+  if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(1)}M`;
+  return `${Math.round(value).toLocaleString("en-CA")}k`;
+}
+
+function formatSignalDisplay(label: string, value: number) {
+  if (/rate/i.test(label)) return `${value.toFixed(1)}%`;
+  if (/employment|labour force|population|unemployment/i.test(label)) return formatCompactNumber(value);
+  return Number.isInteger(value) ? value.toLocaleString("en-CA") : value.toFixed(1);
+}
+
+function formatChangeDisplay(label: string, change: number | null) {
+  if (change === null) return "latest value";
+  const sign = change > 0 ? "+" : "";
+  if (/rate/i.test(label)) return `${sign}${change.toFixed(1)} pts`;
+  if (/employment|labour force|population|unemployment/i.test(label)) return `${sign}${formatCompactNumber(change)}`;
+  return `${sign}${change.toFixed(1)}`;
+}
+
 async function fetchWdsDownloads(tableIds: string[]) {
   return Promise.all(
     tableIds.slice(0, 6).map(async (tableId) => {
@@ -165,21 +192,41 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
     return null;
   }
 
+  const simplePeriodIndexes = periods
+    .map((period, index) => ({ period, index }))
+    .filter((item) => isSimplePeriod(item.period));
+  const latestValueIndex = simplePeriodIndexes.at(-1)?.index ?? Math.min(1, Math.max(0, periods.length - 1));
+  const previousValueIndex = simplePeriodIndexes.at(-2)?.index ?? Math.max(0, latestValueIndex - 1);
+  const changeColumnIndex =
+    periods.findIndex((period, index) => index > latestValueIndex && /\bto\b/i.test(period)) >= 0
+      ? periods.findIndex((period, index) => index > latestValueIndex && /\bto\b/i.test(period))
+      : -1;
+  const latestPeriod = periods[latestValueIndex] ?? "latest period";
+  const previousPeriod = periods[previousValueIndex] ?? "previous period";
+  const changePeriod = changeColumnIndex >= 0 ? periods[changeColumnIndex] : `${previousPeriod} to ${latestPeriod}`;
+
   const rows = parsed
     .slice(headerRowIndex + 1)
     .map((row) => {
       const label = row[0]?.replace(/^"+/, "").trim();
       const values = row.slice(1, periods.length + 1).map(toNumber);
       const numericValues = values.filter((value): value is number => value !== null);
-      const latest = values.at(-1) ?? null;
-      const previous = values.at(-2) ?? null;
+      const latest = values[latestValueIndex] ?? null;
+      const previous = values[previousValueIndex] ?? null;
+      const sourceChange = changeColumnIndex >= 0 ? (values[changeColumnIndex] ?? null) : null;
 
       return {
         label,
         values: values.map((value) => value ?? Number.NaN),
         latest,
         previous,
-        change: latest !== null && previous !== null ? Number((latest - previous).toFixed(2)) : null,
+        change:
+          sourceChange !== null
+            ? sourceChange
+            : latest !== null && previous !== null
+              ? Number((latest - previous).toFixed(2))
+              : null,
+        changePeriod,
         numericCount: numericValues.length,
       };
     })
@@ -191,6 +238,7 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
       latest: row.latest,
       previous: row.previous,
       change: row.change,
+      changePeriod: row.changePeriod,
     }));
 
   if (rows.length === 0) {
@@ -203,23 +251,26 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
     csvUrl,
     sourceTableIds,
     periods,
+    latestPeriod,
+    previousPeriod,
     rows,
   };
 }
 
 function signalsFromTables(tables: StatCanReleaseTable[]): ReleaseSignal[] {
   const rows = tables[0]?.rows ?? [];
-  const latestPeriod = tables[0]?.periods.at(-1) ?? "latest period";
+  const latestPeriod = tables[0]?.latestPeriod ?? "latest period";
 
   return rows.slice(0, 8).map((row) => {
     const value = row.latest ?? 0;
+    const change = row.change;
 
     return {
       label: row.label,
       value,
-      display: `${value > 0 ? "+" : ""}${value.toFixed(1)}%`,
-      direction: value > 0 ? "up" : value < 0 ? "down" : "neutral",
-      explanation: `${row.label}: ${value > 0 ? "up" : value < 0 ? "down" : "flat"} ${Math.abs(value).toFixed(1)}% in ${latestPeriod}.`,
+      display: formatSignalDisplay(row.label, value),
+      direction: change === null || change === 0 ? "neutral" : change > 0 ? "up" : "down",
+      explanation: `${row.label}: ${formatSignalDisplay(row.label, value)} in ${latestPeriod}; ${formatChangeDisplay(row.label, change)} over ${row.changePeriod}.`,
     };
   });
 }

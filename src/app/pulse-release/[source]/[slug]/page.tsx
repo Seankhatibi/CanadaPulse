@@ -55,8 +55,7 @@ export default async function PulseReleasePage({
           </div>
 
           <div className="bg-black/35 p-5 sm:p-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-200">Plain English</p>
-            <p className="mt-4 text-xl leading-8 text-white">{release.plainEnglishSummary}</p>
+            <p className="text-xl leading-8 text-white">{release.plainEnglishSummary}</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <ShareStatButton text={release.socialSummary} />
               <a

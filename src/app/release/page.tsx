@@ -53,10 +53,7 @@ export default async function ReleaseExplainerPage({
           </div>
 
           <div className="bg-black/35 p-5 sm:p-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
-              Plain English
-            </p>
-            <p className="mt-4 text-xl leading-8 text-white">{explainer.plainEnglish}</p>
+            <p className="text-xl leading-8 text-white">{explainer.plainEnglish}</p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <ShareStatButton text={`${explainer.title}: ${explainer.plainEnglish}`} />
               <a
@@ -94,10 +91,10 @@ export default async function ReleaseExplainerPage({
           ) : null}
           {releaseData?.wdsDownloads.length ? (
             <div className="mt-3 flex flex-wrap gap-2">
-              {releaseData.wdsDownloads.map((download) =>
+              {releaseData.wdsDownloads.map((download, index) =>
                 download.downloadUrl ? (
                   <a
-                    key={`${download.tableId}-${download.productId}`}
+                    key={`${download.tableId}-${download.productId}-${index}`}
                     href={download.downloadUrl}
                     target="_blank"
                     rel="noreferrer"
@@ -108,7 +105,7 @@ export default async function ReleaseExplainerPage({
                   </a>
                 ) : (
                   <span
-                    key={`${download.tableId}-${download.productId}`}
+                    key={`${download.tableId}-${download.productId}-${index}`}
                     className="rounded-md border border-amber-300/20 bg-amber-400/10 px-2.5 py-1 font-mono text-xs text-amber-100"
                   >
                     Table unavailable {download.productId}

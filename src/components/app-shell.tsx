@@ -23,25 +23,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.24),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.12),transparent_30%),linear-gradient(135deg,#030303_0%,#090b0d_44%,#130807_100%)] text-stone-50">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-black/82 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-6">
-          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3" aria-label="Canada Pulse home">
+        <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-6">
+          <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3" aria-label="Canada Pulse home">
             <span className="grid size-9 shrink-0 place-items-center rounded-md bg-red-600 text-white shadow-sm sm:size-10">
               <Crown className="size-5" aria-hidden="true" />
             </span>
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold tracking-normal sm:text-base">Canada Pulse</span>
-              <span className="hidden text-xs text-stone-600 dark:text-stone-400 sm:block">
+              <span className="hidden text-xs text-stone-600 dark:text-stone-400 2xl:block">
                 The dashboard explaining modern Canada
               </span>
             </span>
           </Link>
 
-          <nav className="ml-auto hidden items-center gap-1 xl:flex">
+          <nav className="ml-auto hidden min-w-0 max-w-[calc(100vw-31rem)] items-center gap-0.5 overflow-x-auto xl:flex [scrollbar-width:none]">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-md px-3 py-2 text-sm font-medium text-stone-300 transition hover:bg-white/10 hover:text-white"
+                className="whitespace-nowrap rounded-md px-2.5 py-2 text-sm font-medium leading-none text-stone-300 transition hover:bg-white/10 hover:text-white"
               >
                 {item.label}
               </Link>
