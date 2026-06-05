@@ -1,12 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/economic-releases",
-      "schedule": "0 12 * * *"
-    },
-    {
       "path": "/api/cron/refresh-data",
-      "schedule": "0 8,12 * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }
