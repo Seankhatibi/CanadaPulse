@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Gauge, House, Landmark, Radio, Share2, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Flame, Gauge, House, Landmark, Radio, Share2, Sparkles, Users } from "lucide-react";
 import { issues } from "@/lib/issue-data";
 import { livePressureTrackers } from "@/lib/canada-pulse-data";
 import { getWeeklyPulseSummary } from "@/lib/economic-releases";
@@ -16,6 +16,7 @@ import {
 import { IssueCard } from "@/components/issues/issue-card";
 import { ShareStatButton } from "@/components/share-stat-button";
 import { GlossaryStrip } from "@/components/term-tip";
+import { HomepageCommandPanel } from "@/components/homepage-command-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -119,6 +120,49 @@ export default async function Home() {
         }
       : tracker,
   );
+  const issueBySlug = new Map(issues.map((issue) => [issue.slug, issue]));
+  const hotFrontCards = [
+    {
+      eyebrow: "Grocery pressure",
+      issue: issueBySlug.get("food-inflation"),
+      href: "/issue/food-inflation",
+      share: "Food inflation is still the grocery-cart pressure point Canadians notice first.",
+    },
+    {
+      eyebrow: "Rent squeeze",
+      issue: issueBySlug.get("rent-burden"),
+      href: "/issue/rent-burden",
+      share: "Rent burden turns housing into a monthly paycheque problem.",
+    },
+    {
+      eyebrow: "Population capacity",
+      issue: issueBySlug.get("population-vs-housing"),
+      href: "/issue/population-vs-housing",
+      share: "Population growth vs housing supply is the chart Canadians keep arguing about.",
+    },
+    {
+      eyebrow: "Youth future",
+      issue: issueBySlug.get("youth-jobs"),
+      href: "/issue/youth-jobs",
+      share: "Youth unemployment, rent and down-payment years belong in the same future conversation.",
+    },
+    {
+      eyebrow: "Tax receipt",
+      title: "Same salary, different province",
+      value: "$5,437",
+      label: "Ontario vs Alberta tax spread",
+      href: "/compare?left=ontario&right=alberta&income=92000",
+      share: "Same salary, different province: the tax receipt gap is big enough to feel personal.",
+    },
+    {
+      eyebrow: "National stress",
+      title: "Canada Pulse Score",
+      value: "61/100",
+      label: "declining stress signal",
+      href: "/#pulse-score",
+      share: "Canada Pulse Score: 61/100 and declining across affordability, housing, debt and youth outlook.",
+    },
+  ];
 
   return (
     <AppShell>
@@ -136,6 +180,7 @@ export default async function Home() {
               Canada Pulse watches Canadian public data and turns new releases into the numbers people actually
               feel: jobs, prices, housing, rates, population, energy and public money.
             </p>
+            <HomepageCommandPanel />
             <div className="mt-6 grid gap-2 min-[480px]:grid-cols-2">
               {releaseHub.sourceStatuses.slice(0, 6).map((source) => (
                 <div key={source.source} className="rounded-md border border-white/10 bg-black/35 px-3 py-2">
@@ -212,6 +257,60 @@ export default async function Home() {
               })}
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="mb-5 overflow-hidden rounded-lg border border-white/10 bg-black/45">
+        <div className="border-b border-white/10 p-5 sm:p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-red-300">
+                <Flame className="size-4" aria-hidden="true" />
+                Front-page pulse
+              </div>
+              <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
+                The numbers Canadians understand in one glance.
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-400">
+                These are the fastest paths into Canada Pulse: affordability, housing capacity, youth future,
+                tax differences and the national stress score.
+              </p>
+            </div>
+            <ShareStatButton text="Canada Pulse front-page pulse: food, rent, population vs housing, youth jobs, tax spread and national stress in one glance." />
+          </div>
+        </div>
+
+        <div className="grid gap-px bg-white/10 sm:grid-cols-2 xl:grid-cols-3">
+          {hotFrontCards.map((card) => {
+            const title = card.issue?.title ?? card.title ?? "";
+            const value = card.issue?.nationalValue ?? card.value ?? "";
+            const label = card.issue?.nationalLabel ?? card.label ?? "";
+            const question = card.issue?.question ?? card.share;
+
+            return (
+              <article
+                key={card.eyebrow}
+                className="min-w-0 bg-black/45 p-4 transition hover:bg-white/10"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
+                      {card.eyebrow}
+                    </p>
+                    <h3 className="mt-2 line-clamp-2 text-lg font-semibold leading-6 text-white">{title}</h3>
+                  </div>
+                  <ShareStatButton text={`${title}: ${value}. ${card.share}`} />
+                </div>
+                <p className="mt-5 font-mono text-4xl font-semibold text-white">{value}</p>
+                <p className="mt-2 text-xs uppercase tracking-[0.13em] text-stone-500">{label}</p>
+                <p className="mt-3 line-clamp-2 text-sm font-semibold leading-6 text-stone-200">{question}</p>
+                <Link href={card.href} className="group mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-red-200">
+                  Open breakdown
+                  <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" aria-hidden="true" />
+                </Link>
+              </article>
+            );
+          })}
         </div>
       </section>
 
