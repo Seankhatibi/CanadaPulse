@@ -8,7 +8,7 @@ export function ProvinceSelect() {
   const router = useRouter();
 
   return (
-    <label className="ml-auto hidden h-10 min-w-56 items-center gap-2 rounded-md border border-red-300/25 bg-red-500/10 px-3 text-sm text-stone-200 shadow-sm ring-1 ring-white/5 transition hover:border-red-200/50 lg:flex">
+    <label className="hidden h-10 min-w-44 items-center gap-2 rounded-md border border-red-300/25 bg-red-500/10 px-3 text-sm text-stone-200 shadow-sm ring-1 ring-white/5 transition hover:border-red-200/50 xl:flex 2xl:min-w-56">
       <Search className="size-4" aria-hidden="true" />
       <select
         defaultValue=""

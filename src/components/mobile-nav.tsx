@@ -20,7 +20,7 @@ const navItems = [
   { href: "/weekly-pulse", label: "Weekly Pulse" },
   { href: "/myth-vs-reality", label: "Myth vs Reality" },
   { href: "/timeline", label: "Timeline Replay" },
-  { href: "/data-status", label: "Data Status" },
+  { href: "/data-status", label: "Sources" },
   { href: "/housing", label: "Housing" },
   { href: "/compare", label: "Compare" },
 ];
@@ -30,7 +30,7 @@ export function MobileNav() {
   const Icon = isOpen ? X : Menu;
 
   return (
-    <div className="relative shrink-0 xl:hidden">
+    <div className="relative shrink-0">
       <button
         type="button"
         aria-label={isOpen ? "Close navigation" : "Open navigation"}
@@ -43,7 +43,7 @@ export function MobileNav() {
       </button>
 
       {isOpen ? (
-        <div className="absolute right-0 top-12 z-50 max-h-[calc(100vh-5rem)] w-[min(17rem,calc(100vw-1.5rem))] overflow-y-auto rounded-lg border border-black/10 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-stone-950">
+        <div className="fixed right-3 top-[4.25rem] z-50 max-h-[calc(100vh-5rem)] w-[min(17rem,calc(100vw-1.5rem))] overflow-y-auto rounded-lg border border-black/10 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-stone-950">
           {navItems.map((item) => (
             <Link
               key={item.href}

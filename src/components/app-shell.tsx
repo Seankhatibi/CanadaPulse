@@ -7,14 +7,9 @@ import { MobileNav } from "@/components/mobile-nav";
 
 const navItems = [
   { href: "/", label: "Pulse" },
-  { href: "/housing#survive", label: "Afford" },
+  { href: "/housing", label: "Housing" },
+  { href: "/population", label: "Population" },
   { href: "/tax-dollar", label: "Tax" },
-  { href: "/government", label: "Gov" },
-  { href: "/trade", label: "Trade" },
-  { href: "/energy", label: "Energy" },
-  { href: "/health", label: "Health" },
-  { href: "/youth", label: "Youth" },
-  { href: "/quality-of-life", label: "Life" },
   { href: "/weekly-pulse", label: "Weekly" },
   { href: "/compare", label: "Compare" },
 ];
@@ -36,12 +31,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
 
-          <nav className="ml-auto hidden min-w-0 max-w-[calc(100vw-31rem)] items-center gap-0.5 overflow-x-auto xl:flex [scrollbar-width:none]">
+          <nav className="ml-auto hidden min-w-0 items-center gap-0.5 md:flex">
             {navItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="whitespace-nowrap rounded-md px-2.5 py-2 text-sm font-medium leading-none text-stone-300 transition hover:bg-white/10 hover:text-white"
+                className="whitespace-nowrap rounded-md px-2 py-2 text-xs font-medium leading-none text-stone-300 transition hover:bg-white/10 hover:text-white lg:px-2.5 lg:text-sm"
               >
                 {item.label}
               </Link>
