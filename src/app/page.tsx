@@ -396,26 +396,106 @@ export default async function Home() {
         </section>
       ) : null}
 
-      <section className="mb-5 grid gap-5 lg:grid-cols-[0.88fr_1.12fr]">
+      {releaseHub.todayQueue.length ? (
+        <section className="mb-5">
+          <GlassPanel className="overflow-hidden">
+            <div className="border-b border-white/10 bg-black/45 p-5 sm:p-6">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap gap-2">
+                    <StatusPill>Today&apos;s official queue</StatusPill>
+                    <StatusPill>{releaseHub.generatedAt.slice(0, 10)}</StatusPill>
+                  </div>
+                  <h2 className="mt-4 text-2xl font-semibold text-white">
+                    The releases Canadians should not miss.
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-stone-400">
+                    The app ranks new public data by household impact, then sends people to a Canada Pulse
+                    breakdown before the official source.
+                  </p>
+                </div>
+                <Link
+                  href="/weekly-pulse"
+                  className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15"
+                >
+                  See all releases
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid gap-px bg-white/10 md:grid-cols-3">
+              {releaseHub.todayQueue.slice(0, 3).map((release, index) => {
+                const isPromoted = release.id === promotedRelease?.id;
+                const latestPoint = release.chartPayloads[0]?.points[0];
+
+                return (
+                  <Link
+                    key={release.id}
+                    href={release.href}
+                    className="group min-w-0 bg-black/35 p-4 transition hover:bg-white/10 sm:p-5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span
+                        className={`grid size-9 shrink-0 place-items-center rounded-md font-mono text-xs font-semibold ${
+                          isPromoted ? "bg-amber-300 text-stone-950" : "bg-white/10 text-stone-300"
+                        }`}
+                      >
+                        {index + 1}
+                      </span>
+                      <span className="rounded-md border border-white/10 bg-black/35 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">
+                        {publicStatus(release.status)}
+                      </span>
+                    </div>
+                    <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-red-200">
+                      {release.publisher}
+                    </p>
+                    <h3 className="mt-2 line-clamp-2 text-lg font-semibold leading-6 text-white">
+                      {release.title}
+                    </h3>
+                    <p className="mt-3 line-clamp-2 text-sm leading-6 text-stone-400">
+                      {release.plainEnglishSummary}
+                    </p>
+                    <div className="mt-4 flex items-end justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-mono text-lg font-semibold text-amber-100">
+                          {latestPoint?.display ?? release.releaseDate}
+                        </p>
+                        <p className="mt-1 truncate text-xs text-stone-500">{release.referencePeriod}</p>
+                      </div>
+                      <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-amber-100">
+                        Breakdown
+                        <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" aria-hidden="true" />
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </GlassPanel>
+        </section>
+      ) : null}
+
+      <section className="mb-5">
         <GlassPanel className="overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-red-500 via-amber-300 to-sky-400" />
           <div className="p-5 sm:p-6">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="flex flex-wrap gap-2">
                   <StatusPill>Housing Watch</StatusPill>
                   <StatusPill>Supply pressure</StatusPill>
                 </div>
                 <h2 className="mt-4 text-2xl font-semibold text-white">{releaseHub.housingWatch.title}</h2>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-stone-300">{releaseHub.housingWatch.plainEnglishSummary}</p>
               </div>
               <HousingIcon className="size-6 shrink-0 text-red-200" aria-hidden="true" />
             </div>
-            <p className="mt-3 text-sm leading-6 text-stone-300">{releaseHub.housingWatch.plainEnglishSummary}</p>
-            <div className="mt-5 grid gap-2">
+            <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {releaseHub.housingWatch.chartPayloads[0]?.points.slice(0, 4).map((point) => (
-                <div key={point.label} className="flex items-center justify-between gap-3 rounded-md border border-white/10 bg-black/35 px-3 py-2">
+                <div key={point.label} className="rounded-md border border-white/10 bg-black/35 px-3 py-3">
                   <p className="text-sm font-semibold text-white">{point.label}</p>
-                  <p className="font-mono text-xs font-semibold text-red-200">{point.display}</p>
+                  <p className="mt-2 font-mono text-lg font-semibold text-red-200">{point.display}</p>
                 </div>
               ))}
             </div>
@@ -428,67 +508,6 @@ export default async function Home() {
             </Link>
           </div>
         </GlassPanel>
-
-        {releaseHub.todayQueue.length ? (
-          <GlassPanel className="overflow-hidden">
-            <div className="grid gap-px bg-white/10 lg:grid-cols-[0.7fr_1.3fr]">
-              <div className="bg-black/45 p-5 sm:p-6">
-                <div className="flex flex-wrap gap-2">
-                  <StatusPill>Latest monitored releases</StatusPill>
-                  <StatusPill>{releaseHub.generatedAt.slice(0, 10)}</StatusPill>
-                </div>
-                <h2 className="mt-4 text-2xl font-semibold text-white">
-                  The releases Canadians should not miss.
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-stone-400">
-                  Canada Pulse ranks official releases by household impact, then translates them into fast,
-                  readable briefings.
-                </p>
-              </div>
-
-              <div className="bg-black/35 p-5 sm:p-6">
-                <div className="grid gap-3">
-                  {releaseHub.todayQueue.slice(0, 7).map((release, index) => {
-                    const isPromoted = release.id === promotedRelease?.id;
-
-                    return (
-                      <Link
-                        key={release.id}
-                        href={release.href}
-                        className="group grid gap-3 rounded-md border border-white/10 bg-black/35 p-3 transition hover:border-amber-300/40 hover:bg-white/10 sm:grid-cols-[auto_1fr_auto] sm:items-center"
-                      >
-                        <span
-                          className={`grid size-9 shrink-0 place-items-center rounded-md font-mono text-xs font-semibold ${
-                            isPromoted ? "bg-amber-300 text-stone-950" : "bg-white/10 text-stone-300"
-                          }`}
-                        >
-                          {index + 1}
-                        </span>
-                        <span>
-                          <span className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold text-white">{release.title}</span>
-                            {isPromoted ? (
-                              <span className="rounded-md bg-amber-300/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-100">
-                                top story
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="mt-1 line-clamp-2 block text-xs leading-5 text-stone-400">
-                            {release.plainEnglishSummary}
-                          </span>
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-100">
-                          Breakdown
-                          <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" aria-hidden="true" />
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </GlassPanel>
-        ) : null}
       </section>
 
       {releaseHub.provinceImpact.length ? (
