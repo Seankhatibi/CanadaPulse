@@ -2,6 +2,7 @@ import { AppShell } from "@/components/app-shell";
 import { DebateBoard } from "@/components/homepage/debate-board";
 import { HeroPulsePanel } from "@/components/homepage/hero-pulse-panel";
 import { LeadStoryCard } from "@/components/homepage/lead-story-card";
+import { MoneyRealityCheck } from "@/components/homepage/money-reality-check";
 import { ProvinceRankingPanel } from "@/components/homepage/province-ranking-panel";
 import { WeeklyPulsePreview } from "@/components/homepage/weekly-pulse-preview";
 import { gasWizardFallbackPulse, getGasWizardPulse } from "@/lib/gaswizard";
@@ -25,10 +26,11 @@ export default async function Home() {
   });
 
   return (
-    <AppShell>
+    <AppShell variant="light">
       <HeroPulsePanel hero={feed.hero} />
       <LeadStoryCard story={feed.leadStory} />
       <DebateBoard items={feed.debateItems} />
+      <MoneyRealityCheck />
       <ProvinceRankingPanel ranking={feed.provinceRanking} />
       <WeeklyPulsePreview weeklySummary={weeklySummary} shareCards={shareCards} releases={feed.releases} />
     </AppShell>

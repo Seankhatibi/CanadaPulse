@@ -14,18 +14,32 @@ const navItems = [
   { href: "/compare", label: "Compare" },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  variant = "dark",
+}: {
+  children: React.ReactNode;
+  variant?: "dark" | "light";
+}) {
+  const isLight = variant === "light";
+
   return (
-    <div className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.24),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.12),transparent_30%),linear-gradient(135deg,#030303_0%,#090b0d_44%,#130807_100%)] text-stone-50">
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-black/82 backdrop-blur-xl">
+    <div
+      className={
+        isLight
+          ? "min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top_left,rgba(215,25,32,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.10),transparent_28%),linear-gradient(135deg,#fbf7ef_0%,#f6efe3_52%,#eef6f6_100%)] text-stone-950"
+          : "min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.24),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.12),transparent_30%),linear-gradient(135deg,#030303_0%,#090b0d_44%,#130807_100%)] text-stone-50"
+      }
+    >
+      <header className={`sticky top-0 z-30 border-b backdrop-blur-xl ${isLight ? "border-stone-200/80 bg-[#fbf7ef]/88" : "border-white/10 bg-black/82"}`}>
         <div className="mx-auto flex min-h-16 w-full max-w-7xl items-center gap-2 px-3 py-2 sm:gap-3 sm:px-6">
           <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3" aria-label="Canada Pulse home">
             <span className="grid size-9 shrink-0 place-items-center rounded-md bg-red-600 text-white shadow-sm sm:size-10">
               <Crown className="size-5" aria-hidden="true" />
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold tracking-normal sm:text-base">Canada Pulse</span>
-              <span className="hidden text-xs text-stone-600 dark:text-stone-400 2xl:block">
+              <span className={`block truncate text-sm font-semibold tracking-normal sm:text-base ${isLight ? "text-stone-950" : ""}`}>Canada Pulse</span>
+              <span className={`hidden text-xs 2xl:block ${isLight ? "text-stone-500" : "text-stone-600 dark:text-stone-400"}`}>
                 The dashboard explaining modern Canada
               </span>
             </span>
@@ -36,7 +50,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className="whitespace-nowrap rounded-md px-2 py-2 text-xs font-medium leading-none text-stone-300 transition hover:bg-white/10 hover:text-white lg:px-2.5 lg:text-sm"
+                className={`whitespace-nowrap rounded-md px-2 py-2 text-xs font-medium leading-none transition lg:px-2.5 lg:text-sm ${
+                  isLight ? "text-stone-700 hover:bg-stone-950/5 hover:text-stone-950" : "text-stone-300 hover:bg-white/10 hover:text-white"
+                }`}
               >
                 {item.label}
               </Link>
@@ -53,7 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <footer className="mx-auto flex w-full max-w-7xl flex-col gap-3 overflow-x-clip px-3 pb-8 text-xs text-stone-500 sm:px-6 md:flex-row md:items-center md:justify-between">
+      <footer className={`mx-auto flex w-full max-w-7xl flex-col gap-3 overflow-x-clip px-3 pb-8 text-xs sm:px-6 md:flex-row md:items-center md:justify-between ${isLight ? "text-stone-600" : "text-stone-500"}`}>
         <span>Canada Pulse turns Canadian public data into plain-English briefings on the economy, housing, health and affordability.</span>
         <span className="font-mono">Official sources | Plain English | Province comparisons</span>
       </footer>

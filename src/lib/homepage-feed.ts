@@ -8,6 +8,7 @@ export type HomepageVisualPoint = {
   display: string;
   note?: string;
   direction?: "up" | "down" | "neutral";
+  meaning?: "good" | "bad" | "mixed";
 };
 
 export type HomepageTrustStatus = "live" | "source-linked" | "fallback";
@@ -29,6 +30,8 @@ export type HomepageFeedItem = {
   trustStatus: HomepageTrustStatus;
   priority: number;
   tone: "red" | "amber" | "blue" | "green" | "white" | "violet" | "cyan";
+  whyItMatters?: string;
+  severity?: number;
 };
 
 export type HomepageFeed = {
@@ -60,6 +63,17 @@ function releaseStatusToTrust(status: NormalizedRelease["status"]): HomepageTrus
   return "fallback";
 }
 
+function pointMeaning(label: string, direction?: "up" | "down" | "neutral") {
+  const lower = label.toLowerCase();
+  const badWhenRising = /inflation|rent|unemployment|burden|debt|stress|pressure|rate|yield|cost|tax|gap|asylum|permit|mortgage/i.test(lower);
+  const goodWhenRising = /wage|employment|starts|completions|income|saving|productivity|exports|investment|access|score/i.test(lower);
+
+  if (!direction || direction === "neutral") return "mixed" as const;
+  if (badWhenRising) return direction === "up" ? "bad" as const : "good" as const;
+  if (goodWhenRising) return direction === "up" ? "good" as const : "bad" as const;
+  return direction === "down" ? "bad" as const : "mixed" as const;
+}
+
 function usableReleaseChart(release: NormalizedRelease): ReleaseChartPayload | null {
   return release.chartPayloads.find((chart) => chart.points.length >= 2) ?? null;
 }
@@ -67,9 +81,12 @@ function usableReleaseChart(release: NormalizedRelease): ReleaseChartPayload | n
 function isNormalPersonRelease(release: NormalizedRelease) {
   const chart = usableReleaseChart(release);
   const title = release.title.toLowerCase();
+  const hasGenericExtractionLabel = chart?.points.some((point) => /main percentage signal|watch signal|source stack/i.test(point.label));
 
   if (release.status !== "live" || !chart) return false;
   if (title.includes("source stack") || title.includes("open data watch")) return false;
+  if (release.source === "bank-of-canada" && release.releaseType !== "valet-rate-observation") return false;
+  if (hasGenericExtractionLabel) return false;
 
   const hasConfusingZeroHook =
     release.affectedAreas.includes("housing") &&
@@ -87,6 +104,7 @@ function releaseToStory(release: NormalizedRelease): HomepageFeedItem {
       display: point.display,
       note: point.plainEnglish,
       direction: point.direction,
+      meaning: pointMeaning(point.label, point.direction),
     })) ?? [];
   const metricPoint = points[0];
   const area = release.affectedAreas[0] ?? "economy";
@@ -106,6 +124,7 @@ function releaseToStory(release: NormalizedRelease): HomepageFeedItem {
       display: province.value,
       note: province.note,
       direction: "neutral",
+      meaning: "mixed",
     })),
     source: release.publisher,
     period: release.referencePeriod,
@@ -113,6 +132,8 @@ function releaseToStory(release: NormalizedRelease): HomepageFeedItem {
     shareText: release.socialSummary,
     trustStatus: releaseStatusToTrust(release.status),
     priority: release.importanceScore,
+    whyItMatters: release.headlineFacts[0] ?? release.plainEnglishSummary,
+    severity: Math.max(release.importanceScore, release.youthImpactScore, release.housingImpactScore),
     tone: release.affectedAreas.includes("housing")
       ? "red"
       : release.affectedAreas.includes("rates") || release.affectedAreas.includes("fiscal")
@@ -140,6 +161,7 @@ function issueToStory(issue: Issue, overrides: Partial<HomepageFeedItem> = {}): 
       display: component.value,
       note: component.note,
       direction: component.numeric < 0 ? "down" : "up",
+      meaning: pointMeaning(component.label, component.numeric < 0 ? "down" : "up"),
     })),
     provincePoints: issue.provinceValues.slice(0, 7).map((province) => ({
       label: province.abbr,
@@ -147,6 +169,7 @@ function issueToStory(issue: Issue, overrides: Partial<HomepageFeedItem> = {}): 
       display: province.value,
       note: province.province,
       direction: province.numeric < 0 ? "down" : "up",
+      meaning: pointMeaning(issue.title, province.numeric < 0 ? "down" : "up"),
     })),
     source: issue.source,
     period: "latest available",
@@ -155,6 +178,8 @@ function issueToStory(issue: Issue, overrides: Partial<HomepageFeedItem> = {}): 
     trustStatus: issue.source.toLowerCase().includes("model") || issue.source.toLowerCase().includes("ready") ? "fallback" : "source-linked",
     priority: 70,
     tone: "red",
+    whyItMatters: issue.movement,
+    severity: Math.min(100, Math.max(50, Number(issue.nationalValue.replace(/[^0-9.]/g, "")) * 10 || 68)),
     ...overrides,
   };
 }
@@ -182,8 +207,8 @@ function trackerStory(label: string, overrides: Partial<HomepageFeedItem>): Home
     metricLabel: tracker.label,
     visualType: "meter",
     visualPoints: [
-      { label: tracker.label, value: 72, display: tracker.value, note: tracker.change, direction: "up" },
-      { label: tracker.cadence, value: 44, display: tracker.source, note: "source watch", direction: "neutral" },
+      { label: tracker.label, value: 72, display: tracker.value, note: tracker.change, direction: "up", meaning: pointMeaning(tracker.label, "up") },
+      { label: tracker.cadence, value: 44, display: tracker.source, note: "source watch", direction: "neutral", meaning: "mixed" },
     ],
     provincePoints: [],
     source: tracker.source,
@@ -193,12 +218,14 @@ function trackerStory(label: string, overrides: Partial<HomepageFeedItem>): Home
     trustStatus: "source-linked",
     priority: 60,
     tone: "amber",
+    whyItMatters: tracker.question,
+    severity: 72,
     ...overrides,
   };
 }
 
 function buildDebateItems(releaseHub: ReleaseHubPayload, gasMetric?: string, gasNote?: string) {
-  const bankRelease = releaseHub.todayQueue.find((release) => release.source === "bank-of-canada");
+  const bankRelease = releaseHub.todayQueue.find((release) => release.source === "bank-of-canada" && release.releaseType === "valet-rate-observation");
   const bankStory = bankRelease ? releaseToStory(bankRelease) : trackerStory("Mortgage stress", {});
 
   return [
@@ -325,6 +352,7 @@ export function buildHomepageFeed({
         display: province.value,
         note: province.note,
         direction: "up",
+        meaning: "bad",
       })),
     },
     releases,
