@@ -16,7 +16,7 @@ const navItems = [
 
 export function AppShell({
   children,
-  variant = "dark",
+  variant = "light",
 }: {
   children: React.ReactNode;
   variant?: "dark" | "light";
@@ -27,7 +27,7 @@ export function AppShell({
     <div
       className={
         isLight
-          ? "min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top_left,rgba(215,25,32,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.10),transparent_28%),linear-gradient(135deg,#fbf7ef_0%,#f6efe3_52%,#eef6f6_100%)] text-stone-950"
+          ? "canada-light-shell min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top_left,rgba(215,25,32,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.10),transparent_28%),linear-gradient(135deg,#fbf7ef_0%,#f6efe3_52%,#eef6f6_100%)] text-stone-950"
           : "min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top_left,rgba(220,38,38,0.24),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.12),transparent_30%),linear-gradient(135deg,#030303_0%,#090b0d_44%,#130807_100%)] text-stone-50"
       }
     >
@@ -91,10 +91,10 @@ export function SectionHeader({
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-300">
         {eyebrow}
       </p>
-      <h1 className="max-w-4xl text-3xl font-semibold tracking-normal text-white sm:text-5xl">
+      <h1 className="max-w-4xl text-3xl font-semibold tracking-normal text-stone-950 dark:text-white sm:text-5xl">
         {title}
       </h1>
-      <p className="max-w-3xl text-base leading-7 text-stone-300">
+      <p className="max-w-3xl text-base leading-7 text-stone-600 dark:text-stone-300">
         {body}
       </p>
     </div>
@@ -110,7 +110,7 @@ export function GlassPanel({
 }) {
   return (
     <section
-      className={`min-w-0 rounded-lg border border-white/10 bg-white/[0.07] shadow-sm backdrop-blur ${className}`}
+      className={`cp-panel min-w-0 rounded-lg border border-stone-200 bg-white/78 shadow-sm shadow-stone-300/30 backdrop-blur dark:border-white/10 dark:bg-white/[0.07] dark:shadow-sm ${className}`}
     >
       {children}
     </section>
@@ -149,7 +149,7 @@ export function ProvinceMiniMap() {
 
 export function StatusPill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center rounded-md border border-white/10 bg-white/10 px-2.5 py-1 text-xs font-medium text-stone-300">
+    <span className="inline-flex items-center rounded-md border border-stone-200 bg-white/75 px-2.5 py-1 text-xs font-medium text-stone-700 dark:border-white/10 dark:bg-white/10 dark:text-stone-300">
       {children}
     </span>
   );

@@ -88,3 +88,41 @@ input {
   background: #d63f2f;
   color: #fffaf2;
 }
+
+.canada-light-shell main .cp-panel {
+  color: #151312;
+}
+
+.canada-light-shell main .cp-panel :is(.text-white, .text-stone-50, .text-stone-100, .text-stone-200) {
+  color: #151312;
+}
+
+.canada-light-shell main .cp-panel :is(.text-stone-300, .text-stone-400, .text-stone-500) {
+  color: #625b52;
+}
+
+.canada-light-shell main .cp-panel :is(.border-white\/10, .border-white\/15, .border-white\/20) {
+  border-color: rgba(120, 113, 108, 0.22);
+}
+
+.canada-light-shell main .cp-panel :is(.bg-black\/20, .bg-black\/30, .bg-black\/35, .bg-black\/40, .bg-black\/45, .bg-black\/70, .bg-black\/72, .bg-stone-950) {
+  background-color: rgba(255, 255, 255, 0.72);
+}
+
+.canada-light-shell main .cp-panel :is(.bg-white\/5, .bg-white\/10, .bg-white\/15) {
+  background-color: rgba(250, 247, 239, 0.86);
+}
+
+.canada-light-shell main .cp-panel :is(.bg-red-600, .bg-red-700, .bg-sky-600, .bg-fuchsia-600, .bg-teal-600, .bg-emerald-600, .bg-stone-950) :is(.text-white, .text-stone-50, .text-stone-100, .text-stone-200),
+.canada-light-shell main .cp-panel :is(.bg-red-600, .bg-red-700, .bg-sky-600, .bg-fuchsia-600, .bg-teal-600, .bg-emerald-600).text-white,
+.canada-light-shell main :is(a.bg-red-600, button.bg-red-600, .bg-red-600) {
+  color: #fffaf2;
+}
+
+.canada-light-shell main .cp-panel :is(.bg-red-600, .bg-red-700, .bg-sky-600, .bg-fuchsia-600, .bg-teal-600, .bg-emerald-600) {
+  color: #fffaf2;
+}
+
+.canada-light-shell main .cp-panel :is(.bg-red-600, .bg-red-700, .bg-sky-600, .bg-fuchsia-600, .bg-teal-600, .bg-emerald-600) * {
+  color: inherit;
+}
