@@ -89,7 +89,7 @@ export async function fetchStatCanDailyEntries(): Promise<StatCanDailyEntry[]> {
     dailyFeeds.map(async (feed) => {
       const response = await fetch(feed.url, {
         headers: { "User-Agent": "Canada Pulse release monitor" },
-        next: { revalidate: 60 * 60 * 6 },
+        cache: "no-store",
         signal: AbortSignal.timeout(6000),
       });
 
@@ -136,7 +136,7 @@ export async function fetchStatCanDailyEntryFromUrl(url: string): Promise<StatCa
 
   const response = await fetch(href, {
     headers: { "User-Agent": "Canada Pulse release monitor" },
-    next: { revalidate: 60 * 60 },
+    cache: "no-store",
     signal: AbortSignal.timeout(6000),
   });
 
@@ -230,6 +230,14 @@ export function rankDailyEntries(entries: StatCanDailyEntry[]) {
     "wages",
     "housing",
     "trade",
+    "retail trade",
+    "retail sales",
+    "retail",
+    "wholesale trade",
+    "consumer spending",
+    "consumer demand",
+    "sales",
+    "manufacturing sales",
   ];
 
   return [...entries]
@@ -304,6 +312,22 @@ function getReleaseTheme(entry: StatCanDailyEntry) {
         "Did full-time work grow or shrink?",
         "What happened to youth unemployment?",
         "Are wages rising faster than prices?",
+      ],
+    };
+  }
+
+  if (text.includes("retail trade") || text.includes("retail sales") || text.includes("retail")) {
+    return {
+      subtitle: "Retail sales show whether households are still spending or pulling back.",
+      whyItMatters: [
+        "Retail sales are a direct read on consumer demand, affordability pressure, and economic momentum.",
+        "Strong sales can signal resilient households, but can also complicate the inflation and rates story.",
+        "The province and subsector breakdown shows whether spending strength is broad or concentrated.",
+      ],
+      whatToWatch: [
+        "Did core retail sales move differently from headline retail sales?",
+        "Which provinces and store categories drove the change?",
+        "Does the advance estimate point to stronger or weaker next-month demand?",
       ],
     };
   }

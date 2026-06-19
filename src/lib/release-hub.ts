@@ -13,6 +13,7 @@ import {
 } from "@/lib/statcan-daily";
 
 export type ReleaseArea =
+  | "economy"
   | "housing"
   | "rates"
   | "inflation"
@@ -101,6 +102,7 @@ function classifyStatCanAreas(entry: StatCanDailyEntry): ReleaseArea[] {
   const areas = new Set<ReleaseArea>();
 
   if (/housing|rent|construction|building/.test(text)) areas.add("housing");
+  if (/retail|wholesale|consumer demand|consumer spending|sales|manufacturing/.test(text)) areas.add("economy");
   if (/price|inflation|consumer price|cpi/.test(text)) areas.add("inflation");
   if (/labour|employment|unemployment|wage|productivity/.test(text)) areas.add("labour");
   if (/population|immigration|temporary resident|student|refugee/.test(text)) areas.add("population");
@@ -114,6 +116,7 @@ function scoreRelease(areas: ReleaseArea[], text: string) {
   const lower = text.toLowerCase();
   let score = 20;
   if (areas.includes("housing")) score += 35;
+  if (areas.includes("economy")) score += 28;
   if (areas.includes("rates")) score += 32;
   if (areas.includes("inflation")) score += 30;
   if (areas.includes("immigration")) score += 28;
@@ -121,6 +124,7 @@ function scoreRelease(areas: ReleaseArea[], text: string) {
   if (areas.includes("labour")) score += 20;
   if (areas.includes("energy")) score += 18;
   if (/gdp|productivity|mortgage|rent|starts|deficit|debt|temporary resident/.test(lower)) score += 14;
+  if (/retail trade|retail sales|wholesale trade|consumer spending|consumer demand|manufacturing sales/.test(lower)) score += 28;
   if (/labour force survey/.test(lower)) score += 34;
   return Math.min(score, 100);
 }

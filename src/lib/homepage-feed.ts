@@ -66,7 +66,7 @@ function releaseStatusToTrust(status: NormalizedRelease["status"]): HomepageTrus
 function pointMeaning(label: string, direction?: "up" | "down" | "neutral") {
   const lower = label.toLowerCase();
   const badWhenRising = /inflation|rent|unemployment|burden|debt|stress|pressure|rate|yield|cost|tax|gap|asylum|permit|mortgage/i.test(lower);
-  const goodWhenRising = /wage|employment|starts|completions|income|saving|productivity|exports|investment|access|score/i.test(lower);
+  const goodWhenRising = /wage|employment|starts|completions|income|saving|productivity|exports|investment|access|score|sales|retail/i.test(lower);
 
   if (!direction || direction === "neutral") return "mixed" as const;
   if (badWhenRising) return direction === "up" ? "bad" as const : "good" as const;
@@ -142,7 +142,9 @@ function releaseToStory(release: NormalizedRelease): HomepageFeedItem {
           ? "cyan"
           : release.affectedAreas.includes("labour")
             ? "violet"
-            : "blue",
+            : release.affectedAreas.includes("economy")
+              ? "green"
+              : "blue",
   };
 }
 
