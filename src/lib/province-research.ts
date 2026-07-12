@@ -35,7 +35,9 @@ export async function getProvinceResearchBrief(slug: string, area: ProvinceResea
     const row = release.provinceBreakdown.find((item) => item.province === province.name);
     return row ? [{ ...row, release }] : [];
   });
-  const lead = releases.find((release) => release.status === "live" && release.chartPayloads.some((chart) => chart.points.length)) ?? null;
+  const lead = releases.find((release) => ['statcan', 'cmhc'].includes(release.source) && release.status === "live" && release.chartPayloads.some((chart) => chart.points.length))
+    ?? releases.find((release) => release.status === "live" && release.chartPayloads.some((chart) => chart.points.length))
+    ?? null;
 
   return {
     province,

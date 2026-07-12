@@ -83,6 +83,16 @@ const areaConfig = {
   },
 } as const;
 
+const preferredLead: Record<ResearchAreaSlug, (release: NormalizedRelease) => boolean> = {
+  economy: (release) => /labour force survey/i.test(release.title),
+  housing: (release) => release.source === "cmhc",
+  population: (release) => release.source === "open-government-ircc",
+  youth: (release) => /labour force survey/i.test(release.title),
+  government: (release) => /financial stability report/i.test(release.title),
+  trade: (release) => /business outlook survey/i.test(release.title),
+  energy: (release) => release.source === "cer-nrcan",
+};
+
 function releaseTimestamp(release: NormalizedRelease) {
   const value = release.releaseDate.length === 7 ? `${release.releaseDate}-01T12:00:00Z` : `${release.releaseDate.slice(0, 10)}T12:00:00Z`;
   const timestamp = Date.parse(value);
@@ -98,7 +108,8 @@ export async function getResearchAreaBrief(slug: ResearchAreaSlug) {
       const statusDifference = Number(b.status === "live") - Number(a.status === "live");
       return statusDifference || releaseTimestamp(b) - releaseTimestamp(a) || b.importanceScore - a.importanceScore;
     });
-  const lead = releases.find((release) => release.status === "live" && release.chartPayloads.some((chart) => chart.points.length)) ?? releases[0] ?? null;
+  const hasValues = (release: NormalizedRelease) => release.status === "live" && release.chartPayloads.some((chart) => chart.points.length);
+  const lead = releases.find((release) => hasValues(release) && preferredLead[slug](release)) ?? releases.find(hasValues) ?? releases[0] ?? null;
 
   return {
     ...config,
