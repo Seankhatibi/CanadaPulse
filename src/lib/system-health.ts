@@ -14,7 +14,7 @@ export async function getSystemHealth() {
   const releases = hub.todayQueue
     .filter((release) => release.status === "live" && validDate(release.releaseDate))
     .sort((a, b) => validDate(b.releaseDate) - validDate(a.releaseDate));
-  const latestRelease = hub.promotedRelease.status === "live" ? hub.promotedRelease : releases[0] ?? null;
+  const latestRelease = hub.promotedRelease?.status === "live" ? hub.promotedRelease : releases[0] ?? null;
   const warnings: string[] = [];
 
   if (!database) warnings.push("Durable database history is not configured; official sources are fetched live on request.");
