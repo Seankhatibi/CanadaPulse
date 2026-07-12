@@ -20,6 +20,7 @@ export default async function DataStatusPage() {
           <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-600">
             Canada Pulse shows where each release came from, when it was published, how many structured metrics were loaded, and whether durable history is active.
           </p>
+          <Link href="/methodology" className="mt-5 inline-flex items-center gap-2 text-sm font-black text-red-700 hover:text-red-900">Read the evidence methodology <ArrowRight className="size-4" aria-hidden="true" /></Link>
         </section>
 
         <section className="grid gap-3 md:grid-cols-3">

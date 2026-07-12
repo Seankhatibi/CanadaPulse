@@ -4,7 +4,6 @@ import { AppShell, GlassPanel, StatusPill } from "@/components/app-shell";
 import { ShareStatButton } from "@/components/share-stat-button";
 import { getWeeklyPulseSummary } from "@/lib/economic-releases";
 import { getMultiSourceReleaseHub } from "@/lib/release-hub";
-import { shareCards } from "@/lib/viral-data";
 
 export const dynamic = "force-dynamic";
 
@@ -221,53 +220,6 @@ export default async function WeeklyPulsePage() {
                   Open Bank of Canada breakdown
                   <ArrowRight className="size-3.5 transition group-hover:translate-x-0.5" aria-hidden="true" />
                 </span>
-              </Link>
-            ))}
-          </div>
-        </GlassPanel>
-      </section>
-
-      <section className="mt-5 grid gap-5 lg:grid-cols-[0.88fr_1.12fr]">
-        <GlassPanel className="p-5 sm:p-6">
-          <h2 className="text-xl font-semibold text-white">Plain-English explanation layer</h2>
-          <p className="mt-3 text-sm leading-6 text-stone-400">
-            Canada Pulse separates facts from interpretation: first the official numbers are checked, then the
-            summary explains what changed in everyday language.
-          </p>
-          <div className="mt-4 grid gap-2">
-            {[
-              "Confirm the release date, source and reference period",
-              "Identify what moved up, down or stayed flat",
-              "Turn the facts into charts and province comparisons",
-              "Explain the result in plain English",
-            ].map((step, index) => (
-              <div key={step} className="flex gap-3 rounded-md border border-white/10 bg-black/35 p-3">
-                <span className="grid size-7 shrink-0 place-items-center rounded-md bg-red-600 font-mono text-xs font-semibold text-white">
-                  {index + 1}
-                </span>
-                <p className="text-sm text-stone-300">{step}</p>
-              </div>
-            ))}
-          </div>
-        </GlassPanel>
-
-        <GlassPanel className="p-5 sm:p-6">
-          <h2 className="text-xl font-semibold text-white">Share cards ready for launch</h2>
-          <p className="mt-3 text-sm leading-6 text-stone-400">
-            Share cards turn complicated data into one clean screenshot: a number, a claim and a next click.
-          </p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            {shareCards.slice(0, 4).map((card) => (
-              <Link
-                key={card.id}
-                href={`/share/${card.id}`}
-                className={`group overflow-hidden rounded-md border border-white/10 bg-gradient-to-br ${card.tone} p-px transition hover:border-white/40`}
-              >
-                <div className="h-full rounded-[7px] bg-black/72 p-4">
-                  <p className="text-sm font-semibold text-white">{card.title}</p>
-                  <p className="mt-3 font-mono text-3xl font-semibold text-white">{card.value}</p>
-                  <p className="mt-2 text-xs uppercase tracking-[0.14em] text-white/60">{card.subtitle}</p>
-                </div>
               </Link>
             ))}
           </div>

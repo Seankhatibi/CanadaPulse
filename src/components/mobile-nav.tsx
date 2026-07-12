@@ -11,7 +11,7 @@ const navItems = [
   { href: "/housing", label: "Housing and affordability" },
   { href: "/population", label: "Population" },
   { href: "/compare", label: "Compare provinces" },
-  { href: "/tax-dollar", label: "Tax receipt" },
+  { href: "/tax-dollar", label: "Tax estimator (beta)" },
   { href: "/weekly-pulse", label: "Weekly Pulse" },
   { href: "/data-status", label: "Sources and freshness" },
   { href: "/youth", label: "Youth Future" },
@@ -19,9 +19,6 @@ const navItems = [
   { href: "/trade", label: "Trade" },
   { href: "/energy", label: "Energy" },
   { href: "/health", label: "Health" },
-  { href: "/quality-of-life", label: "Quality of Life" },
-  { href: "/myth-vs-reality", label: "Myth vs Reality" },
-  { href: "/timeline", label: "Timeline Replay" },
 ];
 
 export function MobileNav() {

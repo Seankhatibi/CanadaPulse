@@ -1,4 +1,5 @@
 import { persistMultiSourceReleaseEvents, persistStatCanDailyReleaseEvents } from "@/lib/etl/importers";
+import { fetchCihiHealthSnapshot } from "@/lib/cihi-health";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -9,8 +10,11 @@ export async function GET(request: Request) {
   }
 
   const startedAt = new Date().toISOString();
-  const statcanDaily = await persistStatCanDailyReleaseEvents();
-  const multiSourceReleaseHub = await persistMultiSourceReleaseEvents();
+  const [statcanDaily, multiSourceReleaseHub, cihi] = await Promise.all([
+    persistStatCanDailyReleaseEvents(),
+    persistMultiSourceReleaseEvents(),
+    fetchCihiHealthSnapshot(),
+  ]);
 
   return Response.json({
     ok: true,
@@ -23,7 +27,7 @@ export async function GET(request: Request) {
       cmhc: "live housing starts table import connected; rental/completions/mortgage datasets remain next detailed imports",
       bankOfCanada: "live Valet observations plus Bank of Canada report monitor connected",
       openGovernmentIrcc: "live CKAN metadata monitor connected; detailed PR/TFW/student/refugee resource import next",
-      cihi: "source-linked; XLSX import implementation pending",
+      cihi: { status: cihi.status, period: cihi.period, metrics: cihi.metrics.length, sourceUrl: cihi.sourceUrl },
       energy: "CER/NRCan source linked in Release Hub",
       pbo: "PBO reports source linked in Release Hub",
     },

@@ -1,27 +1,18 @@
-import { notFound } from "next/navigation";
-import { AppShell } from "@/components/app-shell";
-import { IssueDetail } from "@/components/issues/issue-detail";
-import { getIssue, issues } from "@/lib/issue-data";
+import { notFound, redirect } from "next/navigation";
 
-export function generateStaticParams() {
-  return issues.map((issue) => ({ slug: issue.slug }));
-}
+const destinations: Record<string, string> = {
+  "food-inflation": "/canada",
+  "rent-burden": "/housing",
+  "population-vs-housing": "/population",
+  "tax-receipt": "/tax-dollar",
+  "equalization-epp": "/government",
+  "youth-jobs": "/youth",
+  productivity: "/canada",
+};
 
-export default async function IssuePage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function IssuePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const issue = getIssue(slug);
-
-  if (!issue) {
-    notFound();
-  }
-
-  return (
-    <AppShell>
-      <IssueDetail issue={issue} />
-    </AppShell>
-  );
+  const destination = destinations[slug];
+  if (!destination) notFound();
+  redirect(destination);
 }

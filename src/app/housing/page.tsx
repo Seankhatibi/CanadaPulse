@@ -1,10 +1,8 @@
-import { AppShell } from "@/components/app-shell";
-import { HousingDashboard } from "@/components/housing-dashboard";
+import { ResearchAreaPage } from "@/components/research-area-page";
+import { getResearchAreaBrief } from "@/lib/research-area";
 
-export default function HousingPage() {
-  return (
-    <AppShell>
-      <HousingDashboard />
-    </AppShell>
-  );
+export const dynamic = "force-dynamic";
+
+export default async function HousingPage() {
+  return <ResearchAreaPage brief={await getResearchAreaBrief("housing")} />;
 }

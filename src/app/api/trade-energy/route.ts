@@ -1,23 +1,8 @@
 import { NextResponse } from "next/server";
-import {
-  nationalExportSectors,
-  nationalTradePartners,
-  provinceTradeEnergyProfiles,
-  tradeEnergySnapshot,
-} from "@/lib/trade-energy-data";
+import { getResearchAreaApiPayload } from "@/lib/research-area-api";
 
+export const dynamic = "force-dynamic";
 export async function GET() {
-  return NextResponse.json({
-    snapshot: tradeEnergySnapshot,
-    nationalExportSectors,
-    nationalTradePartners,
-    provinces: provinceTradeEnergyProfiles,
-    sourceStatus: "source-ready-demo",
-    nextLiveFeeds: [
-      "Statistics Canada international merchandise trade",
-      "Statistics Canada interprovincial trade and provincial economic accounts",
-      "Canada Energy Regulator energy data",
-      "Natural Resources Canada electricity and fuel datasets",
-    ],
-  });
+  const [trade, energy] = await Promise.all([getResearchAreaApiPayload("trade"), getResearchAreaApiPayload("energy")]);
+  return NextResponse.json({ status: "live", generatedAt: new Date().toISOString(), trade, energy });
 }

@@ -27,9 +27,7 @@ export function DebateBoard({ items }: { items: HomepageFeedItem[] }) {
       <div className="mb-5 max-w-3xl">
         <p className="text-xs font-black uppercase tracking-[0.24em] text-red-700">The Numbers People Argue About</p>
         <h2 className="mt-2 text-2xl font-black text-stone-950 sm:text-4xl">Controversial questions, visual evidence</h2>
-        <p className="mt-3 text-sm leading-6 text-stone-600">
-          Every card needs a chart, a source line, and a plain-English reason to care.
-        </p>
+        <p className="mt-3 text-sm leading-6 text-stone-600">One question, one official release, and the evidence needed to understand it quickly.</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((item) => {

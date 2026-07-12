@@ -1,4 +1,5 @@
 import { getDbLiveDataPayload } from "@/lib/db-live-data";
+import { fetchCihiHealthSnapshot } from "@/lib/cihi-health";
 import { getMultiSourceReleaseHub } from "@/lib/release-hub";
 
 function validDate(value: string) {
@@ -7,9 +8,10 @@ function validDate(value: string) {
 }
 
 export async function getSystemHealth() {
-  const [hub, database] = await Promise.all([
+  const [hub, database, cihi] = await Promise.all([
     getMultiSourceReleaseHub(),
     getDbLiveDataPayload().catch(() => null),
+    fetchCihiHealthSnapshot(),
   ]);
   const releases = hub.todayQueue
     .filter((release) => release.status === "live" && validDate(release.releaseDate))
@@ -39,7 +41,10 @@ export async function getSystemHealth() {
           metrics: latestRelease.chartPayloads.reduce((total, chart) => total + chart.points.length, 0),
         }
       : null,
-    sourceStatuses: hub.sourceStatuses,
+    sourceStatuses: [
+      ...hub.sourceStatuses,
+      { source: "CIHI", status: cihi.status === "live" ? "live" as const : "source_linked" as const, note: `National Health Expenditure Trends ${cihi.period}; ${cihi.metrics.length} parsed values.` },
+    ],
     recentReleases: releases.slice(0, 8).map((release) => ({
       title: release.title,
       publisher: release.publisher,

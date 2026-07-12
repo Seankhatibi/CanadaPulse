@@ -1,22 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  equalizationGovernmentCards,
-  federalExpenseBreakdown,
-  federalFiscalSnapshot,
-  federalRevenueBreakdown,
-  federalTransferBreakdown,
-  governmentRefreshPlan,
-  governmentViralQuestions,
-} from "@/lib/government-data";
+import { getResearchAreaApiPayload } from "@/lib/research-area-api";
 
-export function GET() {
-  return NextResponse.json({
-    snapshot: federalFiscalSnapshot,
-    revenues: federalRevenueBreakdown,
-    expenses: federalExpenseBreakdown,
-    transfers: federalTransferBreakdown,
-    equalization: equalizationGovernmentCards,
-    viralQuestions: governmentViralQuestions,
-    refreshPlan: governmentRefreshPlan,
-  });
-}
+export const dynamic = "force-dynamic";
+export async function GET() { return NextResponse.json(await getResearchAreaApiPayload("government")); }

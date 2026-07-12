@@ -70,6 +70,17 @@ export const liveDataConnections: LiveDataConnection[] = [
     latestKnownPeriod: "Current city pages",
     implementation: "Homepage gas tracker fetches live GasWizard data with fallback.",
   },
+  {
+    slug: "cihi-national-health-expenditure",
+    label: "National Health Expenditure Trends",
+    appArea: "Health spending and system capacity",
+    publisher: "Canadian Institute for Health Information",
+    sourceUrl: "https://www.cihi.ca/en/national-health-expenditure-trends",
+    refreshCadence: "Twice-daily check; annual release",
+    status: "live-feed",
+    latestKnownPeriod: "2025 expenditure estimates",
+    implementation: "Parses CIHI's official expenditure summary into source-backed health metrics.",
+  },
 ];
 
 export function getLiveDataConnectionsByArea(area: string) {
