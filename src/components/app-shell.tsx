@@ -6,12 +6,12 @@ import { ProvinceSelect } from "@/components/province-select";
 import { MobileNav } from "@/components/mobile-nav";
 
 const navItems = [
-  { href: "/", label: "Pulse" },
+  { href: "/", label: "Latest" },
+  { href: "/canada", label: "Economy" },
   { href: "/housing", label: "Housing" },
   { href: "/population", label: "Population" },
-  { href: "/tax-dollar", label: "Tax" },
-  { href: "/weekly-pulse", label: "Weekly" },
   { href: "/compare", label: "Compare" },
+  { href: "/data-status", label: "Sources" },
 ];
 
 export function AppShell({
@@ -40,7 +40,7 @@ export function AppShell({
             <span className="min-w-0">
               <span className={`block truncate text-sm font-semibold tracking-normal sm:text-base ${isLight ? "text-stone-950" : ""}`}>Canada Pulse</span>
               <span className={`hidden text-xs 2xl:block ${isLight ? "text-stone-500" : "text-stone-600 dark:text-stone-400"}`}>
-                The dashboard explaining modern Canada
+                Canadian economic intelligence
               </span>
             </span>
           </Link>
@@ -70,8 +70,8 @@ export function AppShell({
       </main>
 
       <footer className={`mx-auto flex w-full max-w-7xl flex-col gap-3 overflow-x-clip px-3 pb-8 text-xs sm:px-6 md:flex-row md:items-center md:justify-between ${isLight ? "text-stone-600" : "text-stone-500"}`}>
-        <span>Canada Pulse turns Canadian public data into plain-English briefings on the economy, housing, health and affordability.</span>
-        <span className="font-mono">Official sources | Plain English | Province comparisons</span>
+        <span>Canada Pulse turns official Canadian data into timely research briefs, visual breakdowns and province comparisons.</span>
+        <span className="font-mono">Official sources | Structured facts | Transparent methodology</span>
       </footer>
     </div>
   );

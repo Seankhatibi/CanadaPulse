@@ -1,9 +1,9 @@
 import { AppShell } from "@/components/app-shell";
 import { DebateBoard } from "@/components/homepage/debate-board";
-import { HeroPulsePanel } from "@/components/homepage/hero-pulse-panel";
-import { LeadStoryCard } from "@/components/homepage/lead-story-card";
+import { LatestReleaseHero } from "@/components/homepage/latest-release-hero";
 import { MoneyRealityCheck } from "@/components/homepage/money-reality-check";
 import { ProvinceRankingPanel } from "@/components/homepage/province-ranking-panel";
+import { ReleaseStream } from "@/components/homepage/release-stream";
 import { WeeklyPulsePreview } from "@/components/homepage/weekly-pulse-preview";
 import { gasWizardFallbackPulse, getGasWizardPulse } from "@/lib/gaswizard";
 import { getWeeklyPulseSummary } from "@/lib/economic-releases";
@@ -27,8 +27,8 @@ export default async function Home() {
 
   return (
     <AppShell variant="light">
-      <HeroPulsePanel hero={feed.hero} />
-      <LeadStoryCard story={feed.leadStory} />
+      {releaseHub.promotedRelease ? <LatestReleaseHero release={releaseHub.promotedRelease} /> : null}
+      <ReleaseStream releases={releaseHub.todayQueue} />
       <DebateBoard items={feed.debateItems} />
       <MoneyRealityCheck />
       <ProvinceRankingPanel ranking={feed.provinceRanking} />

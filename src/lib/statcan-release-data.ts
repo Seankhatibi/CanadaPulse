@@ -10,6 +10,7 @@ export type StatCanReleaseTable = {
   latestPeriod: string;
   previousPeriod: string;
   rows: Array<{
+    group?: string;
     label: string;
     values: number[];
     latest: number | null;
@@ -205,17 +206,25 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
   const previousPeriod = periods[previousValueIndex] ?? "previous period";
   const changePeriod = changeColumnIndex >= 0 ? periods[changeColumnIndex] : `${previousPeriod} to ${latestPeriod}`;
 
+  let currentGroup: string | undefined;
   const rows = parsed
     .slice(headerRowIndex + 1)
-    .map((row) => {
+    .flatMap((row) => {
       const label = row[0]?.replace(/^"+/, "").trim();
       const values = row.slice(1, periods.length + 1).map(toNumber);
       const numericValues = values.filter((value): value is number => value !== null);
+
+      if (label && numericValues.length === 0) {
+        currentGroup = label;
+        return [];
+      }
+
       const latest = values[latestValueIndex] ?? null;
       const previous = values[previousValueIndex] ?? null;
       const sourceChange = changeColumnIndex >= 0 ? (values[changeColumnIndex] ?? null) : null;
 
-      return {
+      return [{
+        group: currentGroup,
         label,
         values: values.map((value) => value ?? Number.NaN),
         latest,
@@ -228,11 +237,12 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
               : null,
         changePeriod,
         numericCount: numericValues.length,
-      };
+      }];
     })
     .filter((row) => row.label && row.numericCount >= 2 && !row.label.toLowerCase().includes("canada"))
-    .slice(0, 12)
+    .slice(0, 300)
     .map((row) => ({
+      group: row.group,
       label: row.label,
       values: row.values,
       latest: row.latest,
@@ -271,6 +281,12 @@ function signalsFromTables(tables: StatCanReleaseTable[]): ReleaseSignal[] {
       display: formatSignalDisplay(row.label, value),
       direction: change === null || change === 0 ? "neutral" : change > 0 ? "up" : "down",
       explanation: `${row.label}: ${formatSignalDisplay(row.label, value)} in ${latestPeriod}; ${formatChangeDisplay(row.label, change)} over ${row.changePeriod}.`,
+      previous: row.previous,
+      previousDisplay: row.previous === null ? undefined : formatSignalDisplay(row.label, row.previous),
+      change,
+      changeDisplay: formatChangeDisplay(row.label, change),
+      period: latestPeriod,
+      changePeriod: row.changePeriod,
     };
   });
 }

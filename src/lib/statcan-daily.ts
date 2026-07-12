@@ -12,6 +12,12 @@ export type ReleaseSignal = {
   display: string;
   direction: "up" | "down" | "neutral";
   explanation: string;
+  previous?: number | null;
+  previousDisplay?: string;
+  change?: number | null;
+  changeDisplay?: string;
+  period?: string;
+  changePeriod?: string;
 };
 
 export type ReleaseExplainer = {
@@ -347,11 +353,24 @@ function getReleaseTheme(entry: StatCanDailyEntry) {
   };
 }
 
-function extractPercentSignals(entry: StatCanDailyEntry): ReleaseSignal[] {
+function signalLabel(sentence: string, index: number) {
+  const lower = sentence.toLowerCase();
+
+  if (/unemployment rate/.test(lower)) return "Unemployment rate";
+  if (/employment rate/.test(lower)) return "Employment rate";
+  if (/employment/.test(lower)) return "Employment";
+  if (/retail sales/.test(lower)) return index === 0 ? "Retail sales" : "Retail sales change";
+  if (/inflation|consumer price/.test(lower)) return "Inflation";
+  if (/gross domestic product|gdp/.test(lower)) return "GDP";
+  if (/productivity/.test(lower)) return "Productivity";
+  if (/wage|earnings|compensation/.test(lower)) return "Wages";
+  return index === 0 ? "Headline change" : `Signal ${index + 1}`;
+}
+
+function extractSummarySignals(entry: StatCanDailyEntry): ReleaseSignal[] {
   const text = `${entry.title}. ${entry.summary}`;
   const matches = [...text.matchAll(/([+-]?\d+(?:\.\d+)?)%/g)].slice(0, 6);
-
-  return matches.map((match, index) => {
+  const percentSignals: ReleaseSignal[] = matches.map((match, index) => {
     const value = Number(match[1]);
     const sentence =
       text
@@ -360,18 +379,37 @@ function extractPercentSignals(entry: StatCanDailyEntry): ReleaseSignal[] {
         ?.trim() || entry.summary;
 
     return {
-      label: index === 0 ? "Main move" : `Signal ${index + 1}`,
+      label: signalLabel(sentence, index),
       value,
       display: `${value > 0 ? "+" : ""}${value}%`,
       direction: value > 0 ? "up" : value < 0 ? "down" : "neutral",
       explanation: sentence,
+      change: value,
+      changeDisplay: `${value > 0 ? "+" : ""}${value}%`,
+      period: entry.published.slice(0, 10),
     };
   });
+
+  const currencyMatch = text.match(/\$([0-9]+(?:\.[0-9]+)?)\s*(billion|million)/i);
+  const currencySignal: ReleaseSignal[] = currencyMatch
+    ? [{
+        label: /retail/i.test(text) ? "Retail sales" : "Headline value",
+        value: Number(currencyMatch[1]),
+        display: `$${currencyMatch[1]}${currencyMatch[2].toLowerCase() === "billion" ? "B" : "M"}`,
+        direction: "neutral",
+        explanation: text.split(/(?<=[.!?])\s+/).find((part) => part.includes(currencyMatch[0]))?.trim() || entry.summary,
+        period: entry.published.slice(0, 10),
+      }]
+    : [];
+
+  return [...currencySignal, ...percentSignals].filter(
+    (signal, index, signals) => signals.findIndex((candidate) => candidate.label === signal.label && candidate.display === signal.display) === index,
+  );
 }
 
 export function buildReleaseExplainer(entry: StatCanDailyEntry): ReleaseExplainer {
   const theme = getReleaseTheme(entry);
-  const signals = extractPercentSignals(entry);
+  const signals = extractSummarySignals(entry);
 
   return {
     title: entry.title,

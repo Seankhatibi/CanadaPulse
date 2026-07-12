@@ -4,11 +4,11 @@ import { fetchStatCanTableCsv } from "@/lib/statcan-table-download";
 export type CmhcProvinceStart = {
   province: string;
   starts: number;
-  completions: number;
+  completions: number | null;
   previousStarts: number | null;
   changePct: number | null;
   sharePct: number;
-  startsCompletionsGap: number;
+  startsCompletionsGap: number | null;
 };
 
 export type CmhcHousingConstructionData = {
@@ -19,8 +19,8 @@ export type CmhcHousingConstructionData = {
   latestPeriod: string;
   previousPeriod: string | null;
   canadaStarts: number;
-  canadaCompletions: number;
-  canadaStartsCompletionsGap: number;
+  canadaCompletions: number | null;
+  canadaStartsCompletionsGap: number | null;
   previousCanadaStarts: number | null;
   canadaChangePct: number | null;
   unitMix: Array<{ label: string; value: number; sharePct: number }>;
@@ -107,7 +107,7 @@ export async function fetchCmhcHousingConstructionData(): Promise<CmhcHousingCon
     throw new Error("No latest Canada CMHC housing starts value found.");
   }
   const canadaStarts = canada.value;
-  const canadaCompletions = canadaCompletion?.value ?? 0;
+  const canadaCompletions = canadaCompletion?.value ?? null;
 
   const unitRows = records.filter(
     (record) =>
@@ -127,7 +127,7 @@ export async function fetchCmhcHousingConstructionData(): Promise<CmhcHousingCon
       const completion = completionsTotal.find((candidate) => candidate.period === latestPeriod && candidate.geo === record.geo);
       const value = record.value ?? 0;
       const previousValue = previous?.value ?? null;
-      const completions = completion?.value ?? 0;
+      const completions = completion?.value ?? null;
 
       return {
         province: record.geo,
@@ -136,7 +136,7 @@ export async function fetchCmhcHousingConstructionData(): Promise<CmhcHousingCon
         previousStarts: previousValue,
         changePct: pctChange(value, previousValue),
         sharePct: Number(((value / canadaStarts) * 100).toFixed(1)),
-        startsCompletionsGap: value - completions,
+        startsCompletionsGap: completions === null ? null : value - completions,
       };
     })
     .sort((a, b) => b.starts - a.starts);
@@ -150,7 +150,7 @@ export async function fetchCmhcHousingConstructionData(): Promise<CmhcHousingCon
     previousPeriod,
     canadaStarts,
     canadaCompletions,
-    canadaStartsCompletionsGap: canadaStarts - canadaCompletions,
+    canadaStartsCompletionsGap: canadaCompletions === null ? null : canadaStarts - canadaCompletions,
     previousCanadaStarts: previousCanada?.value ?? null,
     canadaChangePct: pctChange(canadaStarts, previousCanada?.value ?? null),
     unitMix: unitRows

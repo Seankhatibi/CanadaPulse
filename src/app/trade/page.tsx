@@ -155,11 +155,10 @@ export default function TradePage() {
         <GlassPanel className="p-5">
           <div className="flex items-center gap-2">
             <Factory className="size-5 text-sky-300" aria-hidden="true" />
-            <h2 className="text-lg font-semibold text-white">Backend feeds this phase unlocks</h2>
+            <h2 className="text-lg font-semibold text-white">How to read the trade engine</h2>
           </div>
           <p className="mt-2 text-sm leading-6 text-stone-400">
-            Connect Statistics Canada trade tables, customs export categories, interprovincial trade tables, and province economic accounts.
-            The front-end is ready for source-backed refreshes.
+            Compare each province by export value, its leading industry, and its rank in Canada. Open a province to see the sector mix behind the headline total.
           </p>
         </GlassPanel>
       </div>

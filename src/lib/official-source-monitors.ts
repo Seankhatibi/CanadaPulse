@@ -18,6 +18,7 @@ export type OfficialReportMonitor = {
   importanceScore: number;
   youthImpactScore: number;
   housingImpactScore: number;
+  confirmedRelease: boolean;
 };
 
 type MonitorConfig = {
@@ -132,7 +133,7 @@ function findLikelyLatestLink(html: string, baseUrl: string) {
   return scored[0] ?? null;
 }
 
-function extractDate(html: string, fallback = new Date()) {
+function extractDate(html: string) {
   const metaDate =
     readMeta(html, "dcterms.date") ||
     readMeta(html, "dc.date") ||
@@ -143,9 +144,10 @@ function extractDate(html: string, fallback = new Date()) {
     metaDate ||
     text.match(/\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+20\d{2}\b/i)?.[0] ||
     text.match(/\b20\d{2}-\d{2}-\d{2}\b/)?.[0];
-  const date = dateLike ? new Date(dateLike) : fallback;
+  if (!dateLike) return null;
+  const date = new Date(dateLike);
 
-  return Number.isNaN(date.getTime()) ? fallback.toISOString().slice(0, 10) : date.toISOString().slice(0, 10);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
 }
 
 function extractNumberSignals(text: string, lens: string): ReleaseChartPayload["points"] {
@@ -201,14 +203,17 @@ export async function fetchOfficialReportMonitors(): Promise<OfficialReportMonit
       const description = readMeta(detailHtml, "description") || readMeta(detailHtml, "og:description");
       const text = [description, stripTags(detailHtml).slice(0, 3500)].filter(Boolean).join(" ");
       const points = extractNumberSignals(text, monitor.lens);
-      const releaseDate = extractDate(detailHtml);
+      const confirmedDate = extractDate(detailHtml);
+      const confirmedRelease = Boolean(confirmedDate && detailUrl !== monitor.pageUrl && !/publications|data analysis/i.test(title));
+      const releaseDate = confirmedDate ?? "1970-01-01";
 
       return {
         ...monitor,
         title: `${monitor.publisher}: ${title}`.slice(0, 140),
         sourceUrl: detailUrl,
         releaseDate,
-        referencePeriod: releaseDate,
+        referencePeriod: confirmedRelease ? releaseDate : "Official source monitor; no dated release confirmed",
+        confirmedRelease,
         headlineFacts: [
           description || `Canada Pulse fetched the official ${monitor.publisher} source.`,
           ...points.slice(0, 3).map((point) => `${point.label}: ${point.display}`),

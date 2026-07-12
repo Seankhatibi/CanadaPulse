@@ -5,9 +5,9 @@ import { fetchBankOfCanadaReportReleases } from "@/lib/bank-of-canada-reports";
 import { fetchIrccOpenDataSignals, fetchOfficialReportMonitors, type OfficialReportMonitor } from "@/lib/official-source-monitors";
 import {
   fetchStatCanDailyEntries,
+  buildReleaseExplainer,
   getEntriesForReleaseDate,
   getLatestDailyReleaseDate,
-  getReleaseExplainerHref,
   rankDailyEntries,
   type StatCanDailyEntry,
 } from "@/lib/statcan-daily";
@@ -35,6 +35,12 @@ export type ReleaseChartPayload = {
     display: string;
     direction: "up" | "down" | "neutral";
     plainEnglish: string;
+    previous?: number | null;
+    previousDisplay?: string;
+    change?: number | null;
+    changeDisplay?: string;
+    period?: string;
+    changePeriod?: string;
   }>;
 };
 
@@ -131,23 +137,40 @@ function scoreRelease(areas: ReleaseArea[], text: string) {
 
 async function statCanReleaseFromEntry(entry: StatCanDailyEntry, promotedHref?: string): Promise<NormalizedRelease> {
   const releaseData = await fetchStatCanReleaseData(entry).catch(() => null);
+  const summarySignals = buildReleaseExplainer(entry).signals.filter((signal) => signal.label !== "Release detected");
+  const releaseSignals = releaseData?.signals.length ? releaseData.signals : summarySignals;
   const areas = classifyStatCanAreas(entry);
   const slug = slugify(entry.title);
-  const chartPayloads: ReleaseChartPayload[] = releaseData?.signals.length
+  const chartPayloads: ReleaseChartPayload[] = releaseSignals.length
     ? [
         {
-          title: "Real table breakdown",
-          kind: "bar",
-          points: releaseData.signals.slice(0, 6).map((signal) => ({
+          title: releaseData?.signals.length ? "Official table breakdown" : "Official release summary",
+          kind: "metric-strip",
+          points: releaseSignals.slice(0, 8).map((signal) => ({
             label: signal.label,
             value: signal.value,
             display: signal.display,
             direction: signal.direction,
             plainEnglish: signal.explanation,
+            previous: signal.previous,
+            previousDisplay: signal.previousDisplay,
+            change: signal.change,
+            changeDisplay: signal.changeDisplay,
+            period: signal.period,
+            changePeriod: signal.changePeriod,
           })),
         },
       ]
     : [];
+  const provinceTable = releaseData?.tables.find((table) => /by province/i.test(table.title));
+  const provinceBreakdown = provinceTable?.rows
+    .filter((row) => row.group && row.label === "Unemployment rate" && row.latest !== null)
+    .map((row) => ({
+      province: row.group as string,
+      value: `${row.latest?.toFixed(1)}%`,
+      note: `${row.change === null ? "No monthly change available" : `${row.change > 0 ? "up" : row.change < 0 ? "down" : "unchanged"} ${Math.abs(row.change).toFixed(1)} points`} from ${provinceTable.previousPeriod}.`,
+      score: Math.min(100, Math.round((row.latest ?? 0) * 10)),
+    })) ?? [];
   const isSameDayRelease = entry.published.slice(0, 10) === canadaDate();
   const baseScore = scoreRelease(areas, `${entry.title} ${entry.summary}`);
   const importanceScore = Math.min(100, baseScore + (isSameDayRelease ? 28 : 0));
@@ -159,7 +182,7 @@ async function statCanReleaseFromEntry(entry: StatCanDailyEntry, promotedHref?: 
     source: "statcan",
     publisher: "Statistics Canada",
     sourceUrl: entry.href,
-    href: promotedHref ?? getReleaseExplainerHref(entry),
+    href: promotedHref ?? sourceHref("statcan", slug),
     releaseType: "official-daily-release",
     releaseDate: entry.published.slice(0, 10),
     referencePeriod: entry.published,
@@ -167,15 +190,16 @@ async function statCanReleaseFromEntry(entry: StatCanDailyEntry, promotedHref?: 
     affectedAreas: areas,
     headlineFacts: [
       entry.summary || "Official Daily release detected.",
-      ...((releaseData?.signals ?? []).slice(0, 4).map((signal) => `${signal.label}: ${signal.display}`)),
+      ...releaseSignals.slice(0, 4).map((signal) => `${signal.label}: ${signal.display}${signal.changeDisplay ? ` (${signal.changeDisplay})` : ""}`),
     ],
-    provinceBreakdown: [],
+    provinceBreakdown,
     chartPayloads,
     sourceLinks: [
       { label: "Official Daily release", url: entry.href },
-      ...((releaseData?.wdsDownloads ?? [])
+      ...[...new Map((releaseData?.wdsDownloads ?? [])
         .filter((download) => download.downloadUrl)
-        .map((download) => ({ label: `Official table ${download.productId}`, url: download.downloadUrl as string }))),
+        .map((download) => [download.productId, download])).values()]
+        .map((download) => ({ label: `Official table ${download.productId}`, url: download.downloadUrl as string })),
     ],
     importanceScore,
     youthImpactScore: areas.some((area) => ["housing", "labour", "inflation"].includes(area)) ? 72 : 42,
@@ -320,7 +344,9 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
     affectedAreas: ["housing"],
     headlineFacts: [
       `Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} housing starts in ${data.latestPeriod}.`,
-      `Canada recorded ${data.canadaCompletions.toLocaleString("en-CA")} completions in the same period, a starts-minus-completions gap of ${data.canadaStartsCompletionsGap.toLocaleString("en-CA")}.`,
+      data.canadaCompletions === null
+        ? "The connected starts table does not publish current completions; Canada Pulse does not infer or replace missing completions with zero."
+        : `Canada recorded ${data.canadaCompletions.toLocaleString("en-CA")} completions in the same period.`,
       `National starts are ${changeDisplay}.`,
       `${data.unitMix[0]?.label ?? "Apartments/other"} accounted for ${data.unitMix[0]?.sharePct ?? 0}% of starts.`,
       "Starts are not completions: treat this as a supply pipeline signal, not homes ready to move into.",
@@ -330,13 +356,13 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
       value: province.starts.toLocaleString("en-CA"),
       note:
         province.changePct === null
-          ? `${province.sharePct}% of Canada's latest starts; ${province.completions.toLocaleString("en-CA")} completions.`
-          : `${province.sharePct}% of Canada's latest starts; ${province.changePct > 0 ? "up" : "down"} ${Math.abs(province.changePct)}% vs ${data.previousPeriod}; ${province.completions.toLocaleString("en-CA")} completions.`,
-      score: Math.min(100, Math.round(province.sharePct * 4 + Math.max(0, province.changePct ?? 0) + Math.max(0, province.startsCompletionsGap / 1000))),
+          ? `${province.sharePct}% of Canada's latest starts.`
+          : `${province.sharePct}% of Canada's latest starts; ${province.changePct > 0 ? "up" : "down"} ${Math.abs(province.changePct)}% vs ${data.previousPeriod}.`,
+      score: Math.min(100, Math.round(province.sharePct * 4 + Math.max(0, province.changePct ?? 0))),
     })),
     chartPayloads: [
       {
-        title: "Starts versus completions",
+        title: "Housing starts pipeline",
         kind: "bar",
         points: [
           {
@@ -346,20 +372,19 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
             direction: "up",
             plainEnglish: "Starts show the construction pipeline: homes beginning construction, not move-in ready supply.",
           },
-          {
-            label: "Housing completions",
-            value: data.canadaCompletions,
-            display: data.canadaCompletions.toLocaleString("en-CA"),
-            direction: data.canadaCompletions >= data.canadaStarts ? "up" : "neutral",
-            plainEnglish: "Completions are the closer signal for homes becoming available to households.",
-          },
-          {
-            label: "Starts-completions gap",
-            value: data.canadaStartsCompletionsGap,
-            display: data.canadaStartsCompletionsGap.toLocaleString("en-CA"),
-            direction: data.canadaStartsCompletionsGap >= 0 ? "up" : "down",
-            plainEnglish: "A positive gap means starts exceeded completions this period; it is a pipeline signal, not immediate supply relief.",
-          },
+          ...(data.canadaChangePct === null
+            ? []
+            : [{
+                label: "Starts change",
+                value: data.canadaChangePct,
+                display: `${data.canadaChangePct > 0 ? "+" : ""}${data.canadaChangePct}%`,
+                direction: data.canadaChangePct > 0 ? "up" as const : data.canadaChangePct < 0 ? "down" as const : "neutral" as const,
+                plainEnglish: `Housing starts changed ${Math.abs(data.canadaChangePct)}% from ${data.previousPeriod}.`,
+                change: data.canadaChangePct,
+                changeDisplay: `${data.canadaChangePct > 0 ? "+" : ""}${data.canadaChangePct}%`,
+                period: data.latestPeriod,
+                changePeriod: `${data.previousPeriod} to ${data.latestPeriod}`,
+              }]),
         ],
       },
       {
@@ -397,8 +422,8 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
     promoted: true,
     status: "live",
     plainEnglishSummary:
-      `CMHC housing construction data is now live in Canada Pulse. Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} starts and ${data.canadaCompletions.toLocaleString("en-CA")} completions in ${data.latestPeriod}; starts show the pipeline, while completions are closer to homes becoming available.`,
-    socialSummary: `CMHC Housing Watch: Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} starts and ${data.canadaCompletions.toLocaleString("en-CA")} completions in ${data.latestPeriod}.`,
+      `Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} housing starts in ${data.latestPeriod}, ${changeDisplay}. Starts measure the construction pipeline, not move-in-ready supply. Current completions are not available in this connected table and are not estimated.`,
+    socialSummary: `CMHC Housing Watch: Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} starts in ${data.latestPeriod}, ${changeDisplay}.`,
     icon: Home,
   };
 }
@@ -487,8 +512,8 @@ function officialMonitorToRelease(monitor: OfficialReportMonitor): NormalizedRel
     importanceScore: monitor.importanceScore,
     youthImpactScore: monitor.youthImpactScore,
     housingImpactScore: monitor.housingImpactScore,
-    promoted: monitor.importanceScore >= 70,
-    status: "live",
+    promoted: monitor.confirmedRelease && monitor.importanceScore >= 70,
+    status: monitor.confirmedRelease ? "live" : "source_linked",
     plainEnglishSummary: monitor.plainEnglishSummary,
     socialSummary: monitor.socialSummary,
     icon,
@@ -619,10 +644,31 @@ export async function getMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
   const officialMonitors = await fetchOfficialReportMonitors()
     .then((monitors) => monitors.map(officialMonitorToRelease))
     .catch(() => getSourceLinkedReleases());
+  const releaseTimestamp = (release: NormalizedRelease) => {
+    const timestamp = Date.parse(release.releaseDate.length === 7 ? `${release.releaseDate}-01T12:00:00Z` : release.releaseDate);
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  };
+  const promotionScore = (release: NormalizedRelease) => {
+    const ageDays = Math.max(0, (Date.now() - releaseTimestamp(release)) / 86_400_000);
+    const freshness = ageDays <= 1 ? 45 : ageDays <= 4 ? 30 : ageDays <= 14 ? 15 : ageDays <= 45 ? 0 : -35;
+    const evidence = release.status === "live" && release.chartPayloads.some((chart) => chart.points.length) ? 18 : -20;
+    return release.importanceScore + freshness + evidence;
+  };
   const todayQueue = [housingWatch, bankOfCanada, ...bankOfCanadaReports, ircc, ...officialMonitors, ...statCanReleases].sort(
-    (a, b) => b.importanceScore - a.importanceScore,
+    (a, b) => promotionScore(b) - promotionScore(a) || releaseTimestamp(b) - releaseTimestamp(a),
   );
-  const promotedRelease = todayQueue.find((release) => release.promoted) ?? todayQueue.at(0) ?? null;
+  const isEditorialRelease = (release: NormalizedRelease) =>
+    release.releaseType === "official-daily-release" ||
+    release.releaseType.startsWith("bank-of-canada-") ||
+    release.releaseType === "housing-release-monitor";
+  const promotedRelease = todayQueue.find(
+    (release) =>
+      release.promoted &&
+      release.status === "live" &&
+      release.chartPayloads.some((chart) => chart.points.length) &&
+      isEditorialRelease(release) &&
+      release.releaseType !== "valet-rate-observation",
+  ) ?? todayQueue.find((release) => release.status === "live" && release.chartPayloads.some((chart) => chart.points.length)) ?? null;
 
   return {
     generatedAt: new Date().toISOString(),

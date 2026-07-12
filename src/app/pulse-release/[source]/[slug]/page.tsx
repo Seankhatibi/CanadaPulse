@@ -1,17 +1,64 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, ExternalLink, Share2 } from "lucide-react";
-import { AppShell, GlassPanel, StatusPill } from "@/components/app-shell";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  CalendarDays,
+  CheckCircle2,
+  Database,
+  ExternalLink,
+  Minus,
+} from "lucide-react";
+import { AppShell } from "@/components/app-shell";
 import { ShareStatButton } from "@/components/share-stat-button";
 import { findHubRelease } from "@/lib/release-hub";
+import { buildReleaseIntelligence, type ResearchMetric } from "@/lib/release-intelligence";
+import { formatReferencePeriod, formatReleaseDate } from "@/lib/release-format";
 
 export const dynamic = "force-dynamic";
 
-function publicStatus(status: string) {
-  if (status === "live") return "Live";
-  if (status === "summary_only") return "Tracked";
-  if (status === "source_linked") return "Watching";
-  return "Watching";
+function MetricArrow({ metric }: { metric: ResearchMetric }) {
+  const className =
+    metric.meaning === "positive"
+      ? "bg-emerald-100 text-emerald-800"
+      : metric.meaning === "negative"
+        ? "bg-red-100 text-red-800"
+        : "bg-amber-100 text-amber-800";
+  const Icon = metric.direction === "up" ? ArrowUp : metric.direction === "down" ? ArrowDown : Minus;
+
+  return (
+    <span className={`inline-flex size-8 items-center justify-center rounded-full ${className}`}>
+      <Icon className="size-4" aria-hidden="true" />
+    </span>
+  );
+}
+
+function MetricCard({ metric }: { metric: ResearchMetric }) {
+  return (
+    <article className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">{metric.label}</p>
+          <p className="mt-2 font-mono text-3xl font-black text-stone-950">{metric.display}</p>
+        </div>
+        <MetricArrow metric={metric} />
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+        {metric.changeDisplay ? (
+          <span className="rounded-md bg-stone-950 px-2 py-1 font-mono font-black text-white">
+            {metric.changeDisplay}
+          </span>
+        ) : null}
+        {metric.previousDisplay ? <span className="text-stone-500">previous {metric.previousDisplay}</span> : null}
+      </div>
+      <p className="mt-3 text-sm leading-6 text-stone-600">{metric.plainEnglish}</p>
+      <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">
+        {metric.period ?? metric.changePeriod ?? "Latest official period"}
+      </p>
+    </article>
+  );
 }
 
 export default async function PulseReleasePage({
@@ -22,219 +69,177 @@ export default async function PulseReleasePage({
   const { source, slug } = await params;
   const release = await findHubRelease(source, slug);
 
-  if (!release) {
-    notFound();
-  }
+  if (!release) notFound();
 
-  const maxPoint = Math.max(
-    ...release.chartPayloads.flatMap((chart) => chart.points.map((point) => Math.abs(point.value))),
-    1,
-  );
-  const impactScores = [
-    { label: "Importance", value: release.importanceScore, tone: "bg-red-500" },
-    { label: "Youth impact", value: release.youthImpactScore, tone: "bg-amber-300" },
-    { label: "Housing impact", value: release.housingImpactScore, tone: "bg-emerald-400" },
-  ];
+  const intelligence = buildReleaseIntelligence(release);
 
   return (
     <AppShell>
-      <section className="overflow-hidden rounded-lg border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(239,68,68,0.22),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(0,0,0,0.42))]">
-        <div className="grid gap-px bg-white/10 lg:grid-cols-[0.78fr_1.22fr]">
-          <div className="bg-black/45 p-5 sm:p-7">
-            <div className="flex flex-wrap gap-2">
-              <StatusPill>Canada Pulse breakdown</StatusPill>
-              <StatusPill>{release.publisher}</StatusPill>
-              <StatusPill>{publicStatus(release.status)}</StatusPill>
-            </div>
-            <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-normal text-white sm:text-6xl">
-              {release.title}
-            </h1>
-            <p className="mt-4 font-mono text-xs text-stone-500">
-              {release.releaseDate} · {release.referencePeriod}
-            </p>
-          </div>
+      <div className="space-y-6">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-stone-600 hover:text-red-700">
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Canada Pulse
+        </Link>
 
-          <div className="bg-black/35 p-5 sm:p-7">
-            <p className="text-xl leading-8 text-white">{release.plainEnglishSummary}</p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <ShareStatButton text={release.socialSummary} />
-              <a
-                href={release.sourceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-2.5 text-xs font-semibold text-stone-200 transition hover:bg-white/15"
-              >
-                Official source
-                <ExternalLink className="size-3.5" aria-hidden="true" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-5 grid gap-3 md:grid-cols-3">
-        {impactScores.map((score) => (
-          <GlassPanel key={score.label} className="p-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">{score.label}</p>
-              <p className="font-mono text-2xl font-semibold text-white">{score.value}</p>
-            </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-              <div className={`h-full rounded-full ${score.tone}`} style={{ width: `${Math.min(100, score.value)}%` }} />
-            </div>
-            <p className="mt-3 text-xs leading-5 text-stone-500">
-              Higher scores mean the release is more likely to affect daily life, young Canadians, housing or
-              household finances.
-            </p>
-          </GlassPanel>
-        ))}
-      </section>
-
-      <section className="mt-5 grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-        <GlassPanel className="p-5 sm:p-6">
-          <div className="flex items-center gap-2">
-            <Share2 className="size-5 text-red-300" aria-hidden="true" />
-            <h2 className="text-2xl font-semibold text-white">What changed</h2>
-          </div>
-          <div className="mt-5 grid gap-3">
-            {release.headlineFacts.map((fact, index) => (
-              <div key={fact} className="flex gap-3 rounded-md border border-white/10 bg-black/35 p-4">
-                <span className="grid size-8 shrink-0 place-items-center rounded-md bg-red-600 font-mono text-xs font-semibold text-white">
-                  {index + 1}
-                </span>
-                <p className="text-sm leading-6 text-stone-300">{fact}</p>
+        <section className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xl shadow-stone-300/30">
+          <div className="h-2 bg-gradient-to-r from-red-700 via-red-500 to-amber-400" />
+          <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[1.15fr_0.85fr]">
+            <div>
+              <div className="flex flex-wrap gap-2 text-xs font-black uppercase tracking-[0.13em]">
+                <span className="rounded-md bg-red-50 px-2.5 py-1 text-red-800">{release.affectedAreas[0] ?? "Economy"}</span>
+                <span className="rounded-md bg-stone-100 px-2.5 py-1 text-stone-700">{release.publisher}</span>
+                <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-emerald-800">{intelligence.evidenceLevel}</span>
               </div>
-            ))}
-          </div>
-
-          {release.chartPayloads.length ? (
-            <div className="mt-6 grid gap-4">
-              {release.chartPayloads.map((chart) => (
-                <div key={chart.title} className="rounded-md border border-white/10 bg-black/35 p-4">
-                  <h3 className="font-semibold text-white">{chart.title}</h3>
-                  <div className="mt-4 grid gap-3">
-                    {chart.points.map((point) => {
-                      const isDown = point.direction === "down";
-                      const isNeutral = point.direction === "neutral";
-                      const width = `${Math.max(12, (Math.abs(point.value) / maxPoint) * 100)}%`;
-
-                      return (
-                        <div key={`${chart.title}-${point.label}`} className="grid gap-2">
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-sm font-semibold text-white">{point.label}</p>
-                            <p className={`font-mono text-sm font-semibold ${isNeutral ? "text-amber-200" : isDown ? "text-red-200" : "text-emerald-200"}`}>
-                              {point.display}
-                            </p>
-                          </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                            <div
-                              className={`h-full rounded-full ${isNeutral ? "bg-amber-300" : isDown ? "bg-red-500" : "bg-emerald-400"}`}
-                              style={{ width }}
-                            />
-                          </div>
-                          <p className="text-xs leading-5 text-stone-500">{point.plainEnglish}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </GlassPanel>
-
-        <div className="grid gap-5">
-          <GlassPanel className="p-5 sm:p-6">
-            <h2 className="text-xl font-semibold text-white">Canada Pulse translation</h2>
-            <div className="mt-4 grid gap-3">
-              <div className="rounded-md border border-white/10 bg-black/35 p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-red-200">Affected areas</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {release.affectedAreas.map((area) => (
-                    <span
-                      key={area}
-                      className="rounded-md border border-white/10 bg-white/10 px-2.5 py-1 text-xs font-semibold text-stone-200"
-                    >
-                      {area}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-md border border-white/10 bg-black/35 p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-200">Shareable read</p>
-                <p className="mt-2 text-sm leading-6 text-stone-300">{release.socialSummary}</p>
-              </div>
-              <div className="rounded-md border border-white/10 bg-black/35 p-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-stone-500">Data status</p>
-                <p className="mt-2 text-sm leading-6 text-stone-300">
-                  {release.status === "live"
-                    ? "Live values or report facts were fetched from the official source."
-                    : release.status === "summary_only"
-                      ? "Canada Pulse detected the release and built a briefing from the available source facts."
-                      : "Canada Pulse is watching this source for the next detailed update."}
-                </p>
-              </div>
-            </div>
-          </GlassPanel>
-
-          <GlassPanel className="p-5 sm:p-6">
-            <h2 className="text-xl font-semibold text-white">Provincial read</h2>
-            <div className="mt-4 grid gap-3">
-              {release.provinceBreakdown.length ? (
-                release.provinceBreakdown.map((item) => (
-                  <div key={item.province} className="rounded-md border border-white/10 bg-black/35 p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-semibold text-white">{item.province}</p>
-                      <p className="font-mono text-sm font-semibold text-red-200">{item.value}</p>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-stone-400">{item.note}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="rounded-md border border-white/10 bg-black/35 p-3 text-sm leading-6 text-stone-400">
-                  This source is being monitored nationally first. Province-level values will appear here once the
-                  source exposes a reliable provincial table or dataset.
-                </p>
-              )}
-            </div>
-          </GlassPanel>
-
-          <GlassPanel className="p-5 sm:p-6">
-            <h2 className="text-xl font-semibold text-white">Source trail</h2>
-            <div className="mt-4 grid gap-2">
-              {release.sourceLinks.map((link, index) => (
+              <h1 className="mt-5 max-w-4xl text-4xl font-black leading-tight text-stone-950 sm:text-6xl">{release.title}</h1>
+              <p className="mt-5 max-w-3xl text-xl font-bold leading-8 text-stone-800">{intelligence.verdict}</p>
+              <p className="mt-4 max-w-3xl text-base leading-7 text-stone-600">{release.plainEnglishSummary}</p>
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+                <ShareStatButton text={release.socialSummary} />
                 <a
-                  key={`${link.label}-${link.url}-${index}`}
-                  href={link.url}
+                  href={release.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center justify-between gap-3 rounded-md border border-white/10 bg-white/10 px-3 py-2 text-sm font-semibold text-stone-200 transition hover:bg-white/15"
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-3 text-sm font-bold text-stone-800 hover:border-red-300"
                 >
-                  {link.label}
-                  <ExternalLink className="size-3.5" aria-hidden="true" />
+                  Official release
+                  <ExternalLink className="size-4" aria-hidden="true" />
                 </a>
+              </div>
+            </div>
+
+            <div className="grid content-start gap-3 rounded-xl bg-stone-950 p-5 text-white">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-stone-400">Release record</p>
+              {[
+                { label: "Released", value: formatReleaseDate(release.releaseDate), icon: CalendarDays },
+                { label: "Reference period", value: formatReferencePeriod(release.referencePeriod), icon: Database },
+                { label: "Geography", value: release.geographyLevel, icon: CheckCircle2 },
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.label} className="flex items-start gap-3 border-t border-white/10 pt-3">
+                    <Icon className="mt-0.5 size-4 shrink-0 text-red-300" aria-hidden="true" />
+                    <div>
+                      <p className="text-xs text-stone-400">{item.label}</p>
+                      <p className="mt-1 text-sm font-bold text-white">{item.value}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-red-700">Key metrics</p>
+              <h2 className="mt-1 text-3xl font-black text-stone-950">What changed in the release</h2>
+            </div>
+            <p className="text-xs text-stone-500">Values are not normalized across different units.</p>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {intelligence.metrics.length ? (
+              intelligence.metrics.map((metric) => <MetricCard key={`${metric.label}-${metric.display}`} metric={metric} />)
+            ) : (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                The official release was detected, but structured table values are not available yet.
+              </p>
+            )}
+          </div>
+        </section>
+
+        <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-red-700">Research read</p>
+            <h2 className="mt-2 text-2xl font-black text-stone-950">Five facts worth carrying forward</h2>
+            <div className="mt-5 grid gap-3">
+              {(intelligence.takeaways.length ? intelligence.takeaways : release.headlineFacts).slice(0, 5).map((takeaway, index) => (
+                <div key={takeaway} className="flex gap-3 rounded-lg bg-stone-50 p-4">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-red-700 font-mono text-xs font-black text-white">
+                    {index + 1}
+                  </span>
+                  <p className="text-sm leading-6 text-stone-700">{takeaway}</p>
+                </div>
               ))}
             </div>
-          </GlassPanel>
-        </div>
-      </section>
+          </div>
 
-      <section className="mt-5 flex flex-col gap-3 sm:flex-row">
-        <Link
-          href="/"
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15"
-        >
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Back to homepage
-        </Link>
-        <Link
-          href="/weekly-pulse"
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-semibold text-stone-950 transition hover:bg-stone-200"
-        >
-          Weekly Pulse
-          <ArrowRight className="size-4" aria-hidden="true" />
-        </Link>
-      </section>
+          <div className="grid gap-4">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+              <h2 className="text-lg font-black text-emerald-950">Improving signals</h2>
+              <div className="mt-3 space-y-2">
+                {intelligence.positive.length ? intelligence.positive.map((metric) => (
+                  <p key={metric.label} className="text-sm text-emerald-900">{metric.label}: <strong>{metric.display}</strong></p>
+                )) : <p className="text-sm text-emerald-900">No clearly improving metric was identified.</p>}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
+              <h2 className="text-lg font-black text-red-950">Pressure signals</h2>
+              <div className="mt-3 space-y-2">
+                {intelligence.negative.length ? intelligence.negative.map((metric) => (
+                  <p key={metric.label} className="text-sm text-red-900">{metric.label}: <strong>{metric.display}</strong></p>
+                )) : <p className="text-sm text-red-900">No clearly worsening metric was identified.</p>}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {intelligence.provinceRank.length ? (
+          <section className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-red-700">Provincial breakdown</p>
+                <h2 className="mt-1 text-2xl font-black text-stone-950">How the release differs across Canada</h2>
+              </div>
+              <Link href="/compare" className="inline-flex items-center gap-2 text-sm font-black text-red-700 hover:text-red-900">
+                Compare provinces
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+            </div>
+            <div className="mt-5 overflow-x-auto">
+              <table className="w-full min-w-[640px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-stone-200 text-xs uppercase tracking-[0.12em] text-stone-500">
+                    <th className="px-3 py-3">Rank</th>
+                    <th className="px-3 py-3">Province</th>
+                    <th className="px-3 py-3">Value</th>
+                    <th className="px-3 py-3">Change/context</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {intelligence.provinceRank.map((province, index) => (
+                    <tr key={province.province} className="border-b border-stone-100">
+                      <td className="px-3 py-3 font-mono text-sm text-stone-500">{index + 1}</td>
+                      <td className="px-3 py-3 font-bold text-stone-950">{province.province}</td>
+                      <td className="px-3 py-3 font-mono font-black text-stone-950">{province.value}</td>
+                      <td className="px-3 py-3 text-sm text-stone-600">{province.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
+
+        <section className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
+          <h2 className="text-xl font-black text-stone-950">Source trail</h2>
+          <p className="mt-2 text-sm text-stone-600">Every interpretation above is attached to the official release or table used.</p>
+          <div className="mt-4 grid gap-2 md:grid-cols-2">
+            {release.sourceLinks.map((link, index) => (
+              <a
+                key={`${link.url}-${index}`}
+                href={link.url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 px-4 py-3 text-sm font-bold text-stone-700 hover:border-red-300 hover:text-red-800"
+              >
+                {link.label}
+                <ExternalLink className="size-4 shrink-0" aria-hidden="true" />
+              </a>
+            ))}
+          </div>
+        </section>
+      </div>
     </AppShell>
   );
 }

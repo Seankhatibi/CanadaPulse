@@ -1,0 +1,54 @@
+import { getDbLiveDataPayload } from "@/lib/db-live-data";
+import { getMultiSourceReleaseHub } from "@/lib/release-hub";
+
+function validDate(value: string) {
+  const timestamp = Date.parse(value.length === 7 ? `${value}-01T12:00:00Z` : value);
+  return Number.isFinite(timestamp) && timestamp > Date.parse("2020-01-01T00:00:00Z") ? timestamp : 0;
+}
+
+export async function getSystemHealth() {
+  const [hub, database] = await Promise.all([
+    getMultiSourceReleaseHub(),
+    getDbLiveDataPayload().catch(() => null),
+  ]);
+  const releases = hub.todayQueue
+    .filter((release) => release.status === "live" && validDate(release.releaseDate))
+    .sort((a, b) => validDate(b.releaseDate) - validDate(a.releaseDate));
+  const latestRelease = hub.promotedRelease.status === "live" ? hub.promotedRelease : releases[0] ?? null;
+  const warnings: string[] = [];
+
+  if (!database) warnings.push("Durable database history is not configured; official sources are fetched live on request.");
+  if (!process.env.CRON_SECRET) warnings.push("Scheduled refresh authentication is not configured in this environment.");
+  if (hub.housingWatch.releaseDate.length === 7) {
+    const housingAge = (Date.now() - validDate(hub.housingWatch.releaseDate)) / 86_400_000;
+    if (housingAge > 60) warnings.push(`Housing starts snapshot is ${Math.round(housingAge)} days old.`);
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    persistence: database ? "database" as const : "request-time" as const,
+    scheduler: process.env.CRON_SECRET ? "configured" as const : "not-configured" as const,
+    latestRelease: latestRelease
+      ? {
+          title: latestRelease.title,
+          publisher: latestRelease.publisher,
+          releaseDate: latestRelease.releaseDate,
+          referencePeriod: latestRelease.referencePeriod,
+          status: latestRelease.status,
+          href: latestRelease.href,
+          metrics: latestRelease.chartPayloads.reduce((total, chart) => total + chart.points.length, 0),
+        }
+      : null,
+    sourceStatuses: hub.sourceStatuses,
+    recentReleases: releases.slice(0, 8).map((release) => ({
+      title: release.title,
+      publisher: release.publisher,
+      releaseDate: release.releaseDate,
+      status: release.status,
+      href: release.href,
+      metrics: release.chartPayloads.reduce((total, chart) => total + chart.points.length, 0),
+    })),
+    refreshRuns: database?.latestRuns.slice(0, 8) ?? [],
+    warnings,
+  };
+}

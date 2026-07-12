@@ -6,23 +6,22 @@ import { useState } from "react";
 import { provinces } from "@/lib/canada-pulse-data";
 
 const navItems = [
-  { href: "/", label: "Pulse" },
-  { href: "/housing#survive", label: "Affordability" },
-  { href: "/tax-dollar", label: "Tax" },
+  { href: "/", label: "Latest releases" },
+  { href: "/canada", label: "Canadian economy" },
+  { href: "/housing", label: "Housing and affordability" },
   { href: "/population", label: "Population" },
+  { href: "/compare", label: "Compare provinces" },
+  { href: "/tax-dollar", label: "Tax receipt" },
+  { href: "/weekly-pulse", label: "Weekly Pulse" },
+  { href: "/data-status", label: "Sources and freshness" },
+  { href: "/youth", label: "Youth Future" },
   { href: "/government", label: "Government" },
   { href: "/trade", label: "Trade" },
   { href: "/energy", label: "Energy" },
   { href: "/health", label: "Health" },
-  { href: "/youth", label: "Youth Future" },
   { href: "/quality-of-life", label: "Quality of Life" },
-  { href: "/best-province", label: "Best Province" },
-  { href: "/weekly-pulse", label: "Weekly Pulse" },
   { href: "/myth-vs-reality", label: "Myth vs Reality" },
   { href: "/timeline", label: "Timeline Replay" },
-  { href: "/data-status", label: "Sources" },
-  { href: "/housing", label: "Housing" },
-  { href: "/compare", label: "Compare" },
 ];
 
 export function MobileNav() {
