@@ -49,15 +49,16 @@ export const liveDataConnections: LiveDataConnection[] = [
   },
   {
     slug: "cmhc-starts-completions",
-    label: "Starts, completions and under construction",
+    label: "Quarterly housing construction",
     appArea: "Housing supply and population pressure",
     publisher: "CMHC",
     sourceUrl:
       "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-data/data-tables/housing-market-data/starts-completions-units-under-construction-geography",
-    refreshCadence: "Monthly",
+    refreshCadence: "Quarterly release check",
     status: "live-feed",
-    latestKnownPeriod: "Official table import connected",
-    implementation: "Imports the official StatCan/CMHC housing construction table and builds starts/completions release facts.",
+    latestKnownPeriod: "Official quarterly table import connected",
+    implementation:
+      "Imports Statistics Canada table 34-10-0135-01, sourced from CMHC, and builds national, provincial and unit-type housing-start facts.",
   },
   {
     slug: "gaswizard-prices",

@@ -16,8 +16,12 @@ export type CmhcHousingConstructionData = {
   tableId: string;
   sourceUrl: string;
   downloadUrl: string;
+  releaseDate: string;
+  frequency: "quarterly";
   latestPeriod: string;
+  latestPeriodLabel: string;
   previousPeriod: string | null;
+  previousPeriodLabel: string | null;
   canadaStarts: number;
   canadaCompletions: number | null;
   canadaStartsCompletionsGap: number | null;
@@ -43,6 +47,12 @@ const provinceNames = new Set([
   "British Columbia",
 ]);
 
+function quarterLabel(period: string) {
+  const [year, month] = period.split("-");
+  const quarter = ({ "01": "Q1", "04": "Q2", "07": "Q3", "10": "Q4" } as Record<string, string>)[month];
+  return quarter ? `${quarter} ${year}` : period;
+}
+
 function toNumber(value: string | undefined) {
   if (!value || value === ".." || value === "...") return null;
   const parsed = Number(value.replace(/,/g, ""));
@@ -61,7 +71,14 @@ function formatUnitType(value: string) {
 }
 
 export async function fetchCmhcHousingConstructionData(): Promise<CmhcHousingConstructionData> {
-  const { csv, downloadUrl } = await fetchStatCanTableCsv(productId);
+  const [{ csv, downloadUrl }, sourceResponse] = await Promise.all([
+    fetchStatCanTableCsv(productId),
+    fetch(sourceUrl, {
+      next: { revalidate: 12 * 60 * 60 },
+      signal: AbortSignal.timeout(8_000),
+    }).catch(() => null),
+  ]);
+  const sourceHtml = sourceResponse?.ok ? await sourceResponse.text() : "";
   const rows = parseCsv(csv);
   const header = rows[0] ?? [];
   const index = Object.fromEntries(header.map((name, column) => [name, column]));
@@ -92,6 +109,10 @@ export async function fetchCmhcHousingConstructionData(): Promise<CmhcHousingCon
   if (!latestPeriod) {
     throw new Error("No CMHC housing starts period found.");
   }
+
+  const releaseDate =
+    sourceHtml.match(/<meta[^>]+name=["']dcterms\.modified["'][^>]+content=["'](\d{4}-\d{2}-\d{2})/i)?.[1] ??
+    latestPeriod;
 
   const previousPeriod = [...new Set(startsTotal.map((record) => record.period))]
     .sort()
@@ -146,8 +167,12 @@ export async function fetchCmhcHousingConstructionData(): Promise<CmhcHousingCon
     tableId,
     sourceUrl,
     downloadUrl,
+    releaseDate,
+    frequency: "quarterly",
     latestPeriod,
+    latestPeriodLabel: quarterLabel(latestPeriod),
     previousPeriod,
+    previousPeriodLabel: previousPeriod ? quarterLabel(previousPeriod) : null,
     canadaStarts,
     canadaCompletions,
     canadaStartsCompletionsGap: canadaCompletions === null ? null : canadaStarts - canadaCompletions,

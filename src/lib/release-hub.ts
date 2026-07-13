@@ -324,23 +324,25 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
   const data = await fetchCmhcHousingConstructionData();
   const slug = "cmhc-housing-watch";
   const changeDisplay =
-    data.canadaChangePct === null ? "change pending" : `${data.canadaChangePct > 0 ? "+" : ""}${data.canadaChangePct}% vs ${data.previousPeriod}`;
+    data.canadaChangePct === null
+      ? "change pending"
+      : `${data.canadaChangePct > 0 ? "+" : ""}${data.canadaChangePct}% vs ${data.previousPeriodLabel}`;
 
   return {
     id: "cmhc-housing-watch",
     slug,
-    title: "Canadians just got new housing numbers",
+    title: "Canada's latest official housing construction numbers",
     source: "cmhc",
     publisher: "CMHC",
     sourceUrl: data.sourceUrl,
     href: sourceHref("cmhc", slug),
     releaseType: "housing-release-monitor",
-    releaseDate: data.latestPeriod,
-    referencePeriod: `Latest official table period: ${data.latestPeriod}`,
+    releaseDate: data.releaseDate,
+    referencePeriod: `Latest official quarter: ${data.latestPeriodLabel}`,
     geographyLevel: "mixed",
     affectedAreas: ["housing"],
     headlineFacts: [
-      `Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} housing starts in ${data.latestPeriod}.`,
+      `Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} housing starts in ${data.latestPeriodLabel}.`,
       data.canadaCompletions === null
         ? "The connected starts table does not publish current completions; Canada Pulse does not infer or replace missing completions with zero."
         : `Canada recorded ${data.canadaCompletions.toLocaleString("en-CA")} completions in the same period.`,
@@ -354,7 +356,7 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
       note:
         province.changePct === null
           ? `${province.sharePct}% of Canada's latest starts.`
-          : `${province.sharePct}% of Canada's latest starts; ${province.changePct > 0 ? "up" : "down"} ${Math.abs(province.changePct)}% vs ${data.previousPeriod}.`,
+          : `${province.sharePct}% of Canada's latest starts; ${province.changePct > 0 ? "up" : "down"} ${Math.abs(province.changePct)}% vs ${data.previousPeriodLabel}.`,
       score: Math.min(100, Math.round(province.sharePct * 4 + Math.max(0, province.changePct ?? 0))),
     })),
     chartPayloads: [
@@ -376,11 +378,11 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
                 value: data.canadaChangePct,
                 display: `${data.canadaChangePct > 0 ? "+" : ""}${data.canadaChangePct}%`,
                 direction: data.canadaChangePct > 0 ? "up" as const : data.canadaChangePct < 0 ? "down" as const : "neutral" as const,
-                plainEnglish: `Housing starts changed ${Math.abs(data.canadaChangePct)}% from ${data.previousPeriod}.`,
+                plainEnglish: `Housing starts changed ${Math.abs(data.canadaChangePct)}% from ${data.previousPeriodLabel}.`,
                 change: data.canadaChangePct,
                 changeDisplay: `${data.canadaChangePct > 0 ? "+" : ""}${data.canadaChangePct}%`,
-                period: data.latestPeriod,
-                changePeriod: `${data.previousPeriod} to ${data.latestPeriod}`,
+                period: data.latestPeriodLabel,
+                changePeriod: `${data.previousPeriodLabel} to ${data.latestPeriodLabel}`,
               }]),
         ],
       },
@@ -392,7 +394,7 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
           value: province.starts,
           display: province.starts.toLocaleString("en-CA"),
           direction: province.changePct === null ? "neutral" : province.changePct >= 0 ? "up" : "down",
-          plainEnglish: `${province.province} represented ${province.sharePct}% of Canada's housing starts in ${data.latestPeriod}.`,
+          plainEnglish: `${province.province} represented ${province.sharePct}% of Canada's housing starts in ${data.latestPeriodLabel}.`,
         })),
       },
       {
@@ -419,8 +421,8 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
     promoted: true,
     status: "live",
     plainEnglishSummary:
-      `Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} housing starts in ${data.latestPeriod}, ${changeDisplay}. Starts measure the construction pipeline, not move-in-ready supply. Current completions are not available in this connected table and are not estimated.`,
-    socialSummary: `CMHC Housing Watch: Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} starts in ${data.latestPeriod}, ${changeDisplay}.`,
+      `Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} housing starts in ${data.latestPeriodLabel}, ${changeDisplay}. Starts measure the construction pipeline, not move-in-ready supply. Current completions are not available in this connected table and are not estimated.`,
+    socialSummary: `CMHC Housing Watch: Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} starts in ${data.latestPeriodLabel}, ${changeDisplay}.`,
   };
 }
 
@@ -673,7 +675,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
         status: statCanReleases.some((release) => release.status === "live") ? "live" : "summary_only",
         note: "Daily feeds plus rolling direct Daily URL probes monitored.",
       },
-      { source: "CMHC", status: housingWatch.status, note: "Housing starts table connected; completions/rental imports next." },
+      { source: "CMHC", status: housingWatch.status, note: "Quarterly housing starts table connected; completions and rental tables remain separate imports." },
       {
         source: "Bank of Canada",
         status: bankOfCanadaReports.length ? "live" : bankOfCanada.status,

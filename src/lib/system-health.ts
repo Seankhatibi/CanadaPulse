@@ -21,10 +21,8 @@ export async function getSystemHealth() {
 
   if (!database) warnings.push("Durable database history is not configured; official sources are fetched live on request.");
   if (!process.env.CRON_SECRET) warnings.push("Scheduled refresh authentication is not configured in this environment.");
-  if (hub.housingWatch.releaseDate.length === 7) {
-    const housingAge = (Date.now() - validDate(hub.housingWatch.releaseDate)) / 86_400_000;
-    if (housingAge > 60) warnings.push(`Housing starts snapshot is ${Math.round(housingAge)} days old.`);
-  }
+  const housingAge = (Date.now() - validDate(hub.housingWatch.releaseDate)) / 86_400_000;
+  if (housingAge > 120) warnings.push(`Quarterly housing construction release is ${Math.round(housingAge)} days old.`);
 
   return {
     generatedAt: new Date().toISOString(),
