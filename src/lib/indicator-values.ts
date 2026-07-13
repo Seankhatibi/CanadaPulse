@@ -1,6 +1,6 @@
 import { getPrisma } from "@/lib/prisma";
-import { getIndicatorsByCategory } from "@/lib/data/mock-queries";
 import { prismaStatusToPublic, sourceStatusToPublic, type PublicIndicatorValue } from "@/lib/data-status";
+import { getMultiSourceReleaseHub } from "@/lib/release-hub";
 
 export async function getDbIndicatorValues({
   geographySlug,
@@ -75,39 +75,86 @@ export async function getDbIndicatorValues({
     });
 }
 
-export function getFallbackIndicatorValues({
+const categoryAreas: Record<string, string[]> = {
+  economy: ["economy", "labour", "inflation", "rates", "trade", "fiscal"],
+  housing: ["housing", "rates"],
+  inflation: ["inflation"],
+  population: ["population", "immigration"],
+  immigration: ["population", "immigration"],
+  government: ["fiscal"],
+  trade: ["trade"],
+  energy: ["energy"],
+  youth: ["labour", "housing", "inflation", "rates"],
+};
+
+function slugify(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function numericValue(display: string) {
+  const cleaned = display.replace(/[^0-9.-]+/g, "");
+  if (!cleaned || !/\d/.test(cleaned)) return null;
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function displayUnit(display: string) {
+  if (display.includes("%")) return "%";
+  if (display.includes("$")) return "CAD";
+  return "reported unit";
+}
+
+export async function getReleaseIndicatorValues({
   geographySlug,
   categorySlug,
 }: {
   geographySlug: string;
   categorySlug: string;
-}): PublicIndicatorValue[] {
-  return getIndicatorsByCategory(geographySlug, categorySlug).map((indicator) => ({
-    indicatorSlug: indicator.slug,
-    indicatorName: indicator.name,
-    categorySlug,
-    geographySlug,
-    geographyName: geographySlug,
-    latest: indicator.latest
-      ? {
-          value: indicator.latest.value,
-          period: indicator.latest.period,
-          label: indicator.latest.label,
-          unit: indicator.unit,
-        }
-      : null,
-    trend: indicator.trend.map((point) => ({
-      value: point.value,
-      period: point.period,
-      label: point.label,
-    })),
-    source: {
-      name: "Fallback seed data",
-      publisher: "Canada Pulse",
-      url: "/data-status",
-    },
-    status: "fallback",
-    lastFetchedAt: null,
-    note: "Seeded fallback value. Official source import pending.",
-  }));
+}): Promise<PublicIndicatorValue[]> {
+  const areas = categoryAreas[categorySlug] ?? [categorySlug];
+  const hub = await getMultiSourceReleaseHub();
+  const releases = hub.todayQueue.filter(
+    (release) => release.status === "live" && release.affectedAreas.some((area) => areas.includes(area)),
+  );
+
+  if (geographySlug !== "canada") {
+    return releases.flatMap((release) => {
+      const province = release.provinceBreakdown.find((item) => slugify(item.province) === geographySlug);
+      if (!province) return [];
+      const value = numericValue(province.value);
+      if (value === null) return [];
+      return [{
+        indicatorSlug: `${release.slug}-${geographySlug}`,
+        indicatorName: release.title,
+        categorySlug,
+        geographySlug,
+        geographyName: province.province,
+        latest: { value, period: release.referencePeriod, label: province.value, unit: displayUnit(province.value) },
+        trend: [],
+        source: { name: release.title, publisher: release.publisher, url: release.sourceUrl },
+        status: "live" as const,
+        lastFetchedAt: release.releaseDate,
+        note: province.note,
+      } satisfies PublicIndicatorValue];
+    });
+  }
+
+  const values = releases.flatMap((release) => {
+    const headlineChart = release.chartPayloads.find((chart) => chart.kind === "metric-strip") ?? release.chartPayloads[0];
+    return (headlineChart?.points ?? []).map((point) => ({
+      indicatorSlug: `${release.slug}-${slugify(point.label)}`,
+      indicatorName: point.label,
+      categorySlug,
+      geographySlug,
+      geographyName: "Canada",
+      latest: { value: point.value, period: point.period ?? release.referencePeriod, label: point.display, unit: displayUnit(point.display) },
+      trend: [],
+      source: { name: release.title, publisher: release.publisher, url: release.sourceUrl },
+      status: "live" as const,
+      lastFetchedAt: release.releaseDate,
+      note: point.plainEnglish,
+    } satisfies PublicIndicatorValue));
+  });
+
+  return [...new Map(values.map((value) => [`${value.indicatorSlug}-${value.latest?.label}`, value])).values()];
 }

@@ -15,6 +15,8 @@ const forbidden = [
   "@/lib/canada-pulse-data",
   "source-ready-demo",
   "official-source-ready-demo",
+  "getFallbackIndicatorValues",
+  "Fallback seed data",
 ];
 const ignoredUnreferencedLegacyFiles = new Set([
   "src/components/housing-dashboard.tsx",
