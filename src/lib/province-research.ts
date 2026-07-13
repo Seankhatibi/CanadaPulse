@@ -1,4 +1,4 @@
-import { provinces, provinceSymbols } from "@/lib/canada-pulse-data";
+import { provinces, provinceSymbols } from "@/lib/province-directory";
 import { getMultiSourceReleaseHub } from "@/lib/release-hub";
 import { buildReleaseIntelligence } from "@/lib/release-intelligence";
 

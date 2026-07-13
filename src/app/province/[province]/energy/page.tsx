@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ProvinceResearchPage } from "@/components/province-research-page";
-import { provinces } from "@/lib/canada-pulse-data";
+import { provinces } from "@/lib/province-directory";
 import { getProvinceResearchBrief } from "@/lib/province-research";
 
 export const dynamic = "force-dynamic";

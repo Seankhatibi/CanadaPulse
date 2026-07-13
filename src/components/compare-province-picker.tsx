@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Shuffle } from "lucide-react";
-import { provinces } from "@/lib/canada-pulse-data";
+import { provinces } from "@/lib/province-directory";
 
 export function CompareProvincePicker({ left, right }: { left: string; right: string }) {
   const router = useRouter();

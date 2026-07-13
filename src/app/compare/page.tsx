@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Database } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { CompareProvincePicker } from "@/components/compare-province-picker";
-import { provinces } from "@/lib/canada-pulse-data";
+import { provinces } from "@/lib/province-directory";
 import { getProvinceResearchBrief } from "@/lib/province-research";
 
 export const dynamic = "force-dynamic";

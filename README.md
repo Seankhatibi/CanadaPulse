@@ -1,55 +1,77 @@
 # Canada Pulse
 
-Canada Pulse is an interactive public dashboard for understanding Canada's economy, housing, population pressure, government spending, trade, energy, health, youth future, and quality of life.
+Canada Pulse is a public Canadian economic-intelligence product that detects official releases, loads structured facts where available, and publishes source-backed national and provincial research briefs.
 
-Current milestone: Phase 2, with a Next.js app shell, mock data layer, Prisma/PostgreSQL schema, source registry, seed script, and data-model page.
+Production: [canadapulse.vercel.app](https://canadapulse.vercel.app)
 
-## Getting Started
+## Live Sources
 
-First, run the development server:
+- Statistics Canada Daily feeds, direct release probes, and linked table downloads
+- Bank of Canada Valet observations, reports, surveys, and policy publications
+- CMHC housing-construction data
+- Open Government Canada and IRCC dataset monitoring
+- Canada Energy Regulator and NRCan publications
+- CIHI National Health Expenditure Trends
+- PBO source monitoring
+
+Every public metric carries an evidence status. Missing province rows remain missing; the app does not infer zero or silently replace official data with a model.
+
+## Local Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The live-source product works without a database by fetching official publishers at request time.
 
-If port 3000 is busy, Next.js will automatically select the next available port.
+## Production Database
 
-## Phase 2 Data Commands
+Set `DATABASE_URL` to a Postgres connection, then run:
 
 ```bash
-npm run db:generate
 npm run db:push
-npm run db:seed
-npm run db:studio
+npm run db:bootstrap:production
 ```
 
-Copy `.env.example` to `.env` and set `DATABASE_URL` before pushing or seeding a real database. The app itself still runs on mock data without database credentials.
+The production bootstrap creates source metadata and imports official release events. It does not load the historical demo dataset.
 
-## Key Files
+The old fallback seed is restricted to isolated development databases:
 
-- `prisma/schema.prisma` defines the PostgreSQL-ready data model.
-- `prisma/seed.ts` loads the mock dataset into Prisma.
-- `src/lib/mock-data/` contains source-ready mock geographies, indicators, scores, and time-series rows.
-- `src/lib/data/mock-queries.ts` is the app-facing mock query layer.
-- `src/app/data-model/page.tsx` shows the Phase 2 data inventory.
+```bash
+npm run db:seed:fallback
+```
+
+Never run the fallback seed against production.
+
+## Scheduled Refresh
+
+Vercel cron invokes `/api/cron/refresh-data` at 11:00 a.m. and 1:00 p.m. Toronto time on weekdays. Production requires `CRON_SECRET`; Vercel sends it as a bearer token automatically.
+
+The refresh performs:
+
+1. Statistics Canada Daily detection and table extraction.
+2. Multi-source release normalization and promotion scoring.
+3. CIHI health-expenditure source refresh.
+4. Release-event and refresh-run persistence when Postgres is configured.
 
 ## Verification
 
 ```bash
+npm run audit:public-data
 npm run lint
 npm run build
 npx prisma validate
-npx prisma generate
 ```
 
-## Product Direction
+`audit:public-data` prevents seeded data modules from being imported by public routes and active components.
 
-The app should stay neutral, data-first, mobile-first, and built around the emotional indicators Canadians care about: affordability, housing, wages, immigration pressure, taxes, healthcare access, productivity, debt, energy, and whether young people can build a future.
+## Important Routes
+
+- `/` latest promoted release and official debate board
+- `/releases` searchable official release archive
+- `/pulse-release/[source]/[slug]` structured research brief
+- `/compare` like-for-like province comparison
+- `/province/[province]` verified province evidence
+- `/data-status` live source and freshness status
+- `/methodology` evidence and interpretation rules

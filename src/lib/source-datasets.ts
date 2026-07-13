@@ -194,6 +194,17 @@ export const sourceDatasets: SourceDatasetSeed[] = [
     latestKnownPeriod: "Importer pending",
   },
   {
+    slug: "cihi-national-health-expenditure",
+    label: "CIHI National Health Expenditure Trends",
+    publisher: "Canadian Institute for Health Information",
+    officialUrl: "https://www.cihi.ca/en/national-health-expenditure-trends",
+    apiType: "HTML",
+    cadence: "ANNUAL",
+    licenseNote: "Official CIHI national health expenditure summary.",
+    updateStatus: "LIVE",
+    latestKnownPeriod: "2025 expenditure estimates",
+  },
+  {
     slug: "phac-chronic-disease",
     label: "PHAC chronic disease surveillance",
     publisher: "Public Health Agency of Canada",

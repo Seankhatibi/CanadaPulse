@@ -2,7 +2,7 @@
 
 import { Download, Landmark, MoveRight, ReceiptText, Share2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { provinces } from "@/lib/canada-pulse-data";
+import { provinces } from "@/lib/province-directory";
 import { estimateTaxReceipt, taxProfiles } from "@/lib/tax-data";
 import { GlassPanel, SectionHeader, StatusPill } from "@/components/app-shell";
 

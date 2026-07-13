@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { BarChart3, Crown } from "lucide-react";
-import { provinces, provinceSymbols } from "@/lib/canada-pulse-data";
+import { Crown } from "lucide-react";
+import { provinces, provinceSymbols } from "@/lib/province-directory";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ProvinceSelect } from "@/components/province-select";
 import { MobileNav } from "@/components/mobile-nav";
 
 const navItems = [
   { href: "/", label: "Latest" },
+  { href: "/releases", label: "Archive" },
   { href: "/canada", label: "Economy" },
   { href: "/housing", label: "Housing" },
   { href: "/population", label: "Population" },
@@ -61,7 +62,7 @@ export function AppShell({
 
           <ProvinceSelect />
           <ThemeToggle />
-          <MobileNav />
+          <MobileNav variant={variant} />
         </div>
       </header>
 
@@ -119,30 +120,14 @@ export function GlassPanel({
 
 export function ProvinceMiniMap() {
   return (
-    <div className="grid min-h-80 grid-cols-3 gap-2 rounded-md bg-stone-950 p-3 text-white shadow-inner dark:bg-black/40 min-[430px]:grid-cols-4 sm:grid-cols-5">
+    <div className="grid min-h-80 grid-cols-3 gap-2 rounded-md bg-stone-950 p-3 text-white shadow-inner min-[430px]:grid-cols-4 sm:grid-cols-5">
       {provinces.map((province) => (
-        <Link
-          key={province.slug}
-          href={`/province/${province.slug}`}
-          title={`${province.name}: ${provinceSymbols[province.slug]?.symbol ?? province.status}`}
-          className={`group relative flex min-h-20 min-w-0 flex-col justify-between overflow-hidden rounded-md border border-white/10 bg-gradient-to-br ${provinceSymbols[province.slug]?.accent ?? "from-red-600 to-stone-800"} p-2.5 transition hover:-translate-y-0.5 hover:border-red-200 hover:shadow-lg sm:p-3`}
-        >
-          <span className="absolute inset-0 bg-black/20 transition group-hover:bg-black/5" />
-          <span className="relative flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold">{province.abbr}</span>
-            <BarChart3 className="size-3.5 opacity-75" aria-hidden="true" />
-          </span>
-          <span className="relative">
-            <span className="block font-mono text-lg font-semibold">{province.score}</span>
-            <span className="block truncate text-[10px] text-white/75">
-              {provinceSymbols[province.slug]?.symbol}
-            </span>
-          </span>
+        <Link key={province.slug} href={`/province/${province.slug}`} title={province.name} className={`group relative flex min-h-20 min-w-0 flex-col justify-between overflow-hidden rounded-md border border-white/10 bg-gradient-to-br ${provinceSymbols[province.slug]?.accent ?? "from-red-600 to-stone-800"} p-2.5 transition hover:-translate-y-0.5 hover:border-red-200 hover:shadow-lg sm:p-3`}>
+          <span className="absolute inset-0 bg-black/25 transition group-hover:bg-black/10" />
+          <span className="relative text-sm font-black">{province.abbr}</span>
+          <span className="relative block text-[11px] font-bold leading-4 text-white/85">{provinceSymbols[province.slug]?.symbol}</span>
         </Link>
       ))}
-      <div className="col-span-2 flex min-h-20 items-center justify-center rounded-md border border-dashed border-white/20 bg-white/5 text-xs text-white/60 sm:col-span-1">
-        Arctic
-      </div>
     </div>
   );
 }

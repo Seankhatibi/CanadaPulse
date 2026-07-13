@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { provinces } from "@/lib/canada-pulse-data";
+import { provinces } from "@/lib/province-directory";
 
 const areaRoutes: Record<string, (province: string) => string> = {
   "food-inflation": () => "/canada",

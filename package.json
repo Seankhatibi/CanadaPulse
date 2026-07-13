@@ -11,6 +11,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:fallback": "ALLOW_FALLBACK_SEED=true tsx prisma/seed.ts",
+    "db:bootstrap:production": "tsx scripts/bootstrap-production-db.ts",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },

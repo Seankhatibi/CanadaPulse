@@ -14,6 +14,9 @@ import { indicatorSourceMaps, sourceDatasets } from "../src/lib/source-datasets"
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.ALLOW_FALLBACK_SEED !== "true") {
+    throw new Error("Fallback seed is disabled. Set ALLOW_FALLBACK_SEED=true only for an isolated development database.");
+  }
   for (const source of dataSources) {
     await prisma.dataSource.upsert({
       where: { slug: source.slug },
