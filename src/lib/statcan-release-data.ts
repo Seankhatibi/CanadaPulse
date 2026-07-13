@@ -17,6 +17,8 @@ export type StatCanReleaseTable = {
     previous: number | null;
     change: number | null;
     changePeriod: string;
+    display?: string;
+    previousDisplay?: string;
   }>;
 };
 
@@ -122,6 +124,11 @@ function extractTableLinks(html: string, releaseUrl: string) {
   return [...new Map(links.map((link) => [link.htmlUrl, link])).values()];
 }
 
+function extractCompanionTableUrls(html: string, releaseUrl: string) {
+  return [...new Set([...html.matchAll(/href="([^"]*-cansim-eng\.htm)"/gi)]
+    .map((match) => absoluteUrl(match[1], releaseUrl)))];
+}
+
 function tableIdToProductId(tableId: string) {
   return tableId.replace(/\D/g, "").slice(0, 8);
 }
@@ -144,9 +151,13 @@ function formatSignalDisplay(label: string, value: number) {
 
 function formatChangeDisplay(label: string, change: number | null) {
   if (change === null) return "latest value";
-  const sign = change > 0 ? "+" : "";
+  const sign = change > 0 ? "+" : change < 0 ? "-" : "";
   if (/rate/i.test(label)) return `${sign}${change.toFixed(1)} pts`;
   if (/employment|labour force|population|unemployment/i.test(label)) return `${sign}${formatCompactNumber(change)}`;
+  if (/value|price|sales|income|revenue|permit/i.test(label)) {
+    if (Math.abs(change) >= 1_000_000_000) return `${sign}$${(Math.abs(change) / 1_000_000_000).toFixed(1)}B`;
+    if (Math.abs(change) >= 1_000_000) return `${sign}$${(Math.abs(change) / 1_000_000).toFixed(1)}M`;
+  }
   return `${sign}${change.toFixed(1)}`;
 }
 
@@ -180,6 +191,149 @@ async function fetchWdsDownloads(tableIds: string[]) {
       }
     }),
   );
+}
+
+type WdsMember = {
+  memberId: number;
+  memberNameEn: string;
+  terminated?: number;
+};
+
+type WdsDimension = {
+  dimensionPositionId: number;
+  dimensionNameEn: string;
+  member: WdsMember[];
+};
+
+type WdsMetadata = {
+  productId: string;
+  cubeTitleEn: string;
+  dimension: WdsDimension[];
+};
+
+function memberPriority(member: WdsMember) {
+  const name = member.memberNameEn.toLowerCase();
+  let score = member.terminated ? -100 : 0;
+  if (/^(total|all items|all industries|both sexes|all ages|types? of .* total)/.test(name)) score += 100;
+  if (/seasonally adjusted/.test(name) && !/unadjusted/.test(name)) score += 70;
+  if (/value of|current dollars|all employees/.test(name)) score += 55;
+  if (/cattle|hogs|milk|eggs|wheat|canola|gasoline|food|shelter/.test(name)) score += 25;
+  return score;
+}
+
+function rankedMembers(dimension: WdsDimension) {
+  return [...dimension.member].sort((a, b) => memberPriority(b) - memberPriority(a) || a.memberId - b.memberId);
+}
+
+function formatWdsValue(label: string, value: number, scalarFactorCode = 0) {
+  const scaled = value * 10 ** scalarFactorCode;
+  if (/rate|percent|percentage|index/i.test(label)) return `${value.toFixed(1)}${/rate|percent|percentage/i.test(label) ? "%" : ""}`;
+  if (/value|price|sales|income|revenue|permit/i.test(label)) {
+    if (Math.abs(scaled) >= 1_000_000_000) return `$${(scaled / 1_000_000_000).toFixed(1)}B`;
+    if (Math.abs(scaled) >= 1_000_000) return `$${(scaled / 1_000_000).toFixed(1)}M`;
+    return `$${scaled.toLocaleString("en-CA", { maximumFractionDigits: 1 })}`;
+  }
+  return scaled.toLocaleString("en-CA", { maximumFractionDigits: 1 });
+}
+
+async function fetchWdsTableSnapshot(productId: string): Promise<StatCanReleaseTable | null> {
+  const metadataResponse = await fetch("https://www150.statcan.gc.ca/t1/wds/rest/getCubeMetadata", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify([{ productId: Number(productId) }]),
+    next: { revalidate: 60 * 60 },
+  });
+  if (!metadataResponse.ok) return null;
+  const metadataPayload = (await metadataResponse.json()) as Array<{ status?: string; object?: WdsMetadata }>;
+  const metadata = metadataPayload[0]?.object;
+  if (!metadata?.dimension?.length) return null;
+
+  const dimensions = [...metadata.dimension].sort((a, b) => a.dimensionPositionId - b.dimensionPositionId);
+  const geographyIndex = dimensions.findIndex((dimension) => /geograph/i.test(dimension.dimensionNameEn));
+  const geography = geographyIndex >= 0 ? dimensions[geographyIndex] : dimensions[0];
+  const geographyMembers = geography.member
+    .filter((member) => /Canada|Newfoundland and Labrador|Prince Edward Island|Nova Scotia|New Brunswick|Quebec|Ontario|Manitoba|Saskatchewan|Alberta|British Columbia/.test(member.memberNameEn))
+    .slice(0, 11);
+  const baseMembers = dimensions.map((dimension) => rankedMembers(dimension)[0]);
+  const topicIndex = dimensions
+    .map((dimension, index) => ({ index, count: index === geographyIndex ? -1 : dimension.member.length }))
+    .sort((a, b) => b.count - a.count)[0]?.index ?? -1;
+  const topicMembers = topicIndex >= 0 ? rankedMembers(dimensions[topicIndex]).slice(0, 8) : [];
+  const geographies = geographyMembers.length ? geographyMembers : rankedMembers(geography).slice(0, 10);
+  const topics = topicMembers.length ? topicMembers : [baseMembers[topicIndex]].filter(Boolean);
+  const requests = geographies.flatMap((geo) => topics.map((topic) => {
+    const selected = baseMembers.map((member, index) => index === geographyIndex ? geo : index === topicIndex ? topic : member);
+    const coordinate = [...selected.map((member) => member.memberId), ...Array(Math.max(0, 10 - selected.length)).fill(0)].join(".");
+    const context = selected
+      .filter((member, index) => index !== geographyIndex && index !== topicIndex && member)
+      .map((member) => member.memberNameEn)
+      .filter((name) => /value|price|rate|index|number|dollar|unit/i.test(name));
+    return { productId: Number(productId), coordinate, latestN: 2, geo, topic, context };
+  })).slice(0, 90);
+  if (!requests.length) return null;
+
+  const dataResponse = await fetch("https://www150.statcan.gc.ca/t1/wds/rest/getDataFromCubePidCoordAndLatestNPeriods", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(requests.map(({ productId: pid, coordinate, latestN }) => ({ productId: pid, coordinate, latestN }))),
+    next: { revalidate: 60 * 60 },
+  });
+  if (!dataResponse.ok) return null;
+  const payload = (await dataResponse.json()) as Array<{
+    status?: string;
+    object?: { coordinate?: string; vectorDataPoint?: Array<{ refPer: string; value: number; scalarFactorCode?: number }> };
+  }>;
+  const requestByCoordinate = new Map(requests.map((request) => [request.coordinate, request]));
+  const rows = payload.flatMap((result) => {
+    const points = result.object?.vectorDataPoint ?? [];
+    if (!points.length) return [];
+    const latest = points.at(-1) ?? null;
+    const previous = points.at(-2) ?? null;
+    if (!latest) return [];
+    const request = result.object?.coordinate ? requestByCoordinate.get(result.object.coordinate) : undefined;
+    if (!request) return [];
+    const label = [...request.context, request.topic.memberNameEn].join(": ");
+    const formatLabel = `${metadata.cubeTitleEn}: ${label}`;
+    const latestValue = latest.value * 10 ** (latest.scalarFactorCode ?? 0);
+    const previousValue = previous ? previous.value * 10 ** (previous.scalarFactorCode ?? 0) : null;
+    return [{
+      group: request.geo.memberNameEn,
+      label,
+      values: points.map((point) => point.value * 10 ** (point.scalarFactorCode ?? 0)),
+      latest: latestValue,
+      previous: previousValue,
+      change: previousValue === null ? null : Number((latestValue - previousValue).toFixed(2)),
+      changePeriod: previous ? `${previous.refPer} to ${latest.refPer}` : latest.refPer,
+      display: formatWdsValue(formatLabel, latest.value, latest.scalarFactorCode),
+      previousDisplay: previous ? formatWdsValue(formatLabel, previous.value, previous.scalarFactorCode) : undefined,
+      latestPeriod: latest.refPer,
+      previousPeriod: previous?.refPer ?? latest.refPer,
+    }];
+  });
+  if (!rows.length) return null;
+  const latestPeriod = rows.map((row) => row.latestPeriod).sort().at(-1) ?? "latest period";
+  const previousPeriod = rows.map((row) => row.previousPeriod).sort().at(-1) ?? "previous period";
+
+  return {
+    title: `${metadata.cubeTitleEn} by province`,
+    htmlUrl: `https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=${productId}01`,
+    csvUrl: `https://www150.statcan.gc.ca/n1/tbl/csv/${productId}-eng.zip`,
+    sourceTableIds: [],
+    periods: [previousPeriod, latestPeriod],
+    latestPeriod,
+    previousPeriod,
+    rows: rows.map((row) => ({
+      group: row.group,
+      label: row.label,
+      values: row.values,
+      latest: row.latest,
+      previous: row.previous,
+      change: row.change,
+      changePeriod: row.changePeriod,
+      display: row.display,
+      previousDisplay: row.previousDisplay,
+    })),
+  };
 }
 
 function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCanReleaseTable | null {
@@ -269,20 +423,22 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
 
 function signalsFromTables(tables: StatCanReleaseTable[]): ReleaseSignal[] {
   const rows = tables[0]?.rows ?? [];
+  const nationalRows = rows.filter((row) => row.group === "Canada");
+  const signalRows = [...new Map((nationalRows.length ? nationalRows : rows).map((row) => [row.label, row])).values()];
   const latestPeriod = tables[0]?.latestPeriod ?? "latest period";
 
-  return rows.slice(0, 8).map((row) => {
+  return signalRows.slice(0, 8).map((row) => {
     const value = row.latest ?? 0;
     const change = row.change;
 
     return {
       label: row.label,
       value,
-      display: formatSignalDisplay(row.label, value),
+      display: row.display ?? formatSignalDisplay(row.label, value),
       direction: change === null || change === 0 ? "neutral" : change > 0 ? "up" : "down",
       explanation: `${row.label}: ${formatSignalDisplay(row.label, value)} in ${latestPeriod}; ${formatChangeDisplay(row.label, change)} over ${row.changePeriod}.`,
       previous: row.previous,
-      previousDisplay: row.previous === null ? undefined : formatSignalDisplay(row.label, row.previous),
+      previousDisplay: row.previousDisplay ?? (row.previous === null ? undefined : formatSignalDisplay(row.label, row.previous)),
       change,
       changeDisplay: formatChangeDisplay(row.label, change),
       period: latestPeriod,
@@ -303,7 +459,11 @@ export async function fetchStatCanReleaseData(entry: StatCanDailyEntry): Promise
   }
 
   const releaseHtml = await releaseResponse.text();
-  const tableIds = extractTableIds(releaseHtml);
+  const companionHtml = (await Promise.all(extractCompanionTableUrls(releaseHtml, releaseUrl).map(async (url) => {
+    const response = await fetch(url, { headers: { "User-Agent": "Canada Pulse StatCan table importer" }, next: { revalidate: 60 * 60 } });
+    return response.ok ? response.text() : "";
+  }))).join("\n");
+  const tableIds = [...new Set([...extractTableIds(releaseHtml), ...extractTableIds(companionHtml)])];
   const tableLinks = extractTableLinks(releaseHtml, releaseUrl);
 
   const tables = (
@@ -320,17 +480,20 @@ export async function fetchStatCanReleaseData(entry: StatCanDailyEntry): Promise
     )
   ).filter((table): table is StatCanReleaseTable => Boolean(table));
 
-  const mergedTableIds = [...new Set([...tableIds, ...tables.flatMap((table) => table.sourceTableIds)])];
+  const wdsTables = tables.length ? [] : (await Promise.all(tableIds.slice(0, 2).map((tableId) => fetchWdsTableSnapshot(tableIdToProductId(tableId)).catch(() => null))))
+    .filter((table): table is StatCanReleaseTable => Boolean(table));
+  const allTables = [...tables, ...wdsTables];
+  const mergedTableIds = [...new Set([...tableIds, ...allTables.flatMap((table) => table.sourceTableIds)])];
   const wdsDownloads = await fetchWdsDownloads(mergedTableIds);
-  const signals = signalsFromTables(tables);
+  const signals = signalsFromTables(allTables);
 
   return {
     releaseUrl,
     tableIds: mergedTableIds,
     tableLinks,
     wdsDownloads,
-    tables,
+    tables: allTables,
     signals,
-    sourceStatus: tables.length ? "table_data_loaded" : tableLinks.length ? "table_links_detected" : "summary_only",
+    sourceStatus: allTables.length ? "table_data_loaded" : tableLinks.length || tableIds.length ? "table_links_detected" : "summary_only",
   };
 }

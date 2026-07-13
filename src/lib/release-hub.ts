@@ -102,6 +102,15 @@ function sourceHref(source: string, slug: string) {
   return `/pulse-release/${source}/${slug}`;
 }
 
+function formatProvinceDelta(label: string, value: number) {
+  const absolute = Math.abs(value);
+  if (/rate|percent/i.test(label)) return `${absolute.toFixed(1)} points`;
+  if (absolute >= 1_000_000_000) return `${(absolute / 1_000_000_000).toFixed(1)}B`;
+  if (absolute >= 1_000_000) return `${(absolute / 1_000_000).toFixed(1)}M`;
+  if (absolute >= 1_000) return `${(absolute / 1_000).toFixed(1)}k`;
+  return absolute.toFixed(1);
+}
+
 function classifyStatCanAreas(entry: StatCanDailyEntry): ReleaseArea[] {
   const text = `${entry.title} ${entry.summary}`.toLowerCase();
   const areas = new Set<ReleaseArea>();
@@ -162,14 +171,22 @@ async function statCanReleaseFromEntry(entry: StatCanDailyEntry, promotedHref?: 
       ]
     : [];
   const provinceTable = releaseData?.tables.find((table) => /by province/i.test(table.title));
-  const provinceBreakdown = provinceTable?.rows
-    .filter((row) => row.group && row.label === "Unemployment rate" && row.latest !== null)
+  const provinceRows = provinceTable?.rows.filter((row) => row.group && row.group !== "Canada" && row.latest !== null) ?? [];
+  const provincePreviousPeriod = provinceTable?.previousPeriod ?? "the previous period";
+  const preferredProvinceLabel = /labour force survey/i.test(entry.title)
+    ? provinceRows.find((row) => /unemployment rate/i.test(row.label))?.label
+    : [...new Map(provinceRows.map((row) => [row.label, provinceRows.filter((candidate) => candidate.label === row.label).length])).entries()]
+        .sort((a, b) => b[1] - a[1])[0]?.[0];
+  const provinceBreakdown = provinceRows
+    .filter((row) => row.label === preferredProvinceLabel)
     .map((row) => ({
       province: row.group as string,
-      value: `${row.latest?.toFixed(1)}%`,
-      note: `${row.change === null ? "No monthly change available" : `${row.change > 0 ? "up" : row.change < 0 ? "down" : "unchanged"} ${Math.abs(row.change).toFixed(1)} points`} from ${provinceTable.previousPeriod}.`,
-      score: Math.min(100, Math.round((row.latest ?? 0) * 10)),
-    })) ?? [];
+      value: row.display ?? (/rate/i.test(row.label) ? `${row.latest?.toFixed(1)}%` : row.latest?.toLocaleString("en-CA") ?? "n/a"),
+      note: row.change === null
+        ? `No change is available from ${provincePreviousPeriod}.`
+        : `${row.change > 0 ? "up" : row.change < 0 ? "down" : "unchanged"} ${formatProvinceDelta(row.label, row.change)} from ${provincePreviousPeriod}.`,
+      score: Math.min(100, Math.round(Math.abs(row.change ?? 0) * 10 + 25)),
+    }));
   const isSameDayRelease = entry.published.slice(0, 10) === canadaDate();
   const baseScore = scoreRelease(areas, `${entry.title} ${entry.summary}`);
   const importanceScore = Math.min(100, baseScore + (isSameDayRelease ? 28 : 0));

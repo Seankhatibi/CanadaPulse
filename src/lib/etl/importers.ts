@@ -2,6 +2,7 @@ import { getPrisma } from "@/lib/prisma";
 import { refreshStatCanDailyReleaseFacts } from "@/lib/etl/statcan-adapter";
 import { fetchStatCanReleaseData } from "@/lib/statcan-release-data";
 import { getMultiSourceReleaseHub, type NormalizedRelease } from "@/lib/release-hub";
+import { getLatestDailyReleaseDate, rankDailyEntries } from "@/lib/statcan-daily";
 
 function getReleaseScore(entry: unknown) {
   if (typeof entry !== "object" || entry === null || !("score" in entry)) {
@@ -83,15 +84,22 @@ export async function persistStatCanDailyReleaseEvents() {
       const sourceDataset = await prisma.sourceDataset.findUnique({
         where: { slug: "statcan-daily-economic-releases" },
       });
+      const latestDate = getLatestDailyReleaseDate(result.entries);
+      const entriesToEnrich = new Set(
+        rankDailyEntries(result.entries.filter((entry) => entry.published.startsWith(latestDate)))
+          .slice(0, 12)
+          .map((entry) => entry.href),
+      );
 
       for (const entry of result.entries) {
         const score = getReleaseScore(entry);
-        const releaseData = await fetchStatCanReleaseData(entry).catch(() => null);
+        const releaseData = entriesToEnrich.has(entry.href) ? await fetchStatCanReleaseData(entry).catch(() => null) : null;
         const facts = {
           feed: entry.feed,
           summary: entry.summary,
           score,
           sourceStatus: releaseData?.sourceStatus ?? "summary_only",
+          enrichmentStatus: entriesToEnrich.has(entry.href) ? "latest-release-enrichment" : "archive-summary",
           tableIds: releaseData?.tableIds ?? [],
           tableLinks: releaseData?.tableLinks ?? [],
           wdsDownloads: releaseData?.wdsDownloads ?? [],

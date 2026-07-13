@@ -25,8 +25,8 @@ export async function GET(request: Request) {
     jobs: {
       statcanDaily,
       multiSourceReleaseHub,
-      statcanWds: "live through Daily selected-table extraction where releases expose source tables; WDS adapter ready for mapped tables",
-      cmhc: "live housing starts table import connected; rental/completions/mortgage datasets remain next detailed imports",
+      statcanWds: "live through Daily article tables, companion Tables pages and compact WDS metadata/series extraction",
+      cmhc: "live quarterly housing starts import connected; rental/completions/mortgage datasets remain separate detailed imports",
       bankOfCanada: "live Valet observations plus Bank of Canada report monitor connected",
       openGovernmentIrcc: "live CKAN metadata monitor connected; detailed PR/TFW/student/refugee resource import next",
       cihi: { status: cihi.status, period: cihi.period, metrics: cihi.metrics.length, sourceUrl: cihi.sourceUrl },
