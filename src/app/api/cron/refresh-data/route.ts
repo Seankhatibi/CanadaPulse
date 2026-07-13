@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       cmhc: "live quarterly housing starts import connected; rental/completions/mortgage datasets remain separate detailed imports",
       bankOfCanada: "live Valet observations plus Bank of Canada report monitor connected",
       financeCanada: "live Fiscal Monitor parser connected for revenue, expenses, deficit and public debt charges",
-      openGovernmentIrcc: "live CKAN metadata monitor connected; detailed PR/TFW/student/refugee resource import next",
+      openGovernmentIrcc: "live monthly PR, study permit, TFWP, IMP and asylum resource imports with provincial breakdowns",
       cihi: { status: cihi.status, period: cihi.period, metrics: cihi.metrics.length, sourceUrl: cihi.sourceUrl },
       energy: "CER/NRCan source linked in Release Hub",
       pbo: "PBO reports source linked in Release Hub",

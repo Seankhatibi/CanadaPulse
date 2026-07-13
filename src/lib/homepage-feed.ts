@@ -49,7 +49,7 @@ function releaseToStory(release: NormalizedRelease, topic: string, headline: str
   const intelligence = buildReleaseIntelligence(release);
   const metrics = intelligence.metrics.slice(0, 5);
   const main = metrics[0];
-  const hasOfficialProvinceRows = ["statcan", "cmhc"].includes(release.source);
+  const hasOfficialProvinceRows = ["statcan", "cmhc", "open-government-ircc"].includes(release.source);
 
   return {
     id: `${topic.toLowerCase().replace(/\s+/g, "-")}-${release.id}`,

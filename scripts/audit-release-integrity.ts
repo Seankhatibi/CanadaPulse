@@ -1,5 +1,6 @@
 import { fetchCmhcHousingConstructionData } from "../src/lib/cmhc-housing";
 import { fetchFinanceCanadaFiscalSnapshot } from "../src/lib/finance-canada-fiscal";
+import { fetchIrccImmigrationSnapshot } from "../src/lib/ircc-immigration";
 import { fetchStatCanDailyEntryFromUrl } from "../src/lib/statcan-daily";
 import { fetchStatCanReleaseData } from "../src/lib/statcan-release-data";
 
@@ -28,7 +29,16 @@ async function main() {
   assert(housing.latestPeriodLabel === "Q1 2026", `Unexpected CMHC quarter: ${housing.latestPeriodLabel}`);
   assert(housing.releaseDate === "2026-04-21", `Unexpected CMHC release date: ${housing.releaseDate}`);
 
-  console.log("Official release integrity audit passed: LFS, Finance Canada and CMHC headline values are correctly identified.");
+  const immigration = await fetchIrccImmigrationSnapshot();
+  const permanentResidents = immigration.metrics.find((item) => item.key === "permanentResidents");
+  const tfwp = immigration.metrics.find((item) => item.key === "tfwp");
+  const asylum = immigration.metrics.find((item) => item.key === "asylum");
+  assert(permanentResidents && permanentResidents.value > 20_000, `IRCC permanent-resident total failed integrity range: ${permanentResidents?.value}`);
+  assert(tfwp && tfwp.value > 10_000, `IRCC TFWP total failed integrity range: ${tfwp?.value}`);
+  assert(asylum && asylum.value > 1_000, `IRCC asylum total failed integrity range: ${asylum?.value}`);
+  assert(permanentResidents.provinceValues.some((item) => item.province === "Ontario"), "IRCC Ontario province row is missing.");
+
+  console.log("Official release integrity audit passed: LFS, Finance Canada, CMHC and IRCC headline values are correctly identified.");
 }
 
 main().catch((error) => {

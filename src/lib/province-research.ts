@@ -30,12 +30,13 @@ export async function getProvinceResearchBrief(slug: string, area: ProvinceResea
   const releases = hub.todayQueue.filter((release) =>
     release.affectedAreas.some((affectedArea) => areaFilters[area].includes(affectedArea)),
   );
+  const hasVerifiedProvinceRows = (source: string) => ["statcan", "cmhc", "open-government-ircc"].includes(source);
   const provincialFacts = releases.flatMap((release) => {
-    if (!['statcan', 'cmhc'].includes(release.source)) return [];
+    if (!hasVerifiedProvinceRows(release.source)) return [];
     const row = release.provinceBreakdown.find((item) => item.province === province.name);
     return row ? [{ ...row, release }] : [];
   });
-  const lead = releases.find((release) => ['statcan', 'cmhc'].includes(release.source) && release.status === "live" && release.chartPayloads.some((chart) => chart.points.length))
+  const lead = releases.find((release) => hasVerifiedProvinceRows(release.source) && release.status === "live" && release.chartPayloads.some((chart) => chart.points.length))
     ?? releases.find((release) => release.status === "live" && release.chartPayloads.some((chart) => chart.points.length))
     ?? null;
 

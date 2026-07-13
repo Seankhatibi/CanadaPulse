@@ -19,7 +19,7 @@ export async function getResearchAreaApiPayload(slug: ResearchAreaSlug) {
       affectedAreas: release.affectedAreas,
       plainEnglishSummary: release.plainEnglishSummary,
       chartPayloads: release.chartPayloads,
-      provinceBreakdown: ["statcan", "cmhc"].includes(release.source) ? release.provinceBreakdown : [],
+      provinceBreakdown: ["statcan", "cmhc", "open-government-ircc"].includes(release.source) ? release.provinceBreakdown : [],
       href: release.href,
       sourceUrl: release.sourceUrl,
     })),

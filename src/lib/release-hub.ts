@@ -2,8 +2,9 @@ import { unstable_cache } from "next/cache";
 import { fetchStatCanReleaseData } from "@/lib/statcan-release-data";
 import { fetchCmhcHousingConstructionData } from "@/lib/cmhc-housing";
 import { fetchFinanceCanadaFiscalSnapshot } from "@/lib/finance-canada-fiscal";
+import { fetchIrccImmigrationSnapshot } from "@/lib/ircc-immigration";
 import { fetchBankOfCanadaReportReleases } from "@/lib/bank-of-canada-reports";
-import { fetchIrccOpenDataSignals, fetchOfficialReportMonitors, type OfficialReportMonitor } from "@/lib/official-source-monitors";
+import { fetchOfficialReportMonitors, type OfficialReportMonitor } from "@/lib/official-source-monitors";
 import {
   fetchStatCanDailyEntries,
   buildReleaseExplainer,
@@ -501,52 +502,98 @@ async function getFinanceCanadaRelease(): Promise<NormalizedRelease> {
 }
 
 async function getOpenGovIrccRelease(): Promise<NormalizedRelease> {
-  const signals = await fetchIrccOpenDataSignals();
+  const data = await fetchIrccImmigrationSnapshot();
   const slug = "ircc-open-data-population-pressure";
-  const sourceUrl = "https://search.open.canada.ca/opendata/?owner_org=cic";
-  const totalDatasets = signals.reduce((sum, signal) => sum + signal.datasetCount, 0);
-  const totalResources = signals.reduce((sum, signal) => sum + signal.resourceCount, 0);
-  const latestModified = signals.map((signal) => signal.lastModified).sort().at(-1) ?? canadaDate();
+  const sourceUrl = data.sourceLinks[0]?.url ?? "https://open.canada.ca/data/en/organization/ircc";
+  const metric = (key: string) => data.metrics.find((item) => item.key === key);
+  const permanentResidents = metric("permanentResidents");
+  const studyPermits = metric("studyPermits");
+  const tfwp = metric("tfwp");
+  const imp = metric("imp");
+  const asylum = metric("asylum");
+  const provinceMetrics = [permanentResidents, tfwp, studyPermits].filter(
+    (item): item is (typeof data.metrics)[number] => Boolean(item),
+  );
+  const periodLabel = new Intl.DateTimeFormat("en-CA", { month: "long", year: "numeric", timeZone: "UTC" })
+    .format(new Date(`${data.referencePeriod}-01T12:00:00Z`));
+  const display = (value: number | undefined) => `~${(value ?? 0).toLocaleString("en-CA")}`;
+  const point = (item: typeof data.metrics[number]) => ({
+    label: item.label,
+    value: item.value,
+    display: display(item.value),
+    direction: item.change === null || item.change === 0 ? "neutral" as const : item.change > 0 ? "up" as const : "down" as const,
+    plainEnglish: `${display(item.value)} in ${periodLabel}; source-rounded change of ${item.change === null ? "n/a" : `${item.change > 0 ? "+" : ""}${item.change.toLocaleString("en-CA")}`} from the prior month.`,
+    previous: item.previous,
+    previousDisplay: item.previous === null ? undefined : display(item.previous),
+    change: item.change,
+    changeDisplay: item.change === null ? undefined : `${item.change > 0 ? "+" : ""}${item.change.toLocaleString("en-CA")}`,
+    period: periodLabel,
+    changePeriod: "Previous month to latest month",
+  });
 
   return {
     id: "open-government-ircc-population-pressure",
     slug,
-    title: "Population pressure changed: IRCC open data watch",
+    title: `IRCC monthly immigration flows, ${periodLabel}`,
     source: "open-government-ircc",
     publisher: "Open Government Canada / IRCC",
     sourceUrl,
     href: sourceHref("open-government-ircc", slug),
-    releaseType: "open-data-resource-check",
-    releaseDate: latestModified,
-    referencePeriod: "Latest Open Government resource check",
+    releaseType: "ircc-monthly-immigration",
+    releaseDate: data.releaseDate,
+    referencePeriod: `${periodLabel}; source-rounded monthly counts`,
     geographyLevel: "mixed",
     affectedAreas: ["immigration", "population", "housing", "labour"],
     headlineFacts: [
-      `${totalDatasets.toLocaleString("en-CA")} matching Open Government datasets found across PR, TFW, student, refugee and asylum searches.`,
-      `${totalResources.toLocaleString("en-CA")} source resources are attached to the top matching official datasets.`,
-      "Canada Pulse now checks dataset resources and datastore availability, not just the catalogue page.",
-      ...signals.slice(0, 2).map((signal) => `${signal.topic}: ${signal.packageTitle}`),
+      `${display(permanentResidents?.value)} permanent residents were admitted in the latest month.`,
+      `${display(tfwp?.value)} TFWP and ${display(imp?.value)} IMP work permit holders had permit(s) become effective.`,
+      `${display(studyPermits?.value)} study permit holders had permit(s) become effective, while ${display(asylum?.value)} asylum claimants were recorded.`,
+      "IRCC rounds these public CSV counts; categories describe different flows and are not summed into a unique-person population total.",
     ],
-    provinceBreakdown: [],
+    provinceBreakdown: permanentResidents?.provinceValues.map((province) => ({
+      province: province.province,
+      value: display(province.value),
+      note: `${((province.value / permanentResidents.value) * 100).toFixed(1)}% of permanent-resident admissions; ${province.change === null ? "prior month unavailable" : `${province.change > 0 ? "+" : ""}${province.change.toLocaleString("en-CA")} from the prior month`} (rounded).`,
+      score: Math.min(100, Math.round((province.value / permanentResidents.value) * 200)),
+    })) ?? [],
     chartPayloads: [
       {
-        title: "Population pressure source stack",
+        title: "Latest monthly immigration and permit flows",
         kind: "metric-strip",
-        points: signals.map((signal) => ({
-          label: signal.topic,
-          value: signal.datastoreRecords ?? signal.resourceCount,
-          display:
-            signal.datastoreRecords === null
-              ? `${signal.resourceCount} resources`
-              : `${signal.datastoreRecords.toLocaleString("en-CA")} rows`,
-          direction: "up",
-          plainEnglish: `${signal.packageTitle}. ${signal.datasetCount.toLocaleString("en-CA")} matching datasets found; last modified ${signal.lastModified}.`,
+        points: data.metrics.map(point),
+      },
+      {
+        title: "Permanent-resident admissions by category",
+        kind: "bar",
+        points: data.permanentResidentCategories.map((category) => ({
+          label: category.label,
+          value: category.value,
+          display: display(category.value),
+          direction: category.change === null || category.change === 0 ? "neutral" : category.change > 0 ? "up" : "down",
+          plainEnglish: `${display(category.value)} in ${periodLabel}; ${category.change === null ? "prior month unavailable" : `${category.change > 0 ? "+" : ""}${category.change.toLocaleString("en-CA")} from the prior month`} (rounded).`,
+          previous: category.previous,
+          previousDisplay: category.previous === null ? undefined : display(category.previous),
+          change: category.change,
+          changeDisplay: category.change === null ? undefined : `${category.change > 0 ? "+" : ""}${category.change.toLocaleString("en-CA")}`,
+          period: periodLabel,
+          changePeriod: "Previous month to latest month",
         })),
       },
+      ...provinceMetrics.map((item) => ({
+        title: `${item.label} by province`,
+        kind: "province-rank" as const,
+        points: item.provinceValues.slice(0, 10).map((province) => ({
+          label: province.province,
+          value: province.value,
+          display: display(province.value),
+          direction: province.change === null || province.change === 0 ? "neutral" as const : province.change > 0 ? "up" as const : "down" as const,
+          plainEnglish: `${display(province.value)} in ${periodLabel}; ${province.change === null ? "prior month unavailable" : `${province.change > 0 ? "+" : ""}${province.change.toLocaleString("en-CA")} from the prior month`} (rounded).`,
+        })),
+      })),
     ],
     sourceLinks: [
-      { label: "Open Government IRCC search", url: "https://search.open.canada.ca/opendata/?owner_org=cic" },
-      ...signals.map((signal) => ({ label: signal.topic, url: signal.packageUrl })),
+      ...data.sourceLinks,
+      { label: "IRCC open data catalogue", url: "https://open.canada.ca/data/en/organization/ircc" },
     ],
     importanceScore: 84,
     youthImpactScore: 82,
@@ -554,8 +601,8 @@ async function getOpenGovIrccRelease(): Promise<NormalizedRelease> {
     promoted: true,
     status: "live",
     plainEnglishSummary:
-      `Canada Pulse is watching IRCC Open Data because population growth only becomes understandable when temporary residents, students, workers, refugees, jobs, homes and healthcare capacity are shown together. The app found ${totalDatasets.toLocaleString("en-CA")} matching official datasets and ${totalResources.toLocaleString("en-CA")} attached resources across the population-pressure stack.`,
-    socialSummary: `IRCC Open Data watch: ${totalDatasets.toLocaleString("en-CA")} matching datasets and ${totalResources.toLocaleString("en-CA")} resources across PR, TFW, student, refugee and asylum topics.`,
+      `IRCC's latest source-rounded monthly files report ${display(permanentResidents?.value)} permanent-resident admissions, ${display(studyPermits?.value)} study permit holders, ${display(tfwp?.value)} TFWP work permit holders, ${display(imp?.value)} IMP work permit holders and ${display(asylum?.value)} asylum claimants. For permit holders, the reference month is when permit(s) became effective. These are different flows, not a single stock of temporary residents, and should not be added together as unique people.`,
+    socialSummary: `IRCC ${periodLabel}: ${display(permanentResidents?.value)} permanent residents, ${display(studyPermits?.value)} study permit holders, ${display(tfwp?.value)} TFWP holders, ${display(imp?.value)} IMP holders and ${display(asylum?.value)} asylum claimants (source-rounded).`,
   };
 }
 
@@ -770,7 +817,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
           ? `${bankOfCanadaReports.length} report families monitored plus Valet rate observations.`
           : "Valet rate observation connected; report monitor fallback active.",
       },
-      { source: "Open Government / IRCC", status: ircc.status, note: "Dataset resource and datastore monitor connected." },
+      { source: "Open Government / IRCC", status: ircc.status, note: "Monthly PR, study permit, TFWP, IMP and asylum resources imported with provincial breakdowns." },
       { source: "Finance Canada", status: financeCanada.status, note: "Latest Fiscal Monitor revenue, expense, deficit and debt-charge tables connected." },
       {
         source: "CER / NRCan",

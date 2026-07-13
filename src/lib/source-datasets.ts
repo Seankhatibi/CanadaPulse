@@ -180,7 +180,7 @@ export const sourceDatasets: SourceDatasetSeed[] = [
     cadence: "MONTHLY",
     licenseNote: "Official Government of Canada open data catalogue and resources.",
     updateStatus: "LIVE",
-    latestKnownPeriod: "Open Government metadata monitor",
+    latestKnownPeriod: "Monthly PR, study permit, TFWP, IMP and asylum counts by province",
   },
   {
     slug: "cihi-health-indicators",
