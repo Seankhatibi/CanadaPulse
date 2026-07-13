@@ -157,8 +157,8 @@ export const sourceDatasets: SourceDatasetSeed[] = [
     apiType: "HTML",
     cadence: "MONTHLY",
     licenseNote: "Official Government of Canada fiscal publications.",
-    updateStatus: "IMPORT_PENDING",
-    latestKnownPeriod: "Importer pending",
+    updateStatus: "LIVE",
+    latestKnownPeriod: "Latest Fiscal Monitor summary table",
   },
   {
     slug: "finance-canada-fiscal-monitor",
@@ -168,8 +168,8 @@ export const sourceDatasets: SourceDatasetSeed[] = [
     apiType: "HTML",
     cadence: "MONTHLY",
     licenseNote: "Official Government of Canada fiscal publication.",
-    updateStatus: "SOURCE_LINKED",
-    latestKnownPeriod: "Fiscal Monitor monitor linked",
+    updateStatus: "LIVE",
+    latestKnownPeriod: "Revenue, program expenses, public debt charges and budgetary balance",
   },
   {
     slug: "open-government-ircc",

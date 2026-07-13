@@ -54,9 +54,9 @@ const areaConfig = {
     description: "Fiscal reports, debt signals, transfers and public-finance evidence, with source status visible wherever detailed tables are not yet loaded.",
     areas: ["fiscal", "rates"],
     questions: [
+      ["What changed in the federal books?", "/pulse-release/finance-canada/finance-canada-fiscal-monitor"],
       ["What does your income generate in tax?", "/tax-dollar"],
       ["What is the Bank of Canada seeing in financial stability?", "/pulse-release/bank-of-canada/financial-stability-report-2026"],
-      ["Which fiscal sources are connected?", "/data-status"],
     ],
   },
   trade: {
@@ -88,7 +88,7 @@ const preferredLead: Record<ResearchAreaSlug, (release: NormalizedRelease) => bo
   housing: (release) => release.source === "cmhc",
   population: (release) => release.source === "open-government-ircc",
   youth: (release) => /labour force survey/i.test(release.title),
-  government: (release) => /financial stability report/i.test(release.title),
+  government: (release) => release.source === "finance-canada",
   trade: (release) => /business outlook survey/i.test(release.title),
   energy: (release) => release.source === "cer-nrcan",
 };

@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { fetchStatCanReleaseData } from "@/lib/statcan-release-data";
 import { fetchCmhcHousingConstructionData } from "@/lib/cmhc-housing";
+import { fetchFinanceCanadaFiscalSnapshot } from "@/lib/finance-canada-fiscal";
 import { fetchBankOfCanadaReportReleases } from "@/lib/bank-of-canada-reports";
 import { fetchIrccOpenDataSignals, fetchOfficialReportMonitors, type OfficialReportMonitor } from "@/lib/official-source-monitors";
 import {
@@ -443,6 +444,62 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
   };
 }
 
+async function getFinanceCanadaRelease(): Promise<NormalizedRelease> {
+  const data = await fetchFinanceCanadaFiscalSnapshot();
+  const slug = "finance-canada-fiscal-monitor";
+  const deficit = data.metrics.find((metric) => metric.label === "Fiscal-year deficit");
+  const debtCharges = data.metrics.find((metric) => metric.label === "Public debt charges");
+
+  return {
+    id: "finance-canada-fiscal-monitor",
+    slug,
+    title: data.title,
+    source: "finance-canada",
+    publisher: "Finance Canada",
+    sourceUrl: data.sourceUrl,
+    href: sourceHref("finance-canada", slug),
+    releaseType: "finance-canada-fiscal-monitor",
+    releaseDate: data.releaseDate,
+    referencePeriod: data.referencePeriod,
+    geographyLevel: "federal",
+    affectedAreas: ["fiscal", "economy"],
+    headlineFacts: [
+      data.summary,
+      deficit ? `The deficit changed ${deficit.changeDisplay} from the comparable prior fiscal year.` : "",
+      debtCharges ? `Public debt charges reached ${debtCharges.display}.` : "",
+    ].filter(Boolean),
+    provinceBreakdown: [],
+    chartPayloads: [{
+      title: "Federal money flow",
+      kind: "metric-strip",
+      points: data.metrics.map((metric) => ({
+        label: metric.label,
+        value: metric.value,
+        display: metric.display,
+        direction: metric.direction,
+        plainEnglish: metric.explanation,
+        previous: metric.previous,
+        previousDisplay: metric.previousDisplay,
+        change: metric.change,
+        changeDisplay: metric.changeDisplay,
+        period: data.referencePeriod,
+        changePeriod: "Comparable prior fiscal year",
+      })),
+    }],
+    sourceLinks: [
+      { label: "Official Fiscal Monitor", url: data.sourceUrl },
+      { label: "Finance Canada publications", url: "https://www.canada.ca/en/department-finance/services/publications.html" },
+    ],
+    importanceScore: 93,
+    youthImpactScore: 76,
+    housingImpactScore: 52,
+    promoted: true,
+    status: "live",
+    plainEnglishSummary: `${data.summary} These are federal results; provincial budgets and tax systems are separate.`,
+    socialSummary: `Finance Canada: the federal deficit was ${deficit?.display ?? "updated"}; debt charges reached ${debtCharges?.display ?? "a new official value"}.`,
+  };
+}
+
 async function getOpenGovIrccRelease(): Promise<NormalizedRelease> {
   const signals = await fetchIrccOpenDataSignals();
   const slug = "ircc-open-data-population-pressure";
@@ -633,6 +690,19 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     }),
   );
   const bankOfCanadaReports = await fetchBankOfCanadaReportReleases().catch(() => []);
+  const financeCanada = await getFinanceCanadaRelease().catch(() =>
+    sourceLinkedRelease({
+      id: "finance-canada-fiscal-monitor",
+      source: "finance-canada",
+      publisher: "Finance Canada",
+      title: "Finance Canada's latest Fiscal Monitor",
+      sourceUrl: "https://www.canada.ca/en/department-finance/services/publications/fiscal-monitor.html",
+      releaseType: "finance-canada-fiscal-monitor",
+      affectedAreas: ["fiscal", "economy"],
+      summary: "The Fiscal Monitor reports federal revenue, program expenses, debt charges and the budget balance.",
+      score: 93,
+    }),
+  );
   const ircc = await getOpenGovIrccRelease().catch(() =>
     sourceLinkedRelease({
       id: "open-government-ircc-population-pressure",
@@ -659,7 +729,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     const evidence = release.status === "live" && release.chartPayloads.some((chart) => chart.points.length) ? 18 : -20;
     return release.importanceScore + freshness + evidence;
   };
-  const todayQueue = [housingWatch, bankOfCanada, ...bankOfCanadaReports, ircc, ...officialMonitors, ...statCanReleases].sort(
+  const todayQueue = [housingWatch, bankOfCanada, ...bankOfCanadaReports, financeCanada, ircc, ...officialMonitors, ...statCanReleases].sort(
     (a, b) => promotionScore(b) - promotionScore(a) || releaseTimestamp(b) - releaseTimestamp(a),
   );
   const isEditorialRelease = (release: NormalizedRelease) =>
@@ -701,6 +771,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
           : "Valet rate observation connected; report monitor fallback active.",
       },
       { source: "Open Government / IRCC", status: ircc.status, note: "Dataset resource and datastore monitor connected." },
+      { source: "Finance Canada", status: financeCanada.status, note: "Latest Fiscal Monitor revenue, expense, deficit and debt-charge tables connected." },
       {
         source: "CER / NRCan",
         status: officialMonitors.some((release) => release.source === "cer-nrcan" && release.status === "live") ? "live" : "source_linked",

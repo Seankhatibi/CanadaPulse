@@ -139,8 +139,9 @@ function isSimplePeriod(label: string) {
 }
 
 function formatCompactNumber(value: number) {
-  if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(1)}M`;
-  return `${Math.round(value).toLocaleString("en-CA")}k`;
+  const absolute = Math.abs(value);
+  if (absolute >= 1000) return `${(absolute / 1000).toFixed(1)}M`;
+  return `${Math.round(absolute).toLocaleString("en-CA")}k`;
 }
 
 function formatSignalDisplay(label: string, value: number) {
@@ -152,13 +153,14 @@ function formatSignalDisplay(label: string, value: number) {
 function formatChangeDisplay(label: string, change: number | null) {
   if (change === null) return "latest value";
   const sign = change > 0 ? "+" : change < 0 ? "-" : "";
-  if (/rate/i.test(label)) return `${sign}${change.toFixed(1)} pts`;
+  const absolute = Math.abs(change);
+  if (/rate/i.test(label)) return `${sign}${absolute.toFixed(1)} pts`;
   if (/employment|labour force|population|unemployment/i.test(label)) return `${sign}${formatCompactNumber(change)}`;
   if (/value|price|sales|income|revenue|permit/i.test(label)) {
-    if (Math.abs(change) >= 1_000_000_000) return `${sign}$${(Math.abs(change) / 1_000_000_000).toFixed(1)}B`;
-    if (Math.abs(change) >= 1_000_000) return `${sign}$${(Math.abs(change) / 1_000_000).toFixed(1)}M`;
+    if (absolute >= 1_000_000_000) return `${sign}$${(absolute / 1_000_000_000).toFixed(1)}B`;
+    if (absolute >= 1_000_000) return `${sign}$${(absolute / 1_000_000).toFixed(1)}M`;
   }
-  return `${sign}${change.toFixed(1)}`;
+  return `${sign}${absolute.toFixed(1)}`;
 }
 
 async function fetchWdsDownloads(tableIds: string[]) {
@@ -424,7 +426,8 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
 function signalsFromTables(tables: StatCanReleaseTable[]): ReleaseSignal[] {
   const rows = tables[0]?.rows ?? [];
   const nationalRows = rows.filter((row) => row.group === "Canada");
-  const signalRows = [...new Map((nationalRows.length ? nationalRows : rows).map((row) => [row.label, row])).values()];
+  const candidates = nationalRows.length ? nationalRows : rows;
+  const signalRows = candidates.filter((row, index) => candidates.findIndex((candidate) => candidate.label === row.label) === index);
   const latestPeriod = tables[0]?.latestPeriod ?? "latest period";
 
   return signalRows.slice(0, 8).map((row) => {

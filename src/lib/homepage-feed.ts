@@ -101,7 +101,7 @@ export function buildHomepageFeed({ releaseHub }: { releaseHub: ReleaseHubPayloa
     { topic: "Prices", headline: "What do Canadians expect inflation to do next?", tone: "amber" as const, release: findRelease(releases, (item) => /consumer expectations/i.test(item.title)) },
     { topic: "Trade", headline: "What are Canadian businesses seeing ahead?", tone: "blue" as const, release: findRelease(releases, (item) => /business outlook survey/i.test(item.title)) },
     { topic: "Energy", headline: "What changed in Canada's energy system?", tone: "green" as const, release: findRelease(releases, (item) => item.source === "cer-nrcan") },
-    { topic: "Government money", headline: "Where are the largest financial-system risks?", tone: "blue" as const, release: findRelease(releases, (item) => /financial stability report/i.test(item.title)) },
+    { topic: "Government money", headline: "How much is Ottawa collecting, spending and borrowing?", tone: "blue" as const, release: findRelease(releases, (item) => item.source === "finance-canada") },
   ];
 
   return {
