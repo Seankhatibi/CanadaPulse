@@ -196,7 +196,23 @@ export default async function PulseReleasePage({
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
             </div>
-            <div className="mt-5 overflow-x-auto">
+            <div className="mt-5 grid gap-2 md:hidden">
+              {intelligence.provinceRank.map((province, index) => (
+                <div key={province.province} className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="font-mono text-xs font-black text-red-700">{String(index + 1).padStart(2, "0")}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-black text-stone-950">{province.province}</p>
+                        <p className="shrink-0 font-mono text-lg font-black text-stone-950">{province.value}</p>
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-stone-600">{province.note}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 hidden overflow-x-auto md:block">
               <table className="w-full min-w-[640px] border-collapse text-left">
                 <thead>
                   <tr className="border-b border-stone-200 text-xs uppercase tracking-[0.12em] text-stone-500">
