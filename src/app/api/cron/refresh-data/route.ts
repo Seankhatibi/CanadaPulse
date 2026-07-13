@@ -1,5 +1,6 @@
 import { persistMultiSourceReleaseEvents, persistStatCanDailyReleaseEvents } from "@/lib/etl/importers";
 import { fetchCihiHealthSnapshot } from "@/lib/cihi-health";
+import { revalidateTag } from "next/cache";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -10,6 +11,7 @@ export async function GET(request: Request) {
   }
 
   const startedAt = new Date().toISOString();
+  revalidateTag("canada-pulse-release-hub", { expire: 0 });
   const [statcanDaily, multiSourceReleaseHub, cihi] = await Promise.all([
     persistStatCanDailyReleaseEvents(),
     persistMultiSourceReleaseEvents(),

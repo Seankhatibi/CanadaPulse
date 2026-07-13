@@ -1,5 +1,6 @@
 import { getMultiSourceReleaseHub } from "@/lib/release-hub";
 import { fetchStatCanDailyEntries, rankDailyEntries } from "@/lib/statcan-daily";
+import { unstable_cache } from "next/cache";
 
 export type ArchiveRelease = {
   id: string;
@@ -19,7 +20,7 @@ function timestamp(value: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export async function getReleaseArchive() {
+async function buildReleaseArchive() {
   const [hub, daily] = await Promise.all([
     getMultiSourceReleaseHub(),
     fetchStatCanDailyEntries().then(rankDailyEntries).catch(() => []),
@@ -53,6 +54,12 @@ export async function getReleaseArchive() {
 
   return [...hubItems, ...dailyItems].sort((a, b) => timestamp(b.releaseDate) - timestamp(a.releaseDate) || a.title.localeCompare(b.title));
 }
+
+export const getReleaseArchive = unstable_cache(
+  buildReleaseArchive,
+  ["canada-pulse-release-archive-v1"],
+  { revalidate: 5 * 60, tags: ["canada-pulse-release-hub"] },
+);
 
 export function filterReleaseArchive(releases: ArchiveRelease[], query?: string, publisher?: string, status?: string) {
   const normalized = query?.trim().toLowerCase();

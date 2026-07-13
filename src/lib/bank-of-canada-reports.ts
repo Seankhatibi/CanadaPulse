@@ -1,4 +1,3 @@
-import { Landmark } from "lucide-react";
 import type { NormalizedRelease, ReleaseArea, ReleaseChartPayload } from "@/lib/release-hub";
 
 type BocReportFamily = {
@@ -347,7 +346,6 @@ export async function fetchBankOfCanadaReportReleases(): Promise<NormalizedRelea
         plainEnglishSummary:
           `${link.family.label} is now monitored by Canada Pulse. ${report.description} The app turns the report language into rate, inflation, housing, growth and stability signals.`,
         socialSummary: `${link.title}: ${report.description}`.slice(0, 240),
-        icon: Landmark,
       } satisfies NormalizedRelease;
     }),
   );

@@ -1,4 +1,4 @@
-import { Building2, Factory, Home, Landmark, TrendingUp, Users } from "lucide-react";
+import { unstable_cache } from "next/cache";
 import { fetchStatCanReleaseData } from "@/lib/statcan-release-data";
 import { fetchCmhcHousingConstructionData } from "@/lib/cmhc-housing";
 import { fetchBankOfCanadaReportReleases } from "@/lib/bank-of-canada-reports";
@@ -68,7 +68,6 @@ export type NormalizedRelease = {
   status: ReleaseFactStatus;
   plainEnglishSummary: string;
   socialSummary: string;
-  icon: typeof Home;
 };
 
 export type ReleaseHubPayload = {
@@ -208,7 +207,6 @@ async function statCanReleaseFromEntry(entry: StatCanDailyEntry, promotedHref?: 
     status: releaseData?.sourceStatus === "table_data_loaded" ? "live" : "summary_only",
     plainEnglishSummary: entry.summary || "Canada Pulse detected this official release and is preparing the source-backed breakdown.",
     socialSummary: `${entry.title}: ${entry.summary}`.slice(0, 220),
-    icon: TrendingUp,
   };
 }
 
@@ -319,7 +317,6 @@ async function getBankOfCanadaRelease(): Promise<NormalizedRelease> {
     plainEnglishSummary:
       `Canada Pulse is watching Bank of Canada rate data because interest rates are one of the fastest ways financial stress shows up in housing, rent, debt, and the dollar. The policy rate is ${policyRate.value.toFixed(2)}%, the 5-year yield is ${fiveYearYield.value.toFixed(2)}%, and USD/CAD is ${usdCad.value.toFixed(4)}.`,
     socialSummary: `Bank of Canada watch: policy rate ${policyRate.value.toFixed(2)}%, 5-year yield ${fiveYearYield.value.toFixed(2)}%, USD/CAD ${usdCad.value.toFixed(4)}.`,
-    icon: Landmark,
   };
 }
 
@@ -424,7 +421,6 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
     plainEnglishSummary:
       `Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} housing starts in ${data.latestPeriod}, ${changeDisplay}. Starts measure the construction pipeline, not move-in-ready supply. Current completions are not available in this connected table and are not estimated.`,
     socialSummary: `CMHC Housing Watch: Canada recorded ${data.canadaStarts.toLocaleString("en-CA")} starts in ${data.latestPeriod}, ${changeDisplay}.`,
-    icon: Home,
   };
 }
 
@@ -484,13 +480,11 @@ async function getOpenGovIrccRelease(): Promise<NormalizedRelease> {
     plainEnglishSummary:
       `Canada Pulse is watching IRCC Open Data because population growth only becomes understandable when temporary residents, students, workers, refugees, jobs, homes and healthcare capacity are shown together. The app found ${totalDatasets.toLocaleString("en-CA")} matching official datasets and ${totalResources.toLocaleString("en-CA")} attached resources across the population-pressure stack.`,
     socialSummary: `IRCC Open Data watch: ${totalDatasets.toLocaleString("en-CA")} matching datasets and ${totalResources.toLocaleString("en-CA")} resources across PR, TFW, student, refugee and asylum topics.`,
-    icon: Users,
   };
 }
 
 function officialMonitorToRelease(monitor: OfficialReportMonitor): NormalizedRelease {
   const slug = slugify(monitor.title);
-  const icon = monitor.source === "pbo" ? Building2 : Factory;
 
   return {
     id: monitor.id,
@@ -516,7 +510,6 @@ function officialMonitorToRelease(monitor: OfficialReportMonitor): NormalizedRel
     status: monitor.confirmedRelease ? "live" : "source_linked",
     plainEnglishSummary: monitor.plainEnglishSummary,
     socialSummary: monitor.socialSummary,
-    icon,
   };
 }
 
@@ -529,7 +522,6 @@ function sourceLinkedRelease(input: {
   releaseType: string;
   affectedAreas: ReleaseArea[];
   summary: string;
-  icon: typeof Home;
   score: number;
 }): NormalizedRelease {
   const slug = slugify(input.title);
@@ -557,7 +549,6 @@ function sourceLinkedRelease(input: {
     status: "source_linked",
     plainEnglishSummary: input.summary,
     socialSummary: input.summary,
-    icon: input.icon,
   };
 }
 
@@ -573,7 +564,6 @@ async function getSourceLinkedReleases() {
       affectedAreas: ["energy", "trade"],
       summary:
         "Energy releases show oil, gas, electricity mix, electricity prices, emissions, pipelines and export pressure.",
-      icon: Factory,
       score: 70,
     }),
     sourceLinkedRelease({
@@ -586,13 +576,12 @@ async function getSourceLinkedReleases() {
       affectedAreas: ["fiscal", "housing"],
       summary:
         "PBO reports translate fiscal outlooks, infrastructure spending, program costing and debt sustainability into plain English.",
-      icon: Building2,
       score: 72,
     }),
   ];
 }
 
-export async function getMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
+async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
   const statCanEntries = await fetchStatCanDailyEntries().catch(() => []);
   const latestStatCanDate = getLatestDailyReleaseDate(statCanEntries);
   const statCanToday = getEntriesForReleaseDate(statCanEntries, latestStatCanDate);
@@ -608,7 +597,6 @@ export async function getMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
       releaseType: "housing-release-monitor",
       affectedAreas: ["housing"],
       summary: "CMHC housing data tracks starts, completions, rent, vacancy, mortgage and debt pressure.",
-      icon: Home,
       score: 95,
     }),
   );
@@ -622,7 +610,6 @@ export async function getMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
       releaseType: "rate-monitor",
       affectedAreas: ["rates", "housing"],
       summary: "Bank of Canada rate and yield data translates into mortgage, rent, debt and CAD pressure.",
-      icon: Landmark,
       score: 84,
     }),
   );
@@ -637,7 +624,6 @@ export async function getMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
       releaseType: "open-data-monitor",
       affectedAreas: ["immigration", "population", "housing"],
       summary: "IRCC open data tracks PR, TFW, student, refugee and asylum pressure.",
-      icon: Users,
       score: 84,
     }),
   );
@@ -709,6 +695,12 @@ export async function getMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     ],
   };
 }
+
+export const getMultiSourceReleaseHub = unstable_cache(
+  buildMultiSourceReleaseHub,
+  ["canada-pulse-release-hub-v1"],
+  { revalidate: 5 * 60, tags: ["canada-pulse-release-hub"] },
+);
 
 export async function findHubRelease(source: string, slug: string) {
   const hub = await getMultiSourceReleaseHub();

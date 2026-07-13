@@ -11,9 +11,7 @@ import type { NormalizedRelease } from "@/lib/release-hub";
 import { getMultiSourceReleaseHub } from "@/lib/release-hub";
 
 function sanitizeRelease(release: NormalizedRelease) {
-  const { icon, ...payload } = release;
-  void icon;
-  return payload;
+  return release;
 }
 
 export async function GET() {
