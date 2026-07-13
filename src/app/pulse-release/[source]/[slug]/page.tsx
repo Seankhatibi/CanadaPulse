@@ -12,6 +12,7 @@ import {
   Minus,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { ReleaseVisualBreakdowns } from "@/components/release-visual-breakdowns";
 import { ShareStatButton } from "@/components/share-stat-button";
 import { findHubRelease } from "@/lib/release-hub";
 import { buildReleaseIntelligence, type ResearchMetric } from "@/lib/release-intelligence";
@@ -183,6 +184,8 @@ export default async function PulseReleasePage({
             </div>
           </div>
         </section>
+
+        <ReleaseVisualBreakdowns charts={release.chartPayloads} />
 
         {intelligence.provinceRank.length ? (
           <section className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">

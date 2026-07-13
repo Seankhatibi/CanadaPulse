@@ -149,6 +149,7 @@ export async function persistStatCanDailyReleaseEvents() {
 }
 
 function sourceDatasetSlugForRelease(release: NormalizedRelease) {
+  if (release.source === "cmhc" && release.releaseType === "cmhc-rental-market") return "cmhc-rental-market";
   if (release.source === "cmhc") return "cmhc-housing-starts";
   if (release.source === "bank-of-canada" && release.releaseType.startsWith("bank-of-canada-")) return "bank-of-canada-reports";
   if (release.source === "bank-of-canada") return "bank-of-canada-valet";

@@ -85,7 +85,7 @@ const areaConfig = {
 
 const preferredLead: Record<ResearchAreaSlug, (release: NormalizedRelease) => boolean> = {
   economy: (release) => /labour force survey/i.test(release.title),
-  housing: (release) => release.source === "cmhc",
+  housing: (release) => release.releaseType === "cmhc-rental-market",
   population: (release) => release.source === "open-government-ircc",
   youth: (release) => /labour force survey/i.test(release.title),
   government: (release) => release.source === "finance-canada",

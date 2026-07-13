@@ -95,7 +95,7 @@ export function buildHomepageFeed({ releaseHub }: { releaseHub: ReleaseHubPayloa
   const releases = releaseHub.todayQueue;
   const candidates = [
     { topic: "Jobs", headline: "Is Canada's labour market getting stronger or weaker?", tone: "violet" as const, release: findRelease(releases, (item) => /labour force survey/i.test(item.title)) },
-    { topic: "Housing", headline: "Is Canada building enough homes?", tone: "red" as const, release: findRelease(releases, (item) => item.source === "cmhc") },
+    { topic: "Housing", headline: "What happened to rent and rental vacancy?", tone: "red" as const, release: findRelease(releases, (item) => item.releaseType === "cmhc-rental-market") },
     { topic: "Rates", headline: "What are borrowing conditions doing to households?", tone: "amber" as const, release: findRelease(releases, (item) => item.releaseType === "valet-rate-observation") },
     { topic: "Population", headline: "Which official population datasets changed?", tone: "cyan" as const, release: findRelease(releases, (item) => item.source === "open-government-ircc") },
     { topic: "Prices", headline: "What do Canadians expect inflation to do next?", tone: "amber" as const, release: findRelease(releases, (item) => /consumer expectations/i.test(item.title)) },

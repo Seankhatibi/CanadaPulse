@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { fetchStatCanReleaseData } from "@/lib/statcan-release-data";
 import { fetchCmhcHousingConstructionData } from "@/lib/cmhc-housing";
+import { fetchCmhcRentalSnapshot } from "@/lib/cmhc-rental";
 import { fetchFinanceCanadaFiscalSnapshot } from "@/lib/finance-canada-fiscal";
 import { fetchIrccImmigrationSnapshot } from "@/lib/ircc-immigration";
 import { fetchBankOfCanadaReportReleases } from "@/lib/bank-of-canada-reports";
@@ -445,6 +446,152 @@ async function getCmhcHousingWatch(): Promise<NormalizedRelease> {
   };
 }
 
+async function getCmhcRentalWatch(): Promise<NormalizedRelease> {
+  const data = await fetchCmhcRentalSnapshot();
+  const slug = "cmhc-rental-market-watch";
+  const currency = (value: number) => `${value < 0 ? "-" : ""}$${Math.abs(value).toLocaleString("en-CA")}`;
+  const signed = (value: number, suffix = "") => `${value > 0 ? "+" : value < 0 ? "-" : ""}${Math.abs(value).toFixed(1)}${suffix}`;
+  const provinceRent = [...data.provinces].sort((a, b) => b.averageTwoBedroomRent - a.averageTwoBedroomRent);
+  const provinceVacancy = [...data.provinces].sort((a, b) => a.vacancyRate - b.vacancyRate);
+  const metroRent = [...data.metros].sort((a, b) => b.averageTwoBedroomRent - a.averageTwoBedroomRent);
+  const metroVacancy = [...data.metros].sort((a, b) => a.vacancyRate - b.vacancyRate);
+  const vacancySentence = data.canada.vacancyChange === 0
+    ? `The vacancy rate held steady at ${data.canada.vacancyRate.toFixed(1)}%.`
+    : `The vacancy rate ${data.canada.vacancyChange > 0 ? "rose" : "fell"} ${Math.abs(data.canada.vacancyChange).toFixed(1)} points to ${data.canada.vacancyRate.toFixed(1)}%.`;
+
+  return {
+    id: "cmhc-rental-market-watch",
+    slug,
+    title: `CMHC Rental Market Survey, ${data.referencePeriod}`,
+    source: "cmhc",
+    publisher: "CMHC",
+    sourceUrl: data.sourceUrl,
+    href: sourceHref("cmhc", slug),
+    releaseType: "cmhc-rental-market",
+    releaseDate: data.releaseDate,
+    referencePeriod: data.referencePeriod,
+    geographyLevel: "mixed",
+    affectedAreas: ["housing", "inflation"],
+    headlineFacts: [
+      `The surveyed national average two-bedroom rent was ${currency(data.canada.averageTwoBedroomRent)}, ${currency(data.canada.rentChangeAmount)} above ${data.previousPeriod}.`,
+      `Fixed-sample two-bedroom rent growth was ${data.canada.rentGrowthPct?.toFixed(1) ?? "not available"}%.`,
+      vacancySentence,
+      "This is CMHC's primary rental universe, not an asking-rent index and not every rental dwelling in Canada.",
+    ],
+    provinceBreakdown: provinceRent.map((province) => ({
+      province: province.geography,
+      value: currency(province.averageTwoBedroomRent),
+      note: `${province.vacancyRate.toFixed(1)}% vacancy; ${province.rentGrowthPct === null ? "fixed-sample rent change suppressed or not significant" : `${province.rentGrowthPct.toFixed(1)}% fixed-sample rent growth`}.`,
+      score: Math.min(100, Math.round(province.averageTwoBedroomRent / 25)),
+    })),
+    chartPayloads: [
+      {
+        title: "Canada rental-market headline",
+        kind: "metric-strip",
+        points: [
+          {
+            label: "Average two-bedroom rent",
+            value: data.canada.averageTwoBedroomRent,
+            display: currency(data.canada.averageTwoBedroomRent),
+            direction: data.canada.rentChangeAmount > 0 ? "up" : data.canada.rentChangeAmount < 0 ? "down" : "neutral",
+            plainEnglish: `${currency(data.canada.averageTwoBedroomRent)} across surveyed new and existing structures, ${data.canada.rentChangeAmount >= 0 ? "up" : "down"} ${currency(Math.abs(data.canada.rentChangeAmount))} from ${data.previousPeriod}.`,
+            previous: data.canada.previousAverageTwoBedroomRent,
+            previousDisplay: currency(data.canada.previousAverageTwoBedroomRent),
+            change: data.canada.rentChangeAmount,
+            changeDisplay: `${data.canada.rentChangeAmount > 0 ? "+" : ""}${currency(data.canada.rentChangeAmount)}`,
+            period: data.referencePeriod,
+            changePeriod: `${data.previousPeriod} to ${data.referencePeriod}`,
+          },
+          {
+            label: "Fixed-sample rent growth",
+            value: data.canada.rentGrowthPct ?? 0,
+            display: data.canada.rentGrowthPct === null ? "Suppressed" : `${data.canada.rentGrowthPct.toFixed(1)}%`,
+            direction: data.canada.rentGrowthPct === null || data.canada.rentGrowthPct === 0 ? "neutral" : data.canada.rentGrowthPct > 0 ? "up" : "down",
+            plainEnglish: "Fixed-sample growth follows existing structures and is more comparable year to year than the change in the raw average.",
+            period: data.referencePeriod,
+          },
+          {
+            label: "Rental vacancy rate",
+            value: data.canada.vacancyRate,
+            display: `${data.canada.vacancyRate.toFixed(1)}%`,
+            direction: data.canada.vacancyChange > 0 ? "up" : data.canada.vacancyChange < 0 ? "down" : "neutral",
+            plainEnglish: `Vacancy increased ${signed(data.canada.vacancyChange, " points")} from ${data.previousPeriod}.`,
+            previous: data.canada.previousVacancyRate,
+            previousDisplay: `${data.canada.previousVacancyRate.toFixed(1)}%`,
+            change: data.canada.vacancyChange,
+            changeDisplay: signed(data.canada.vacancyChange, " pts"),
+            period: data.referencePeriod,
+            changePeriod: `${data.previousPeriod} to ${data.referencePeriod}`,
+          },
+          {
+            label: "Turnover rate",
+            value: data.canada.turnoverRate ?? 0,
+            display: data.canada.turnoverRate === null ? "Unavailable" : `${data.canada.turnoverRate.toFixed(1)}%`,
+            direction: "neutral",
+            plainEnglish: "Share of units where tenancy changed during the survey period.",
+            period: data.referencePeriod,
+          },
+        ],
+      },
+      {
+        title: "Average two-bedroom rent by province",
+        kind: "province-rank",
+        points: provinceRent.map((province) => ({
+          label: province.geography,
+          value: province.averageTwoBedroomRent,
+          display: currency(province.averageTwoBedroomRent),
+          direction: province.rentChangeAmount > 0 ? "up" : province.rentChangeAmount < 0 ? "down" : "neutral",
+          plainEnglish: `${province.rentChangeAmount > 0 ? "+" : ""}${currency(province.rentChangeAmount)} change in the surveyed average; ${province.rentGrowthPct === null ? "fixed-sample change unavailable" : `${province.rentGrowthPct.toFixed(1)}% fixed-sample growth`}.`,
+        })),
+      },
+      {
+        title: "Vacancy rate by province (lower means tighter)",
+        kind: "province-rank",
+        points: provinceVacancy.map((province) => ({
+          label: province.geography,
+          value: province.vacancyRate,
+          display: `${province.vacancyRate.toFixed(1)}%`,
+          direction: province.vacancyChange > 0 ? "up" : province.vacancyChange < 0 ? "down" : "neutral",
+          plainEnglish: `${signed(province.vacancyChange, " points")} from ${data.previousPeriod}.`,
+        })),
+      },
+      {
+        title: "Most expensive major rental markets",
+        kind: "bar",
+        points: metroRent.slice(0, 12).map((metro) => ({
+          label: metro.geography,
+          value: metro.averageTwoBedroomRent,
+          display: currency(metro.averageTwoBedroomRent),
+          direction: metro.rentChangeAmount > 0 ? "up" : metro.rentChangeAmount < 0 ? "down" : "neutral",
+          plainEnglish: `${metro.vacancyRate.toFixed(1)}% vacancy; ${metro.rentGrowthPct === null ? "fixed-sample change unavailable" : `${metro.rentGrowthPct.toFixed(1)}% fixed-sample rent growth`}.`,
+        })),
+      },
+      {
+        title: "Tightest major rental markets",
+        kind: "bar",
+        points: metroVacancy.slice(0, 12).map((metro) => ({
+          label: metro.geography,
+          value: metro.vacancyRate,
+          display: `${metro.vacancyRate.toFixed(1)}%`,
+          direction: metro.vacancyChange > 0 ? "up" : metro.vacancyChange < 0 ? "down" : "neutral",
+          plainEnglish: `${currency(metro.averageTwoBedroomRent)} average two-bedroom rent; ${signed(metro.vacancyChange, " points")} vacancy change.`,
+        })),
+      },
+    ],
+    sourceLinks: [
+      { label: "CMHC Rental Market Survey data tables", url: data.sourceUrl },
+      { label: "Official 2025 workbook", url: data.workbookUrl },
+    ],
+    importanceScore: 98,
+    youthImpactScore: 100,
+    housingImpactScore: 100,
+    promoted: true,
+    status: "live",
+    plainEnglishSummary: `CMHC's surveyed national two-bedroom average reached ${currency(data.canada.averageTwoBedroomRent)} in ${data.referencePeriod}, while vacancy rose to ${data.canada.vacancyRate.toFixed(1)}%. ${data.definition}`,
+    socialSummary: `CMHC ${data.referencePeriod}: national two-bedroom rent ${currency(data.canada.averageTwoBedroomRent)}, fixed-sample growth ${data.canada.rentGrowthPct?.toFixed(1) ?? "n/a"}%, vacancy ${data.canada.vacancyRate.toFixed(1)}%.`,
+  };
+}
+
 async function getFinanceCanadaRelease(): Promise<NormalizedRelease> {
   const data = await fetchFinanceCanadaFiscalSnapshot();
   const slug = "finance-canada-fiscal-monitor";
@@ -723,6 +870,19 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
       score: 95,
     }),
   );
+  const rentalWatch = await getCmhcRentalWatch().catch(() =>
+    sourceLinkedRelease({
+      id: "cmhc-rental-market-watch",
+      source: "cmhc",
+      publisher: "CMHC",
+      title: "CMHC Rental Market Survey",
+      sourceUrl: "https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-data/data-tables/rental-market/rental-market-report-data-tables",
+      releaseType: "cmhc-rental-market",
+      affectedAreas: ["housing", "inflation"],
+      summary: "CMHC's Rental Market Survey reports vacancy, turnover and average rents for its primary rental universe.",
+      score: 98,
+    }),
+  );
   const bankOfCanada = await getBankOfCanadaRelease().catch(() =>
     sourceLinkedRelease({
       id: "bank-of-canada-valet-rate-watch",
@@ -776,13 +936,14 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     const evidence = release.status === "live" && release.chartPayloads.some((chart) => chart.points.length) ? 18 : -20;
     return release.importanceScore + freshness + evidence;
   };
-  const todayQueue = [housingWatch, bankOfCanada, ...bankOfCanadaReports, financeCanada, ircc, ...officialMonitors, ...statCanReleases].sort(
+  const todayQueue = [housingWatch, rentalWatch, bankOfCanada, ...bankOfCanadaReports, financeCanada, ircc, ...officialMonitors, ...statCanReleases].sort(
     (a, b) => promotionScore(b) - promotionScore(a) || releaseTimestamp(b) - releaseTimestamp(a),
   );
   const isEditorialRelease = (release: NormalizedRelease) =>
     release.releaseType === "official-daily-release" ||
     release.releaseType.startsWith("bank-of-canada-") ||
-    release.releaseType === "housing-release-monitor";
+    release.releaseType === "housing-release-monitor" ||
+    release.releaseType === "cmhc-rental-market";
   const promotedRelease = todayQueue.find(
     (release) =>
       release.promoted &&
@@ -809,7 +970,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
         status: statCanReleases.some((release) => release.status === "live") ? "live" : "summary_only",
         note: "Daily feeds plus rolling direct Daily URL probes monitored.",
       },
-      { source: "CMHC", status: housingWatch.status, note: "Quarterly housing starts table connected; completions and rental tables remain separate imports." },
+      { source: "CMHC", status: housingWatch.status === "live" && rentalWatch.status === "live" ? "live" : "source_linked", note: "Quarterly construction starts and annual Rental Market Survey rent, vacancy and turnover tables connected." },
       {
         source: "Bank of Canada",
         status: bankOfCanadaReports.length ? "live" : bankOfCanada.status,

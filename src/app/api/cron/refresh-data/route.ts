@@ -26,7 +26,7 @@ export async function GET(request: Request) {
       statcanDaily,
       multiSourceReleaseHub,
       statcanWds: "live through Daily article tables, companion Tables pages and compact WDS metadata/series extraction",
-      cmhc: "live quarterly housing starts import connected; rental/completions/mortgage datasets remain separate detailed imports",
+      cmhc: "live quarterly construction starts plus annual Rental Market Survey rent, vacancy and turnover imports; current completions/mortgage datasets remain separate",
       bankOfCanada: "live Valet observations plus Bank of Canada report monitor connected",
       financeCanada: "live Fiscal Monitor parser connected for revenue, expenses, deficit and public debt charges",
       openGovernmentIrcc: "live monthly PR, study permit, TFWP, IMP and asylum resource imports with provincial breakdowns",
