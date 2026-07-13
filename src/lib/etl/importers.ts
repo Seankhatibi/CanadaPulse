@@ -149,6 +149,7 @@ export async function persistStatCanDailyReleaseEvents() {
 }
 
 function sourceDatasetSlugForRelease(release: NormalizedRelease) {
+  if (release.source === "statcan" && release.releaseType === "statcan-cpi-watch") return "statcan-wds-cpi";
   if (release.source === "cmhc" && release.releaseType === "cmhc-rental-market") return "cmhc-rental-market";
   if (release.source === "cmhc") return "cmhc-housing-starts";
   if (release.source === "bank-of-canada" && release.releaseType.startsWith("bank-of-canada-")) return "bank-of-canada-reports";

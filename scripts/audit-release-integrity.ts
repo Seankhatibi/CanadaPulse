@@ -4,6 +4,7 @@ import { fetchFinanceCanadaFiscalSnapshot } from "../src/lib/finance-canada-fisc
 import { fetchIrccImmigrationSnapshot } from "../src/lib/ircc-immigration";
 import { fetchStatCanDailyEntryFromUrl } from "../src/lib/statcan-daily";
 import { fetchStatCanReleaseData } from "../src/lib/statcan-release-data";
+import { fetchStatCanCpiSnapshot } from "../src/lib/statcan-cpi";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -21,6 +22,13 @@ async function main() {
   assert(employment && employment.value > 20_000 && employment.value < 25_000, `National employment failed integrity range: ${employment?.value}`);
   assert(unemploymentRate && unemploymentRate.value === 6.5, `National unemployment rate should be 6.5%, got ${unemploymentRate?.value}`);
   assert(participationRate && participationRate.value === 65, `National participation rate should be 65.0%, got ${participationRate?.value}`);
+
+  const cpi = await fetchStatCanCpiSnapshot();
+  assert(cpi.referencePeriod === "May 2026", `Unexpected CPI period: ${cpi.referencePeriod}`);
+  assert(cpi.canada.allItems.yearOverYearPct === 3.2, `Headline CPI should be 3.2%, got ${cpi.canada.allItems.yearOverYearPct}`);
+  assert(cpi.canada.food.yearOverYearPct === 3.8, `Food CPI should be 3.8%, got ${cpi.canada.food.yearOverYearPct}`);
+  assert(cpi.provinces.length === 10, `CPI should include 10 provinces, got ${cpi.provinces.length}`);
+  assert(cpi.components.find((item) => item.product === "Rent")?.yearOverYearPct === 3.5, "CPI rent component failed integrity check.");
 
   const finance = await fetchFinanceCanadaFiscalSnapshot();
   assert(finance.referencePeriod === "April to March 2025-26", `Unexpected Fiscal Monitor period: ${finance.referencePeriod}`);
@@ -48,7 +56,7 @@ async function main() {
   assert(asylum && asylum.value > 1_000, `IRCC asylum total failed integrity range: ${asylum?.value}`);
   assert(permanentResidents.provinceValues.some((item) => item.province === "Ontario"), "IRCC Ontario province row is missing.");
 
-  console.log("Official release integrity audit passed: LFS, Finance Canada, CMHC construction/rental and IRCC headline values are correctly identified.");
+  console.log("Official release integrity audit passed: LFS, CPI, Finance Canada, CMHC construction/rental and IRCC headline values are correctly identified.");
 }
 
 main().catch((error) => {

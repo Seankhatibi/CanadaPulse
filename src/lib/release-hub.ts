@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { fetchStatCanReleaseData } from "@/lib/statcan-release-data";
+import { fetchStatCanCpiSnapshot, type CpiChange } from "@/lib/statcan-cpi";
 import { fetchCmhcHousingConstructionData } from "@/lib/cmhc-housing";
 import { fetchCmhcRentalSnapshot } from "@/lib/cmhc-rental";
 import { fetchFinanceCanadaFiscalSnapshot } from "@/lib/finance-canada-fiscal";
@@ -251,6 +252,123 @@ async function fetchValetObservation(series: string) {
     description: json.seriesDetail?.[series]?.description ?? series,
     date: typeof latest?.d === "string" ? latest.d : canadaDate(),
     value: Number((latest?.[series] as { v?: string } | undefined)?.v ?? 0),
+  };
+}
+
+function cpiDirection(metric: CpiChange): "up" | "down" | "neutral" {
+  return metric.momentumChangePctPoints === null || metric.momentumChangePctPoints === 0
+    ? "neutral"
+    : metric.momentumChangePctPoints > 0 ? "up" : "down";
+}
+
+function cpiPoint(metric: CpiChange) {
+  const change = metric.momentumChangePctPoints;
+  return {
+    label: metric.product,
+    value: metric.yearOverYearPct,
+    display: `${metric.yearOverYearPct.toFixed(1)}%`,
+    direction: cpiDirection(metric),
+    plainEnglish: change === null
+      ? `${metric.product} prices changed ${metric.yearOverYearPct.toFixed(1)}% from a year earlier.`
+      : `${metric.product} inflation ${change > 0 ? "accelerated" : change < 0 ? "cooled" : "held steady"} ${Math.abs(change).toFixed(1)} points from the previous month's year-over-year rate.`,
+    previous: metric.previousMonthYoYPct,
+    previousDisplay: metric.previousMonthYoYPct === null ? undefined : `${metric.previousMonthYoYPct.toFixed(1)}%`,
+    change,
+    changeDisplay: change === null ? undefined : `${change > 0 ? "+" : ""}${change.toFixed(1)} pts`,
+  };
+}
+
+async function getStatCanCpiWatch(): Promise<NormalizedRelease> {
+  const data = await fetchStatCanCpiSnapshot();
+  const slug = "consumer-price-index-watch";
+  const rent = data.components.find((component) => component.product === "Rent");
+  const gasoline = data.components.find((component) => component.product === "Gasoline");
+  const highestHeadline = [...data.provinces].sort((a, b) => b.allItems.yearOverYearPct - a.allItems.yearOverYearPct)[0];
+  const highestFood = [...data.provinces].sort((a, b) => b.food.yearOverYearPct - a.food.yearOverYearPct)[0];
+  const provinceHeadline = [...data.provinces].sort((a, b) => b.allItems.yearOverYearPct - a.allItems.yearOverYearPct);
+  const provinceFood = [...data.provinces].sort((a, b) => b.food.yearOverYearPct - a.food.yearOverYearPct);
+  const components = [...data.components].sort((a, b) => b.yearOverYearPct - a.yearOverYearPct);
+
+  return {
+    id: "statcan-cpi-watch",
+    slug,
+    title: `Consumer Price Index, ${data.referencePeriod}`,
+    source: "statcan",
+    publisher: "Statistics Canada",
+    sourceUrl: data.sourceUrl,
+    href: sourceHref("statcan", slug),
+    releaseType: "statcan-cpi-watch",
+    releaseDate: data.releaseDate,
+    referencePeriod: data.referencePeriod,
+    geographyLevel: "province",
+    affectedAreas: ["inflation", "housing", "energy"],
+    headlineFacts: [
+      `Headline inflation was ${data.canada.allItems.yearOverYearPct.toFixed(1)}% in ${data.referencePeriod}; food inflation was ${data.canada.food.yearOverYearPct.toFixed(1)}%.`,
+      `${highestHeadline.province} had the highest provincial headline rate at ${highestHeadline.allItems.yearOverYearPct.toFixed(1)}%.`,
+      `${highestFood.province} had the highest provincial food inflation at ${highestFood.food.yearOverYearPct.toFixed(1)}%.`,
+      rent ? `Rent inflation was ${rent.yearOverYearPct.toFixed(1)}%.` : "",
+      gasoline ? `Gasoline prices were ${gasoline.yearOverYearPct.toFixed(1)}% above a year earlier.` : "",
+    ].filter(Boolean),
+    provinceBreakdown: provinceHeadline.map((province) => ({
+      province: province.province,
+      value: `${province.allItems.yearOverYearPct.toFixed(1)}%`,
+      note: `${province.food.yearOverYearPct.toFixed(1)}% food inflation; headline momentum ${province.allItems.momentumChangePctPoints === null ? "unavailable" : `${province.allItems.momentumChangePctPoints > 0 ? "+" : ""}${province.allItems.momentumChangePctPoints.toFixed(1)} points`}.`,
+      score: Math.max(0, Math.min(100, Math.round(province.allItems.yearOverYearPct * 15))),
+    })),
+    chartPayloads: [
+      {
+        title: "Canada inflation at a glance",
+        kind: "metric-strip",
+        points: [data.canada.allItems, data.canada.food, rent, gasoline].filter((metric): metric is CpiChange => Boolean(metric)).map((metric) => ({
+          ...cpiPoint(metric),
+          period: data.referencePeriod,
+          changePeriod: `change in year-over-year rate from the previous month`,
+        })),
+      },
+      {
+        title: "Headline inflation by province",
+        kind: "province-rank",
+        points: provinceHeadline.map((province) => ({ ...cpiPoint(province.allItems), label: province.province, period: data.referencePeriod })),
+      },
+      {
+        title: "Food inflation by province",
+        kind: "province-rank",
+        points: provinceFood.map((province) => ({ ...cpiPoint(province.food), label: province.province, period: data.referencePeriod })),
+      },
+      {
+        title: "What is getting more expensive fastest?",
+        kind: "bar",
+        points: components.map((component) => ({ ...cpiPoint(component), period: data.referencePeriod })),
+      },
+      {
+        title: "Headline inflation over the past year",
+        kind: "bar",
+        points: data.history.map((period, index, history) => {
+          const previous = history[index - 1]?.allItemsYoY;
+          const change = previous === undefined ? null : Number((period.allItemsYoY - previous).toFixed(1));
+          return {
+            label: period.period,
+            value: period.allItemsYoY,
+            display: `${period.allItemsYoY.toFixed(1)}%`,
+            direction: change === null || change === 0 ? "neutral" as const : change > 0 ? "up" as const : "down" as const,
+            plainEnglish: `Food inflation was ${period.foodYoY.toFixed(1)}% in the same month.`,
+            previous,
+            previousDisplay: previous === undefined ? undefined : `${previous.toFixed(1)}%`,
+            change,
+            changeDisplay: change === null ? undefined : `${change > 0 ? "+" : ""}${change.toFixed(1)} pts`,
+            period: period.period,
+          };
+        }),
+      },
+    ],
+    sourceLinks: [{ label: `Statistics Canada table ${data.tableId}`, url: data.sourceUrl }],
+    importanceScore: 99,
+    youthImpactScore: 100,
+    housingImpactScore: 94,
+    promoted: true,
+    status: "live",
+    plainEnglishSummary: `Prices were ${data.canada.allItems.yearOverYearPct.toFixed(1)}% higher than a year earlier in ${data.referencePeriod}. Food rose ${data.canada.food.yearOverYearPct.toFixed(1)}%, and the province charts show where household pressure was strongest.`,
+    socialSummary: `Canada CPI, ${data.referencePeriod}: headline ${data.canada.allItems.yearOverYearPct.toFixed(1)}%, food ${data.canada.food.yearOverYearPct.toFixed(1)}%. Highest provincial headline: ${highestHeadline.province} at ${highestHeadline.allItems.yearOverYearPct.toFixed(1)}%.`,
   };
 }
 
@@ -852,12 +970,21 @@ async function getSourceLinkedReleases() {
 }
 
 async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
-  const statCanEntries = await fetchStatCanDailyEntries().catch(() => []);
-  const latestStatCanDate = getLatestDailyReleaseDate(statCanEntries);
-  const statCanToday = getEntriesForReleaseDate(statCanEntries, latestStatCanDate);
-  const rankedStatCan = rankDailyEntries(statCanToday.length ? statCanToday : statCanEntries).slice(0, 5);
-  const statCanReleases = await Promise.all(rankedStatCan.map((entry) => statCanReleaseFromEntry(entry)));
-  const housingWatch = await getCmhcHousingWatch().catch(() =>
+  const statCanEntriesPromise = fetchStatCanDailyEntries().catch(() => []);
+  const cpiWatchPromise = getStatCanCpiWatch().catch(() =>
+    sourceLinkedRelease({
+      id: "statcan-cpi-watch",
+      source: "statcan",
+      publisher: "Statistics Canada",
+      title: "Consumer Price Index watch",
+      sourceUrl: "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=1810000401",
+      releaseType: "statcan-cpi-watch",
+      affectedAreas: ["inflation", "housing", "energy"],
+      summary: "The CPI table tracks headline, food, shelter, rent, gasoline and provincial inflation.",
+      score: 99,
+    }),
+  );
+  const housingWatchPromise = getCmhcHousingWatch().catch(() =>
     sourceLinkedRelease({
       id: "cmhc-housing-watch",
       source: "cmhc",
@@ -870,7 +997,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
       score: 95,
     }),
   );
-  const rentalWatch = await getCmhcRentalWatch().catch(() =>
+  const rentalWatchPromise = getCmhcRentalWatch().catch(() =>
     sourceLinkedRelease({
       id: "cmhc-rental-market-watch",
       source: "cmhc",
@@ -883,7 +1010,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
       score: 98,
     }),
   );
-  const bankOfCanada = await getBankOfCanadaRelease().catch(() =>
+  const bankOfCanadaPromise = getBankOfCanadaRelease().catch(() =>
     sourceLinkedRelease({
       id: "bank-of-canada-valet-rate-watch",
       source: "bank-of-canada",
@@ -896,8 +1023,8 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
       score: 84,
     }),
   );
-  const bankOfCanadaReports = await fetchBankOfCanadaReportReleases().catch(() => []);
-  const financeCanada = await getFinanceCanadaRelease().catch(() =>
+  const bankOfCanadaReportsPromise = fetchBankOfCanadaReportReleases().catch(() => []);
+  const financeCanadaPromise = getFinanceCanadaRelease().catch(() =>
     sourceLinkedRelease({
       id: "finance-canada-fiscal-monitor",
       source: "finance-canada",
@@ -910,7 +1037,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
       score: 93,
     }),
   );
-  const ircc = await getOpenGovIrccRelease().catch(() =>
+  const irccPromise = getOpenGovIrccRelease().catch(() =>
     sourceLinkedRelease({
       id: "open-government-ircc-population-pressure",
       source: "open-government-ircc",
@@ -923,9 +1050,24 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
       score: 84,
     }),
   );
-  const officialMonitors = await fetchOfficialReportMonitors()
+  const officialMonitorsPromise = fetchOfficialReportMonitors()
     .then((monitors) => monitors.map(officialMonitorToRelease))
     .catch(() => getSourceLinkedReleases());
+  const statCanEntries = await statCanEntriesPromise;
+  const latestStatCanDate = getLatestDailyReleaseDate(statCanEntries);
+  const statCanToday = getEntriesForReleaseDate(statCanEntries, latestStatCanDate);
+  const rankedStatCan = rankDailyEntries(statCanToday.length ? statCanToday : statCanEntries).slice(0, 5);
+  const statCanReleases = await Promise.all(rankedStatCan.map((entry) => statCanReleaseFromEntry(entry)));
+  const [cpiWatch, housingWatch, rentalWatch, bankOfCanada, bankOfCanadaReports, financeCanada, ircc, officialMonitors] = await Promise.all([
+    cpiWatchPromise,
+    housingWatchPromise,
+    rentalWatchPromise,
+    bankOfCanadaPromise,
+    bankOfCanadaReportsPromise,
+    financeCanadaPromise,
+    irccPromise,
+    officialMonitorsPromise,
+  ]);
   const releaseTimestamp = (release: NormalizedRelease) => {
     const timestamp = Date.parse(release.releaseDate.length === 7 ? `${release.releaseDate}-01T12:00:00Z` : release.releaseDate);
     return Number.isFinite(timestamp) ? timestamp : 0;
@@ -936,12 +1078,13 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     const evidence = release.status === "live" && release.chartPayloads.some((chart) => chart.points.length) ? 18 : -20;
     return release.importanceScore + freshness + evidence;
   };
-  const todayQueue = [housingWatch, rentalWatch, bankOfCanada, ...bankOfCanadaReports, financeCanada, ircc, ...officialMonitors, ...statCanReleases].sort(
+  const todayQueue = [cpiWatch, housingWatch, rentalWatch, bankOfCanada, ...bankOfCanadaReports, financeCanada, ircc, ...officialMonitors, ...statCanReleases].sort(
     (a, b) => promotionScore(b) - promotionScore(a) || releaseTimestamp(b) - releaseTimestamp(a),
   );
   const isEditorialRelease = (release: NormalizedRelease) =>
     release.releaseType === "official-daily-release" ||
     release.releaseType.startsWith("bank-of-canada-") ||
+    release.releaseType === "statcan-cpi-watch" ||
     release.releaseType === "housing-release-monitor" ||
     release.releaseType === "cmhc-rental-market";
   const promotedRelease = todayQueue.find(
@@ -967,8 +1110,8 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     sourceStatuses: [
       {
         source: "Statistics Canada",
-        status: statCanReleases.some((release) => release.status === "live") ? "live" : "summary_only",
-        note: "Daily feeds plus rolling direct Daily URL probes monitored.",
+        status: cpiWatch.status === "live" || statCanReleases.some((release) => release.status === "live") ? "live" : "summary_only",
+        note: "Daily releases plus direct CPI WDS vectors and rolling Daily URL probes connected.",
       },
       { source: "CMHC", status: housingWatch.status === "live" && rentalWatch.status === "live" ? "live" : "source_linked", note: "Quarterly construction starts and annual Rental Market Survey rent, vacancy and turnover tables connected." },
       {
