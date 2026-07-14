@@ -7,19 +7,20 @@ import { formatReferencePeriod, formatReleaseDate } from "@/lib/release-format";
 export function LatestReleaseHero({ release }: { release: NormalizedRelease }) {
   const intelligence = buildReleaseIntelligence(release);
   const metrics = intelligence.metrics.slice(0, 4);
+  const showSummary = release.plainEnglishSummary.trim().toLowerCase() !== intelligence.verdict.trim().toLowerCase();
 
   return (
     <section className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl shadow-stone-300/40">
       <div className="grid lg:grid-cols-[1.18fr_0.82fr]">
         <div className="p-5 sm:p-8 lg:p-10">
           <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-[0.14em]">
-            <span className="rounded-md bg-red-700 px-2.5 py-1 text-white">Latest structured release</span>
+            <span className="rounded-md bg-red-700 px-2.5 py-1 text-white">Latest major release</span>
             <span className="rounded-md bg-stone-100 px-2.5 py-1 text-stone-700">{release.publisher}</span>
             <span className="text-stone-500">{formatReleaseDate(release.releaseDate)}</span>
           </div>
           <h1 className="mt-6 max-w-4xl text-4xl font-black leading-tight text-stone-950 sm:text-6xl">{release.title}</h1>
           <p className="mt-5 max-w-3xl text-xl font-bold leading-8 text-stone-800">{intelligence.verdict}</p>
-          <p className="mt-4 max-w-3xl text-base leading-7 text-stone-600">{release.plainEnglishSummary}</p>
+          {showSummary ? <p className="mt-4 max-w-3xl text-base leading-7 text-stone-600">{release.plainEnglishSummary}</p> : null}
 
           <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {metrics.map((metric) => {

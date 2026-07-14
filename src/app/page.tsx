@@ -16,8 +16,8 @@ export default async function Home() {
     <AppShell variant="light">
       {releaseHub.promotedRelease ? <LatestReleaseHero release={releaseHub.promotedRelease} /> : null}
       <InteractiveLaunchpad />
-      <ReleaseStream releases={releaseHub.todayQueue} />
       <DebateBoard items={feed.debateItems} />
+      <ReleaseStream releases={releaseHub.todayQueue} />
     </AppShell>
   );
 }

@@ -17,6 +17,8 @@ export type StatCanReleaseTable = {
     previous: number | null;
     change: number | null;
     changePeriod: string;
+    unit?: string;
+    changeUnit?: string;
     display?: string;
     previousDisplay?: string;
   }>;
@@ -138,6 +140,10 @@ function isSimplePeriod(label: string) {
     !/\bto\b|standard error|change|%/i.test(label);
 }
 
+function cleanPeriodLabel(value: string) {
+  return value.replace(/\{[a-z]+\}/gi, "").replace(/\s+/g, " ").trim();
+}
+
 function formatCompactNumber(value: number) {
   const absolute = Math.abs(value);
   if (absolute >= 1000) return `${(absolute / 1000).toFixed(1)}M`;
@@ -161,6 +167,40 @@ function formatChangeDisplay(label: string, change: number | null) {
     if (absolute >= 1_000_000) return `${sign}$${(absolute / 1_000_000).toFixed(1)}M`;
   }
   return `${sign}${absolute.toFixed(1)}`;
+}
+
+function formatDollarScale(value: number, sourceMultiplier: number) {
+  const scaled = value * sourceMultiplier;
+  const absolute = Math.abs(scaled);
+  if (absolute >= 1_000_000_000_000) return `$${(scaled / 1_000_000_000_000).toFixed(2)}T`;
+  if (absolute >= 1_000_000_000) return `$${(scaled / 1_000_000_000).toFixed(1)}B`;
+  if (absolute >= 1_000_000) return `$${(scaled / 1_000_000).toFixed(1)}M`;
+  return `$${scaled.toLocaleString("en-CA", { maximumFractionDigits: 1 })}`;
+}
+
+function formatTableValue(label: string, value: number, unit?: string) {
+  const normalizedUnit = unit?.toLowerCase() ?? "";
+  if (/rate/i.test(label) && /except rates?/.test(normalizedUnit)) return `${value.toFixed(1)}%`;
+  if (/percentage point/.test(normalizedUnit)) return `${value.toFixed(1)} pts`;
+  if (/%|percent/.test(normalizedUnit)) return `${value.toFixed(1)}%`;
+  if (/millions? of dollars?/.test(normalizedUnit)) return formatDollarScale(value, 1_000_000);
+  if (/thousands? of dollars?/.test(normalizedUnit)) return formatDollarScale(value, 1_000);
+  if (/dollars?/.test(normalizedUnit)) return formatDollarScale(value, 1);
+  if (/thousands?/.test(normalizedUnit)) return formatCompactNumber(value);
+  return formatSignalDisplay(label, value);
+}
+
+function formatTableChange(label: string, change: number | null, unit?: string) {
+  if (change === null) return "latest value";
+  const normalizedUnit = unit?.toLowerCase() ?? "";
+  const sign = change > 0 ? "+" : change < 0 ? "-" : "";
+  const absolute = Math.abs(change);
+  if (/rate/i.test(label) && /except rates?/.test(normalizedUnit)) return `${sign}${absolute.toFixed(1)} pts`;
+  if (/percentage point/.test(normalizedUnit)) return `${sign}${absolute.toFixed(1)} pts`;
+  if (/%|percent/.test(normalizedUnit)) return `${sign}${absolute.toFixed(1)}%`;
+  if (/thousands?/.test(normalizedUnit)) return `${sign}${formatCompactNumber(change)}`;
+  if (Number.isInteger(absolute) && absolute >= 1_000) return `${sign}${absolute.toLocaleString("en-CA")}`;
+  return formatChangeDisplay(label, change);
 }
 
 async function fetchWdsDownloads(tableIds: string[]) {
@@ -213,6 +253,23 @@ type WdsMetadata = {
   dimension: WdsDimension[];
 };
 
+const canadaGeographies = new Set([
+  "Canada",
+  "Newfoundland and Labrador",
+  "Prince Edward Island",
+  "Nova Scotia",
+  "New Brunswick",
+  "Quebec",
+  "Ontario",
+  "Manitoba",
+  "Saskatchewan",
+  "Alberta",
+  "British Columbia",
+  "Yukon",
+  "Northwest Territories",
+  "Nunavut",
+]);
+
 function memberPriority(member: WdsMember) {
   const name = member.memberNameEn.toLowerCase();
   let score = member.terminated ? -100 : 0;
@@ -254,8 +311,8 @@ async function fetchWdsTableSnapshot(productId: string): Promise<StatCanReleaseT
   const geographyIndex = dimensions.findIndex((dimension) => /geograph/i.test(dimension.dimensionNameEn));
   const geography = geographyIndex >= 0 ? dimensions[geographyIndex] : dimensions[0];
   const geographyMembers = geography.member
-    .filter((member) => /Canada|Newfoundland and Labrador|Prince Edward Island|Nova Scotia|New Brunswick|Quebec|Ontario|Manitoba|Saskatchewan|Alberta|British Columbia/.test(member.memberNameEn))
-    .slice(0, 11);
+    .filter((member) => canadaGeographies.has(member.memberNameEn.trim()))
+    .slice(0, canadaGeographies.size);
   const baseMembers = dimensions.map((dimension) => rankedMembers(dimension)[0]);
   const topicIndex = dimensions
     .map((dimension, index) => ({ index, count: index === geographyIndex ? -1 : dimension.member.length }))
@@ -295,7 +352,6 @@ async function fetchWdsTableSnapshot(productId: string): Promise<StatCanReleaseT
     const request = result.object?.coordinate ? requestByCoordinate.get(result.object.coordinate) : undefined;
     if (!request) return [];
     const label = [...request.context, request.topic.memberNameEn].join(": ");
-    const formatLabel = `${metadata.cubeTitleEn}: ${label}`;
     const latestValue = latest.value * 10 ** (latest.scalarFactorCode ?? 0);
     const previousValue = previous ? previous.value * 10 ** (previous.scalarFactorCode ?? 0) : null;
     return [{
@@ -306,8 +362,8 @@ async function fetchWdsTableSnapshot(productId: string): Promise<StatCanReleaseT
       previous: previousValue,
       change: previousValue === null ? null : Number((latestValue - previousValue).toFixed(2)),
       changePeriod: previous ? `${previous.refPer} to ${latest.refPer}` : latest.refPer,
-      display: formatWdsValue(formatLabel, latest.value, latest.scalarFactorCode),
-      previousDisplay: previous ? formatWdsValue(formatLabel, previous.value, previous.scalarFactorCode) : undefined,
+      display: formatWdsValue(label, latest.value, latest.scalarFactorCode),
+      previousDisplay: previous ? formatWdsValue(label, previous.value, previous.scalarFactorCode) : undefined,
       latestPeriod: latest.refPer,
       previousPeriod: previous?.refPer ?? latest.refPer,
     }];
@@ -342,7 +398,7 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
   const parsed = parseCsv(csv);
   const title = parsed[0]?.[0] || "Release table";
   const headerRowIndex = parsed.findIndex((row) => row.slice(1).filter(Boolean).length >= 2);
-  const periods = (parsed[headerRowIndex] ?? []).slice(1).filter(Boolean);
+  const periods = (parsed[headerRowIndex] ?? []).slice(1).filter(Boolean).map(cleanPeriodLabel);
   const sourceTableIds = extractTableIds(csv);
 
   if (headerRowIndex < 0 || periods.length === 0) {
@@ -358,13 +414,20 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
     periods.findIndex((period, index) => index > latestValueIndex && /\bto\b/i.test(period)) >= 0
       ? periods.findIndex((period, index) => index > latestValueIndex && /\bto\b/i.test(period))
       : -1;
+  const possibleUnitRow = parsed[headerRowIndex + 1] ?? [];
+  const units = possibleUnitRow.slice(1, periods.length + 1);
+  const hasUnitRow = !possibleUnitRow[0] && units.some((unit) => /%|percent|dollar|thousand|million|number|index|person|unit|rate/i.test(unit));
   const latestPeriod = periods[latestValueIndex] ?? "latest period";
-  const previousPeriod = periods[previousValueIndex] ?? "previous period";
+  const hasComparablePrevious = previousValueIndex !== latestValueIndex && periods[previousValueIndex] !== periods[latestValueIndex];
+  const previousPeriod = hasComparablePrevious ? periods[previousValueIndex] : "previous comparable period unavailable";
   const changePeriod = changeColumnIndex >= 0 ? periods[changeColumnIndex] : `${previousPeriod} to ${latestPeriod}`;
+  const latestUnit = hasUnitRow ? units[latestValueIndex] : undefined;
+  const previousUnit = hasUnitRow ? units[previousValueIndex] : undefined;
+  const changeUnit = hasUnitRow && changeColumnIndex >= 0 ? units[changeColumnIndex] : undefined;
 
   let currentGroup: string | undefined;
   const rows = parsed
-    .slice(headerRowIndex + 1)
+    .slice(headerRowIndex + (hasUnitRow ? 2 : 1))
     .flatMap((row) => {
       const label = row[0]?.replace(/^"+/, "").trim();
       const values = row.slice(1, periods.length + 1).map(toNumber);
@@ -376,7 +439,7 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
       }
 
       const latest = values[latestValueIndex] ?? null;
-      const previous = values[previousValueIndex] ?? null;
+      const previous = hasComparablePrevious ? (values[previousValueIndex] ?? null) : null;
       const sourceChange = changeColumnIndex >= 0 ? (values[changeColumnIndex] ?? null) : null;
 
       return [{
@@ -392,6 +455,9 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
               ? Number((latest - previous).toFixed(2))
               : null,
         changePeriod,
+        unit: latestUnit,
+        previousUnit,
+        changeUnit,
         numericCount: numericValues.length,
       }];
     })
@@ -405,6 +471,10 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
       previous: row.previous,
       change: row.change,
       changePeriod: row.changePeriod,
+      unit: row.unit,
+      changeUnit: row.changeUnit,
+      display: row.latest === null ? undefined : formatTableValue(row.label, row.latest, row.unit),
+      previousDisplay: row.previous === null ? undefined : formatTableValue(row.label, row.previous, row.previousUnit),
     }));
 
   if (rows.length === 0) {
@@ -433,17 +503,19 @@ function signalsFromTables(tables: StatCanReleaseTable[]): ReleaseSignal[] {
   return signalRows.slice(0, 8).map((row) => {
     const value = row.latest ?? 0;
     const change = row.change;
+    const display = row.display ?? formatSignalDisplay(row.label, value);
+    const changeDisplay = formatTableChange(row.label, change, row.changeUnit);
 
     return {
       label: row.label,
       value,
-      display: row.display ?? formatSignalDisplay(row.label, value),
+      display,
       direction: change === null || change === 0 ? "neutral" : change > 0 ? "up" : "down",
-      explanation: `${row.label}: ${formatSignalDisplay(row.label, value)} in ${latestPeriod}; ${formatChangeDisplay(row.label, change)} over ${row.changePeriod}.`,
+      explanation: `${row.label}: ${display} in ${latestPeriod}; ${changeDisplay} over ${row.changePeriod}.`,
       previous: row.previous,
       previousDisplay: row.previousDisplay ?? (row.previous === null ? undefined : formatSignalDisplay(row.label, row.previous)),
       change,
-      changeDisplay: formatChangeDisplay(row.label, change),
+      changeDisplay,
       period: latestPeriod,
       changePeriod: row.changePeriod,
     };

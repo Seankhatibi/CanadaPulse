@@ -223,7 +223,7 @@ export async function persistStatCanDailyReleaseEvents() {
             status: releaseData?.sourceStatus === "table_data_loaded" ? "live" : "summary_only",
             metricCount: releaseData?.signals.length ?? 0,
             title: entry.title,
-            referencePeriod: entry.published,
+            referencePeriod: releaseData?.tables[0]?.latestPeriod ?? entry.published,
             affectedIndicators: affectedAreas,
             facts,
             plainEnglishSummary: entry.summary,

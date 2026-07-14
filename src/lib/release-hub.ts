@@ -121,14 +121,30 @@ function classifyStatCanAreas(entry: StatCanDailyEntry): ReleaseArea[] {
   const areas = new Set<ReleaseArea>();
 
   if (/housing|rent|construction|building/.test(text)) areas.add("housing");
-  if (/retail|wholesale|consumer demand|consumer spending|sales|manufacturing/.test(text)) areas.add("economy");
+  if (/retail|wholesale|consumer demand|consumer spending|sales|manufacturing|gross domestic product|\bgdp\b|productivity/.test(text)) areas.add("economy");
   if (/price|inflation|consumer price|cpi/.test(text)) areas.add("inflation");
-  if (/labour|employment|unemployment|wage|productivity/.test(text)) areas.add("labour");
+  if (/labour|employment|unemployment|wage|productivity|job vacanc/.test(text)) areas.add("labour");
   if (/population|immigration|temporary resident|student|refugee/.test(text)) areas.add("population");
   if (/trade|export|import/.test(text)) areas.add("trade");
   if (/energy|oil|gas|electricity|natural resources/.test(text)) areas.add("energy");
 
   return areas.size ? [...areas] : ["population"];
+}
+
+function isMajorStatCanTitle(title: string) {
+  return [
+    /^labour force survey\b/i,
+    /^consumer price index\b/i,
+    /^gross domestic product by industry\b/i,
+    /^gross domestic product, income and expenditure\b/i,
+    /^retail trade\b/i,
+    /^wholesale trade\b/i,
+    /^canadian international merchandise trade\b/i,
+    /^labour productivity\b/i,
+    /^population estimates\b/i,
+    /^building permits\b/i,
+    /^job vacancies\b/i,
+  ].some((pattern) => pattern.test(title));
 }
 
 function scoreRelease(areas: ReleaseArea[], text: string) {
@@ -145,6 +161,9 @@ function scoreRelease(areas: ReleaseArea[], text: string) {
   if (/gdp|productivity|mortgage|rent|starts|deficit|debt|temporary resident/.test(lower)) score += 14;
   if (/retail trade|retail sales|wholesale trade|consumer spending|consumer demand|manufacturing sales/.test(lower)) score += 28;
   if (/labour force survey/.test(lower)) score += 34;
+  if (isMajorStatCanTitle(text)) score += 20;
+  if (areas.includes("trade")) score += 18;
+  if (areas.includes("population")) score += 18;
   return Math.min(score, 100);
 }
 
@@ -206,7 +225,7 @@ async function statCanReleaseFromEntry(entry: StatCanDailyEntry, promotedHref?: 
     href: promotedHref ?? sourceHref("statcan", slug),
     releaseType: "official-daily-release",
     releaseDate: entry.published.slice(0, 10),
-    referencePeriod: entry.published,
+    referencePeriod: releaseData?.tables[0]?.latestPeriod ?? entry.published,
     geographyLevel: "mixed",
     affectedAreas: areas,
     headlineFacts: [
@@ -1057,7 +1076,13 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
   const statCanEntries = await statCanEntriesPromise;
   const latestStatCanDate = getLatestDailyReleaseDate(statCanEntries);
   const statCanToday = getEntriesForReleaseDate(statCanEntries, latestStatCanDate);
-  const rankedStatCan = rankDailyEntries(statCanToday.length ? statCanToday : statCanEntries).slice(0, 5);
+  const rollingMajorStatCan = statCanEntries
+    .filter((entry) => isMajorStatCanTitle(entry.title))
+    .sort((a, b) => b.published.localeCompare(a.published));
+  const rankedStatCan = [...new Map(
+    [...rankDailyEntries(statCanToday).slice(0, 5), ...rollingMajorStatCan.slice(0, 5)]
+      .map((entry) => [entry.href, entry]),
+  ).values()].slice(0, 9);
   const statCanReleases = await Promise.all(rankedStatCan.map((entry) => statCanReleaseFromEntry(entry)));
   const [cpiWatch, housingWatch, rentalWatch, bankOfCanada, bankOfCanadaReports, financeCanada, ircc, officialMonitors] = await Promise.all([
     cpiWatchPromise,
@@ -1083,7 +1108,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     (a, b) => promotionScore(b) - promotionScore(a) || releaseTimestamp(b) - releaseTimestamp(a),
   );
   const isEditorialRelease = (release: NormalizedRelease) =>
-    release.releaseType === "official-daily-release" ||
+    (release.releaseType === "official-daily-release" && isMajorStatCanTitle(release.title)) ||
     release.releaseType.startsWith("bank-of-canada-") ||
     release.releaseType === "statcan-cpi-watch" ||
     release.releaseType === "housing-release-monitor" ||

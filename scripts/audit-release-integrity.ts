@@ -22,6 +22,25 @@ async function main() {
   assert(employment && employment.value > 20_000 && employment.value < 25_000, `National employment failed integrity range: ${employment?.value}`);
   assert(unemploymentRate && unemploymentRate.value === 6.5, `National unemployment rate should be 6.5%, got ${unemploymentRate?.value}`);
   assert(participationRate && participationRate.value === 65, `National participation rate should be 65.0%, got ${participationRate?.value}`);
+  assert(unemploymentRate.display === "6.5%", `Unemployment display lost its percent unit: ${unemploymentRate.display}`);
+  assert(participationRate.display === "65.0%", `Participation display lost its percent unit: ${participationRate.display}`);
+  const provinceTable = labour.tables.find((table) => /by province/i.test(table.title));
+  const provinceGroups = new Set(provinceTable?.rows.map((row) => row.group).filter(Boolean));
+  assert(provinceGroups.has("Ontario") && !provinceGroups.has("North Shore, Nova Scotia"), "LFS geography normalization included sub-provincial regions.");
+
+  const gdpEntry = await fetchStatCanDailyEntryFromUrl("https://www150.statcan.gc.ca/n1/daily-quotidien/260630/dq260630a-eng.htm");
+  assert(gdpEntry, "GDP by industry release was not fetched.");
+  const gdp = await fetchStatCanReleaseData(gdpEntry);
+  const allIndustries = gdp.signals.find((signal) => signal.label === "All industries");
+  assert(allIndustries?.display === "$2.35T", `GDP level should preserve millions-of-dollars scaling, got ${allIndustries?.display}`);
+  assert(allIndustries.previous === null, `GDP monthly percent change was mistaken for a previous level: ${allIndustries.previous}`);
+  assert(allIndustries.changeDisplay === "+1.1%", `GDP annual change should retain percent units, got ${allIndustries.changeDisplay}`);
+
+  const vacanciesEntry = await fetchStatCanDailyEntryFromUrl("https://www150.statcan.gc.ca/n1/daily-quotidien/260616/dq260616b-eng.htm");
+  assert(vacanciesEntry, "Job vacancies release was not fetched.");
+  const vacancies = await fetchStatCanReleaseData(vacanciesEntry);
+  assert(vacancies.signals.find((signal) => signal.label === "Job vacancies")?.display === "506,730", "Job-vacancy count was formatted with the wrong unit.");
+  assert(vacancies.signals.find((signal) => signal.label === "Job vacancy rate")?.display === "2.8%", "Job-vacancy rate lost its percent unit.");
 
   const cpi = await fetchStatCanCpiSnapshot();
   assert(cpi.referencePeriod === "May 2026", `Unexpected CPI period: ${cpi.referencePeriod}`);
@@ -56,7 +75,7 @@ async function main() {
   assert(asylum && asylum.value > 1_000, `IRCC asylum total failed integrity range: ${asylum?.value}`);
   assert(permanentResidents.provinceValues.some((item) => item.province === "Ontario"), "IRCC Ontario province row is missing.");
 
-  console.log("Official release integrity audit passed: LFS, CPI, Finance Canada, CMHC construction/rental and IRCC headline values are correctly identified.");
+  console.log("Official release integrity audit passed: LFS, GDP, vacancies, CPI, Finance Canada, CMHC construction/rental and IRCC values and units are correctly identified.");
 }
 
 main().catch((error) => {
