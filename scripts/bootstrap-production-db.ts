@@ -27,15 +27,37 @@ async function main() {
     persistStatCanDailyReleaseEvents(),
     persistMultiSourceReleaseEvents(),
   ]);
+  if (!statcan.persisted || !multiSource.persisted) {
+    throw new Error("Production bootstrap fetched releases but did not persist them.");
+  }
+  const [releaseEvents, successfulRuns, fallbackValues] = await Promise.all([
+    prisma.releaseEvent.count(),
+    prisma.dataRefreshRun.count({ where: { status: "SUCCESS" } }),
+    prisma.timeSeriesValue.count({ where: { dataStatus: "FALLBACK" } }),
+  ]);
+  if (releaseEvents === 0 || successfulRuns < 2) {
+    throw new Error("Production bootstrap did not create the expected release history and refresh audit records.");
+  }
+  if (fallbackValues > 0) {
+    throw new Error("Production bootstrap found fallback time-series values. Remove them before launch.");
+  }
   console.log(JSON.stringify({
     sourceDatasets: sourceDatasets.length,
     statcanRows: statcan.result.rowsFetched,
+    statcanRowsChanged: statcan.result.rowsChanged,
     multiSourceRows: multiSource.result.rowsFetched,
+    multiSourceRowsChanged: multiSource.result.rowsChanged,
+    releaseEvents,
+    successfulRuns,
+    fallbackValues,
   }, null, 2));
-  await prisma.$disconnect();
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await getPrisma().$disconnect();
+  });

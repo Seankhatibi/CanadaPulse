@@ -67,16 +67,16 @@ enum SummaryStatus {
 }
 
 model Geography {
-  id          String        @id @default(cuid())
+  id          String            @id @default(cuid())
   name        String
-  slug        String        @unique
-  code        String        @unique
+  slug        String            @unique
+  code        String            @unique
   type        GeographyType
   population  Int?
   capital     String?
   region      String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   values      TimeSeriesValue[]
   scores      GeographyScore[]
   cityMetrics CityMetric[]
@@ -85,31 +85,31 @@ model Geography {
 }
 
 model IndicatorCategory {
-  id          String      @id @default(cuid())
-  slug        String      @unique
+  id          String           @id @default(cuid())
+  slug        String           @unique
   name        String
   description String
-  sortOrder   Int         @default(0)
+  sortOrder   Int              @default(0)
   indicators  Indicator[]
   scores      GeographyScore[]
 }
 
 model Indicator {
-  id          String             @id @default(cuid())
-  slug        String             @unique
+  id          String               @id @default(cuid())
+  slug        String               @unique
   name        String
   description String
   unit        String
   categoryId  String
   frequency   IndicatorFrequency
-  direction   IndicatorDirection @default(NEUTRAL)
+  direction   IndicatorDirection   @default(NEUTRAL)
   sourceId    String?
-  isHot       Boolean            @default(false)
-  isYouth     Boolean            @default(false)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  category    IndicatorCategory  @relation(fields: [categoryId], references: [id])
-  source      DataSource?        @relation(fields: [sourceId], references: [id])
+  isHot       Boolean              @default(false)
+  isYouth     Boolean              @default(false)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  category    IndicatorCategory    @relation(fields: [categoryId], references: [id])
+  source      DataSource?          @relation(fields: [sourceId], references: [id])
   values      TimeSeriesValue[]
   sourceMaps  IndicatorSourceMap[]
 
@@ -119,24 +119,24 @@ model Indicator {
 }
 
 model TimeSeriesValue {
-  id          String    @id @default(cuid())
-  indicatorId String
-  geographyId String
-  period      DateTime
-  value       Decimal   @db.Decimal(18, 4)
-  label       String?
-  note        String?
-  isEstimate  Boolean   @default(false)
+  id              String         @id @default(cuid())
+  indicatorId     String
+  geographyId     String
+  period          DateTime
+  value           Decimal        @db.Decimal(18, 4)
+  label           String?
+  note            String?
+  isEstimate      Boolean        @default(false)
   sourceDatasetId String?
-  sourceUrl   String?
-  fetchedAt   DateTime?
-  sourcePeriod String?
-  confidence  Decimal?  @db.Decimal(5, 2)
-  dataStatus  DataStatus @default(FALLBACK)
-  createdAt   DateTime  @default(now())
-  indicator   Indicator @relation(fields: [indicatorId], references: [id])
-  geography   Geography @relation(fields: [geographyId], references: [id])
-  sourceDataset SourceDataset? @relation(fields: [sourceDatasetId], references: [id])
+  sourceUrl       String?
+  fetchedAt       DateTime?
+  sourcePeriod    String?
+  confidence      Decimal?       @db.Decimal(5, 2)
+  dataStatus      DataStatus     @default(FALLBACK)
+  createdAt       DateTime       @default(now())
+  indicator       Indicator      @relation(fields: [indicatorId], references: [id])
+  geography       Geography      @relation(fields: [geographyId], references: [id])
+  sourceDataset   SourceDataset? @relation(fields: [sourceDatasetId], references: [id])
 
   @@unique([indicatorId, geographyId, period])
   @@index([geographyId, period])
@@ -156,45 +156,45 @@ model DataSource {
 }
 
 model SourceDataset {
-  id          String             @id @default(cuid())
-  slug        String             @unique
-  label       String
-  publisher   String
-  officialUrl String
-  apiType     SourceApiType
-  cadence     IndicatorFrequency
-  licenseNote String
-  updateStatus SourceUpdateStatus @default(SOURCE_LINKED)
+  id                String               @id @default(cuid())
+  slug              String               @unique
+  label             String
+  publisher         String
+  officialUrl       String
+  apiType           SourceApiType
+  cadence           IndicatorFrequency
+  licenseNote       String
+  updateStatus      SourceUpdateStatus   @default(SOURCE_LINKED)
   latestKnownPeriod String?
-  lastCheckedAt DateTime?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  indicatorMaps IndicatorSourceMap[]
-  values      TimeSeriesValue[]
-  refreshRuns DataRefreshRun[]
-  releaseEvents ReleaseEvent[]
+  lastCheckedAt     DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  indicatorMaps     IndicatorSourceMap[]
+  values            TimeSeriesValue[]
+  refreshRuns       DataRefreshRun[]
+  releaseEvents     ReleaseEvent[]
 
   @@index([apiType])
   @@index([updateStatus])
 }
 
 model IndicatorSourceMap {
-  id          String        @id @default(cuid())
-  indicatorId String
-  sourceDatasetId String
+  id                 String             @id @default(cuid())
+  indicatorId        String
+  sourceDatasetId    String
   sourceIndicatorKey String?
-  productId   String?
-  vectorId    String?
-  fieldPath   String?
-  geographyMapping Json?
-  unitConversion String?
-  transformRule String?
-  importStatus SourceUpdateStatus @default(SOURCE_LINKED)
-  priority    Int           @default(1)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  indicator   Indicator     @relation(fields: [indicatorId], references: [id])
-  sourceDataset SourceDataset @relation(fields: [sourceDatasetId], references: [id])
+  productId          String?
+  vectorId           String?
+  fieldPath          String?
+  geographyMapping   Json?
+  unitConversion     String?
+  transformRule      String?
+  importStatus       SourceUpdateStatus @default(SOURCE_LINKED)
+  priority           Int                @default(1)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  indicator          Indicator          @relation(fields: [indicatorId], references: [id])
+  sourceDataset      SourceDataset      @relation(fields: [sourceDatasetId], references: [id])
 
   @@unique([indicatorId, sourceDatasetId, priority])
   @@index([indicatorId])
@@ -203,18 +203,18 @@ model IndicatorSourceMap {
 }
 
 model DataRefreshRun {
-  id          String        @id @default(cuid())
-  jobName     String
+  id              String         @id @default(cuid())
+  jobName         String
   sourceDatasetId String?
-  status      RefreshStatus @default(RUNNING)
-  startedAt   DateTime      @default(now())
-  finishedAt  DateTime?
-  rowsFetched Int           @default(0)
-  rowsChanged Int           @default(0)
-  sourceVersion String?
-  errorPayload Json?
-  metadata    Json?
-  sourceDataset SourceDataset? @relation(fields: [sourceDatasetId], references: [id])
+  status          RefreshStatus  @default(RUNNING)
+  startedAt       DateTime       @default(now())
+  finishedAt      DateTime?
+  rowsFetched     Int            @default(0)
+  rowsChanged     Int            @default(0)
+  sourceVersion   String?
+  errorPayload    Json?
+  metadata        Json?
+  sourceDataset   SourceDataset? @relation(fields: [sourceDatasetId], references: [id])
 
   @@index([jobName, startedAt])
   @@index([status])
@@ -222,24 +222,33 @@ model DataRefreshRun {
 }
 
 model ReleaseEvent {
-  id          String        @id @default(cuid())
-  sourceDatasetId String?
-  title       String
-  sourceUrl   String
-  releaseDate DateTime
-  referencePeriod String?
-  affectedIndicators Json?
-  facts       Json?
+  id                  String         @id @default(cuid())
+  sourceDatasetId     String?
+  source              String?
+  slug                String?
+  publisher           String?
+  releaseType         String?
+  geographyLevel      String?
+  status              String?
+  metricCount         Int            @default(0)
+  title               String
+  sourceUrl           String
+  releaseDate         DateTime
+  referencePeriod     String?
+  affectedIndicators  Json?
+  facts               Json?
   plainEnglishSummary String?
-  socialSummary String?
-  summaryStatus SummaryStatus @default(PENDING)
-  promoted    Boolean       @default(false)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  sourceDataset SourceDataset? @relation(fields: [sourceDatasetId], references: [id])
+  socialSummary       String?
+  summaryStatus       SummaryStatus  @default(PENDING)
+  promoted            Boolean        @default(false)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  sourceDataset       SourceDataset? @relation(fields: [sourceDatasetId], references: [id])
 
   @@unique([sourceUrl, releaseDate])
   @@index([releaseDate])
+  @@index([source, slug, releaseDate])
+  @@index([publisher, releaseDate])
   @@index([promoted])
   @@index([summaryStatus])
 }
@@ -274,28 +283,28 @@ model CityMetric {
 }
 
 model ShareCard {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  title       String
-  geography   String
-  category    String
-  headline    String
-  summary     String
-  score       Int?
-  payload     Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  title     String
+  geography String
+  category  String
+  headline  String
+  summary   String
+  score     Int?
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model UserScenario {
-  id             String   @id @default(cuid())
-  scenarioType   String
-  provinceSlug   String
-  city           String?
-  householdSize  Int
-  annualIncome   Decimal  @db.Decimal(18, 2)
-  monthlyRent    Decimal? @db.Decimal(18, 2)
-  monthlyCosts   Json
-  affordability  Json
-  createdAt      DateTime @default(now())
+  id            String   @id @default(cuid())
+  scenarioType  String
+  provinceSlug  String
+  city          String?
+  householdSize Int
+  annualIncome  Decimal  @db.Decimal(18, 2)
+  monthlyRent   Decimal? @db.Decimal(18, 2)
+  monthlyCosts  Json
+  affordability Json
+  createdAt     DateTime @default(now())
 }

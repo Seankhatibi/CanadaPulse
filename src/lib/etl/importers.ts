@@ -4,6 +4,79 @@ import { fetchStatCanReleaseData } from "@/lib/statcan-release-data";
 import { getMultiSourceReleaseHub, type NormalizedRelease } from "@/lib/release-hub";
 import { getLatestDailyReleaseDate, rankDailyEntries } from "@/lib/statcan-daily";
 
+function releaseSlug(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 90);
+}
+
+function inferReleaseAreas(value: string) {
+  const text = value.toLowerCase();
+  const areas = new Set<string>();
+  if (/housing|rent|construction|building/.test(text)) areas.add("housing");
+  if (/retail|wholesale|sales|manufacturing|gdp|productivity/.test(text)) areas.add("economy");
+  if (/price|inflation|consumer price|cpi/.test(text)) areas.add("inflation");
+  if (/labour|employment|unemployment|wage/.test(text)) areas.add("labour");
+  if (/population|immigration|temporary resident|student|refugee/.test(text)) areas.add("population");
+  if (/trade|export|import/.test(text)) areas.add("trade");
+  if (/energy|oil|gas|electricity|natural resources/.test(text)) areas.add("energy");
+  return [...areas];
+}
+
+function stableJson(value: unknown) {
+  return JSON.stringify(value ?? null);
+}
+
+async function upsertReleaseEventIfChanged({
+  sourceUrl,
+  releaseDate,
+  data,
+}: {
+  sourceUrl: string;
+  releaseDate: Date;
+  data: Record<string, unknown>;
+}) {
+  const prisma = getPrisma();
+  const where = { sourceUrl_releaseDate: { sourceUrl, releaseDate } };
+  const existing = await prisma.releaseEvent.findUnique({ where });
+
+  if (!existing) {
+    await prisma.releaseEvent.create({
+      data: { ...data, sourceUrl, releaseDate } as never,
+    });
+    return true;
+  }
+
+  const comparableKeys = [
+    "sourceDatasetId",
+    "source",
+    "slug",
+    "publisher",
+    "releaseType",
+    "geographyLevel",
+    "status",
+    "metricCount",
+    "title",
+    "referencePeriod",
+    "affectedIndicators",
+    "facts",
+    "plainEnglishSummary",
+    "socialSummary",
+    "summaryStatus",
+    "promoted",
+  ] as const;
+  const changed = comparableKeys.some((key) =>
+    stableJson(existing[key as keyof typeof existing]) !== stableJson(data[key]),
+  );
+
+  if (!changed) return false;
+
+  await prisma.releaseEvent.update({ where, data: data as never });
+  return true;
+}
+
 function getReleaseScore(entry: unknown) {
   if (typeof entry !== "object" || entry === null || !("score" in entry)) {
     return null;
@@ -20,7 +93,7 @@ export async function runWithRefreshLog<T>({
 }: {
   jobName: string;
   sourceDatasetSlug?: string;
-  run: () => Promise<T & { rowsFetched?: number; rowsChanged?: number; metadata?: unknown }>;
+  run: () => Promise<T & { rowsFetched?: number; rowsChanged?: number; sourceVersion?: string; metadata?: unknown }>;
 }) {
   if (!process.env.DATABASE_URL) {
     const result = await run();
@@ -49,9 +122,16 @@ export async function runWithRefreshLog<T>({
         finishedAt: new Date(),
         rowsFetched: result.rowsFetched ?? 0,
         rowsChanged: result.rowsChanged ?? 0,
+        sourceVersion: result.sourceVersion,
         metadata: result.metadata === undefined ? undefined : JSON.parse(JSON.stringify(result.metadata)),
       },
     });
+    if (sourceDataset) {
+      await prisma.sourceDataset.update({
+        where: { id: sourceDataset.id },
+        data: { lastCheckedAt: new Date() },
+      });
+    }
 
     return { persisted: true, result };
   } catch (error) {
@@ -65,6 +145,12 @@ export async function runWithRefreshLog<T>({
         },
       },
     });
+    if (sourceDataset) {
+      await prisma.sourceDataset.update({
+        where: { id: sourceDataset.id },
+        data: { lastCheckedAt: new Date() },
+      });
+    }
     throw error;
   }
 }
@@ -85,16 +171,28 @@ export async function persistStatCanDailyReleaseEvents() {
         where: { slug: "statcan-daily-economic-releases" },
       });
       const latestDate = getLatestDailyReleaseDate(result.entries);
+      let rowsChanged = 0;
       const entriesToEnrich = new Set(
         rankDailyEntries(result.entries.filter((entry) => entry.published.startsWith(latestDate)))
           .slice(0, 12)
           .map((entry) => entry.href),
       );
+      if (sourceDataset) {
+        await prisma.sourceDataset.update({
+          where: { id: sourceDataset.id },
+          data: { latestKnownPeriod: latestDate },
+        });
+      }
 
       for (const entry of result.entries) {
         const score = getReleaseScore(entry);
+        const affectedAreas = inferReleaseAreas(`${entry.title} ${entry.summary}`);
         const releaseData = entriesToEnrich.has(entry.href) ? await fetchStatCanReleaseData(entry).catch(() => null) : null;
         const facts = {
+          source: "statcan",
+          publisher: "Statistics Canada",
+          slug: releaseSlug(entry.title),
+          releaseType: "official-daily-release",
           feed: entry.feed,
           summary: entry.summary,
           score,
@@ -112,38 +210,32 @@ export async function persistStatCanDailyReleaseEvents() {
           })) ?? [],
         };
 
-        await prisma.releaseEvent.upsert({
-          where: {
-            sourceUrl_releaseDate: {
-              sourceUrl: entry.href,
-              releaseDate: new Date(entry.published),
-            },
-          },
-          update: {
+        const changed = await upsertReleaseEventIfChanged({
+          sourceUrl: entry.href,
+          releaseDate: new Date(entry.published),
+          data: {
+            sourceDatasetId: sourceDataset?.id,
+            source: "statcan",
+            slug: releaseSlug(entry.title),
+            publisher: "Statistics Canada",
+            releaseType: "official-daily-release",
+            geographyLevel: "mixed",
+            status: releaseData?.sourceStatus === "table_data_loaded" ? "live" : "summary_only",
+            metricCount: releaseData?.signals.length ?? 0,
             title: entry.title,
             referencePeriod: entry.published,
+            affectedIndicators: affectedAreas,
             facts,
             plainEnglishSummary: entry.summary,
+            socialSummary: entry.summary,
             summaryStatus: "GENERATED",
             promoted: Boolean(score && score > 0),
-            sourceDatasetId: sourceDataset?.id,
-          },
-          create: {
-            title: entry.title,
-            sourceUrl: entry.href,
-            releaseDate: new Date(entry.published),
-            referencePeriod: entry.published,
-            affectedIndicators: [],
-            facts,
-            plainEnglishSummary: entry.summary,
-            summaryStatus: "GENERATED",
-            promoted: Boolean(score && score > 0),
-            sourceDatasetId: sourceDataset?.id,
           },
         });
+        if (changed) rowsChanged += 1;
       }
 
-      return result;
+      return { ...result, rowsChanged, sourceVersion: latestDate };
     },
   });
 }
@@ -167,11 +259,14 @@ export async function persistMultiSourceReleaseEvents() {
     jobName: "refresh-multi-source-release-hub",
     run: async () => {
       const hub = await getMultiSourceReleaseHub();
+      const releasesToPersist = hub.todayQueue.filter(
+        (release) => !(release.source === "statcan" && release.releaseType === "official-daily-release"),
+      );
 
       if (!process.env.DATABASE_URL) {
         return {
-          rowsFetched: hub.todayQueue.length,
-          rowsChanged: hub.todayQueue.length,
+          rowsFetched: releasesToPersist.length,
+          rowsChanged: 0,
           metadata: {
             adapter: "MultiSourceReleaseHub",
             promotedRelease: hub.promotedRelease?.title ?? null,
@@ -182,14 +277,16 @@ export async function persistMultiSourceReleaseEvents() {
       }
 
       const prisma = getPrisma();
+      let rowsChanged = 0;
 
-      for (const release of hub.todayQueue) {
+      for (const release of releasesToPersist) {
         const sourceDatasetSlug = sourceDatasetSlugForRelease(release);
         const sourceDataset = sourceDatasetSlug
           ? await prisma.sourceDataset.findUnique({ where: { slug: sourceDatasetSlug } })
           : null;
         const facts = {
           source: release.source,
+          slug: release.slug,
           publisher: release.publisher,
           releaseType: release.releaseType,
           releaseDate: release.releaseDate,
@@ -208,14 +305,18 @@ export async function persistMultiSourceReleaseEvents() {
           internalHref: release.href,
         };
 
-        await prisma.releaseEvent.upsert({
-          where: {
-            sourceUrl_releaseDate: {
-              sourceUrl: release.sourceUrl,
-              releaseDate: new Date(release.releaseDate),
-            },
-          },
-          update: {
+        const changed = await upsertReleaseEventIfChanged({
+          sourceUrl: release.sourceUrl,
+          releaseDate: new Date(release.releaseDate),
+          data: {
+            sourceDatasetId: sourceDataset?.id,
+            source: release.source,
+            slug: release.slug,
+            publisher: release.publisher,
+            releaseType: release.releaseType,
+            geographyLevel: release.geographyLevel,
+            status: release.status,
+            metricCount: release.chartPayloads.reduce((total, chart) => total + chart.points.length, 0),
             title: release.title,
             referencePeriod: release.referencePeriod,
             affectedIndicators: release.affectedAreas,
@@ -224,27 +325,24 @@ export async function persistMultiSourceReleaseEvents() {
             socialSummary: release.socialSummary,
             summaryStatus: "GENERATED",
             promoted: release.promoted,
-            sourceDatasetId: sourceDataset?.id,
-          },
-          create: {
-            title: release.title,
-            sourceUrl: release.sourceUrl,
-            releaseDate: new Date(release.releaseDate),
-            referencePeriod: release.referencePeriod,
-            affectedIndicators: release.affectedAreas,
-            facts,
-            plainEnglishSummary: release.plainEnglishSummary,
-            socialSummary: release.socialSummary,
-            summaryStatus: "GENERATED",
-            promoted: release.promoted,
-            sourceDatasetId: sourceDataset?.id,
           },
         });
+        if (changed) rowsChanged += 1;
+        if (sourceDataset) {
+          await prisma.sourceDataset.update({
+            where: { id: sourceDataset.id },
+            data: {
+              lastCheckedAt: new Date(),
+              latestKnownPeriod: release.status === "live" ? release.referencePeriod : sourceDataset.latestKnownPeriod,
+            },
+          });
+        }
       }
 
       return {
-        rowsFetched: hub.todayQueue.length,
-        rowsChanged: hub.todayQueue.length,
+        rowsFetched: releasesToPersist.length,
+        rowsChanged,
+        sourceVersion: hub.generatedAt,
         metadata: {
           adapter: "MultiSourceReleaseHub",
           promotedRelease: hub.promotedRelease?.title ?? null,

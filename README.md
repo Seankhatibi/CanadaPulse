@@ -30,8 +30,9 @@ The live-source product works without a database by fetching official publishers
 Set `DATABASE_URL` to a Postgres connection, then run:
 
 ```bash
-npm run db:push
+npm run db:migrate:deploy
 npm run db:bootstrap:production
+npm run db:verify:production
 ```
 
 The production bootstrap creates source metadata and imports official release events. It does not load the historical demo dataset.
@@ -46,7 +47,7 @@ Never run the fallback seed against production.
 
 ## Scheduled Refresh
 
-Vercel cron invokes `/api/cron/refresh-data` at 11:00 a.m. and 1:00 p.m. Toronto time on weekdays. Production requires `CRON_SECRET`; Vercel sends it as a bearer token automatically.
+Vercel cron invokes `/api/cron/refresh-data` at 15:00 and 16:00 UTC on weekdays. The pair guarantees one check at 11:00 a.m. Toronto time through both daylight-saving and standard-time seasons, with a second check one hour before or after. Production requires `CRON_SECRET`; Vercel sends it as a bearer token automatically.
 
 The refresh performs:
 
@@ -59,6 +60,7 @@ The refresh performs:
 
 ```bash
 npm run audit:public-data
+npm run audit:persistence
 npm run lint
 npm run build
 npx prisma validate

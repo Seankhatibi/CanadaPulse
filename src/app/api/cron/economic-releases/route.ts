@@ -10,8 +10,9 @@ import { fetchStatCanDailyEntries, rankDailyEntries } from "@/lib/statcan-daily"
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const isProduction = process.env.NODE_ENV === "production";
+  const cronSecret = process.env.CRON_SECRET;
 
-  if (isProduction && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (isProduction && (!cronSecret || authHeader !== `Bearer ${cronSecret}`)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

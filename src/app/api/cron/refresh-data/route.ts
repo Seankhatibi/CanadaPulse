@@ -2,11 +2,15 @@ import { persistMultiSourceReleaseEvents, persistStatCanDailyReleaseEvents } fro
 import { fetchCihiHealthSnapshot } from "@/lib/cihi-health";
 import { revalidateTag } from "next/cache";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const isProduction = process.env.NODE_ENV === "production";
+  const cronSecret = process.env.CRON_SECRET;
 
-  if (isProduction && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (isProduction && (!cronSecret || authHeader !== `Bearer ${cronSecret}`)) {
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -25,6 +29,11 @@ export async function GET(request: Request) {
     jobs: {
       statcanDaily,
       multiSourceReleaseHub,
+      persistence: {
+        configured: Boolean(process.env.DATABASE_URL),
+        statcanPersisted: statcanDaily.persisted,
+        multiSourcePersisted: multiSourceReleaseHub.persisted,
+      },
       statcanWds: "live through Daily article tables, companion Tables pages and compact WDS metadata/series extraction",
       cmhc: "live quarterly construction starts plus annual Rental Market Survey rent, vacancy and turnover imports; current completions/mortgage datasets remain separate",
       bankOfCanada: "live Valet observations plus Bank of Canada report monitor connected",

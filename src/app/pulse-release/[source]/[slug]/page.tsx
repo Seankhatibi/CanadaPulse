@@ -64,11 +64,14 @@ function MetricCard({ metric }: { metric: ResearchMetric }) {
 
 export default async function PulseReleasePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ source: string; slug: string }>;
+  searchParams?: Promise<{ date?: string }>;
 }) {
   const { source, slug } = await params;
-  const release = await findHubRelease(source, slug);
+  const query = await searchParams;
+  const release = await findHubRelease(source, slug, query?.date);
 
   if (!release) notFound();
 

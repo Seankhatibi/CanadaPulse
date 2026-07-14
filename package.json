@@ -10,10 +10,13 @@
     "audit:public-data": "node scripts/audit-public-data.mjs",
     "audit:release-integrity": "tsx scripts/audit-release-integrity.ts",
     "db:generate": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:fallback": "ALLOW_FALLBACK_SEED=true tsx prisma/seed.ts",
     "db:bootstrap:production": "tsx scripts/bootstrap-production-db.ts",
+    "db:verify:production": "tsx scripts/verify-production-db.ts",
+    "audit:persistence": "node scripts/audit-persistence-readiness.mjs",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate"
   },

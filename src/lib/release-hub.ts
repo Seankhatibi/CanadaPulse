@@ -15,6 +15,7 @@ import {
   rankDailyEntries,
   type StatCanDailyEntry,
 } from "@/lib/statcan-daily";
+import { findPersistedRelease } from "@/lib/persisted-releases";
 
 export type ReleaseArea =
   | "economy"
@@ -1143,7 +1144,11 @@ export const getMultiSourceReleaseHub = unstable_cache(
   { revalidate: 5 * 60, tags: ["canada-pulse-release-hub"] },
 );
 
-export async function findHubRelease(source: string, slug: string) {
+export async function findHubRelease(source: string, slug: string, releaseDate?: string) {
   const hub = await getMultiSourceReleaseHub();
-  return hub.todayQueue.find((release) => release.source === source && release.slug === slug) ?? null;
+  const current = hub.todayQueue.find((release) =>
+    release.source === source && release.slug === slug && (!releaseDate || release.releaseDate === releaseDate),
+  );
+  if (current) return current;
+  return findPersistedRelease(source, slug, releaseDate).catch(() => null);
 }
