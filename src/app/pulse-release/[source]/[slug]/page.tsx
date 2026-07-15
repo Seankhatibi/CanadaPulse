@@ -8,6 +8,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Database,
+  Download,
   ExternalLink,
   Minus,
 } from "lucide-react";
@@ -44,6 +45,7 @@ function MetricCard({ metric }: { metric: ResearchMetric }) {
         <div>
           <p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">{metric.label}</p>
           <p className="mt-2 font-mono text-3xl font-black text-stone-950">{metric.display}</p>
+          {metric.provenance === "derived" ? <p className="mt-2 text-[11px] font-black uppercase tracking-[0.1em] text-sky-800">Canada Pulse derived</p> : null}
         </div>
         <MetricArrow metric={metric} />
       </div>
@@ -56,6 +58,7 @@ function MetricCard({ metric }: { metric: ResearchMetric }) {
         {metric.previousDisplay ? <span className="text-stone-500">previous {metric.previousDisplay}</span> : null}
       </div>
       <p className="mt-3 text-sm leading-6 text-stone-600">{metric.plainEnglish}</p>
+      {metric.methodology ? <p className="mt-3 border-l-2 border-sky-500 pl-3 text-xs leading-5 text-sky-950">{metric.methodology}</p> : null}
       <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">
         {metric.period ?? metric.changePeriod ?? "Latest official period"}
       </p>
@@ -79,6 +82,8 @@ export default async function PulseReleasePage({
   const intelligence = buildReleaseIntelligence(release);
   const hasMetrics = intelligence.metrics.length > 0;
   const isNarrativeReport = intelligence.evidenceLevel === "Official report analyzed";
+  const exportQuery = new URLSearchParams({ date: release.releaseDate, url: release.sourceUrl });
+  const exportBase = `/api/releases/${encodeURIComponent(source)}/${encodeURIComponent(slug)}/export`;
 
   return (
     <AppShell>
@@ -100,13 +105,25 @@ export default async function PulseReleasePage({
               <h1 className="mt-5 max-w-4xl text-4xl font-black leading-tight text-stone-950 sm:text-6xl">{release.title}</h1>
               <p className="mt-5 max-w-3xl text-xl font-bold leading-8 text-stone-800">{intelligence.verdict}</p>
               <p className="mt-4 max-w-3xl text-base leading-7 text-stone-600">{release.plainEnglishSummary}</p>
-              <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                <ShareStatButton text={release.socialSummary} />
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <ShareStatButton text={release.socialSummary} variant="light" />
+                <a
+                  href={`${exportBase}?format=csv&${exportQuery.toString()}`}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-3 text-sm font-bold text-stone-800 hover:border-red-300 hover:text-red-800"
+                >
+                  <Download className="size-4" aria-hidden="true" /> Download CSV
+                </a>
+                <a
+                  href={`${exportBase}?format=json&${exportQuery.toString()}`}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-3 text-sm font-bold text-stone-800 hover:border-red-300 hover:text-red-800"
+                >
+                  <Download className="size-4" aria-hidden="true" /> Download JSON
+                </a>
                 <a
                   href={release.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-3 text-sm font-bold text-stone-800 hover:border-red-300"
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-3 text-sm font-bold text-stone-800 hover:border-red-300 hover:text-red-800"
                 >
                   Official release
                   <ExternalLink className="size-4" aria-hidden="true" />

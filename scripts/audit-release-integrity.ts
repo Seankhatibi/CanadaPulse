@@ -7,6 +7,7 @@ import { fetchStatCanReleaseData, formatWdsValue } from "../src/lib/statcan-rele
 import { fetchStatCanCpiSnapshot } from "../src/lib/statcan-cpi";
 import { normalizeStatCanDailyRelease } from "../src/lib/release-hub";
 import { buildProvincePeerRows } from "../src/lib/province-research";
+import { buildReleaseExportRows, releaseRowsToCsv } from "../src/lib/release-export";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -67,6 +68,18 @@ async function main() {
   assert(employmentInsurance.status === "live", `Unpromoted release did not load table data on demand: ${employmentInsurance.status}`);
   assert(employmentInsurance.chartPayloads.some((chart) => chart.points.length > 0), "Unpromoted release has no on-demand structured metrics.");
   assert(employmentInsurance.sourceLinks.some((link) => link.url === employmentInsuranceUrl), "Unpromoted release lost its official source trail.");
+  const exportRows = buildReleaseExportRows(employmentInsurance);
+  const exportCsv = releaseRowsToCsv(exportRows);
+  assert(exportRows.some((row) => row.recordType === "metric" && row.publisher === "Statistics Canada"), "Release export lost structured official metrics.");
+  assert(exportCsv.startsWith("recordType,chart,geography,indicator,sourceValue,normalizedValue,display,unit,valueType"), "Release CSV schema is not stable.");
+  assert(exportCsv.includes(employmentInsuranceUrl), "Release CSV lost the official source URL.");
+
+  const labourExportRows = buildReleaseExportRows(await normalizeStatCanDailyRelease(labourEntry));
+  const employmentExport = labourExportRows.find((row) => row.recordType === "metric" && row.indicator === "Employment");
+  assert(employmentExport?.sourceValue === 21_139.7, `Export lost the source-scale employment value: ${employmentExport?.sourceValue}`);
+  assert(employmentExport.normalizedValue === 21_139_700, `Export did not normalize employment to persons: ${employmentExport.normalizedValue}`);
+  assert(employmentExport.unit === "persons", `Export lost the employment unit: ${employmentExport.unit}`);
+  assert(employmentExport.valueType === "official", `Official employment data was not labelled official: ${employmentExport.valueType}`);
 
   const gdpEntry = await fetchStatCanDailyEntryFromUrl("https://www150.statcan.gc.ca/n1/daily-quotidien/260630/dq260630a-eng.htm");
   assert(gdpEntry, "GDP by industry release was not fetched.");

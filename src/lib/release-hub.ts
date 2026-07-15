@@ -48,6 +48,8 @@ export type ReleaseChartPayload = {
     changeDisplay?: string;
     period?: string;
     changePeriod?: string;
+    provenance?: "official" | "derived" | "qualitative";
+    methodology?: string;
   }>;
 };
 
@@ -503,6 +505,8 @@ async function getBankOfCanadaRelease(): Promise<NormalizedRelease> {
             display: "High",
             direction: "up",
             plainEnglish: "Higher borrowing costs flow into renewals, new mortgages, and landlord financing.",
+            provenance: "derived",
+            methodology: "Canada Pulse context indicator: policy rate × 28 plus 5-year Government of Canada yield × 10, capped at 100. This is not a Bank of Canada statistic.",
           },
         ],
       },
@@ -1211,7 +1215,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
 
 export const getMultiSourceReleaseHub = unstable_cache(
   buildMultiSourceReleaseHub,
-  ["canada-pulse-release-hub-v3"],
+  ["canada-pulse-release-hub-v4"],
   { revalidate: 5 * 60, tags: ["canada-pulse-release-hub"] },
 );
 

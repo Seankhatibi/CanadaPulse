@@ -5,9 +5,11 @@ import { Share2 } from "lucide-react";
 export function ShareStatButton({
   text,
   title = "Share this stat",
+  variant = "dark",
 }: {
   text: string;
   title?: string;
+  variant?: "dark" | "light";
 }) {
   async function share() {
     const url = window.location.href;
@@ -27,7 +29,11 @@ export function ShareStatButton({
       onClick={share}
       title={title}
       aria-label={title}
-      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-white/10 bg-white/10 px-2.5 text-xs font-semibold text-stone-200 transition hover:bg-white/15"
+      className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-bold transition ${
+        variant === "light"
+          ? "border-stone-300 bg-white text-stone-800 hover:border-red-300 hover:text-red-800"
+          : "border-white/10 bg-white/10 text-stone-200 hover:bg-white/15"
+      }`}
     >
       <Share2 className="size-3.5" aria-hidden="true" />
       Share
