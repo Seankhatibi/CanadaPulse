@@ -2,13 +2,10 @@ import { NextResponse } from "next/server";
 import {
   economicReleaseSchedule,
   getCanadaReleaseDate,
-  getWeeklyPulseSummary,
-  isCanadaReleaseToday,
-  latestMajorEconomicRelease,
 } from "@/lib/economic-releases";
 import { fetchStatCanDailyEntries, rankDailyEntries } from "@/lib/statcan-daily";
-import type { NormalizedRelease } from "@/lib/release-hub";
-import { getMultiSourceReleaseHub } from "@/lib/release-hub";
+import { getMultiSourceReleaseHub, type NormalizedRelease } from "@/lib/release-hub";
+import { buildLiveWeeklyPulseSummary } from "@/lib/live-weekly-pulse";
 
 function sanitizeRelease(release: NormalizedRelease) {
   return release;
@@ -19,6 +16,7 @@ export async function GET() {
   const dailyEntries = await fetchStatCanDailyEntries().catch(() => []);
   const rankedEntries = rankDailyEntries(dailyEntries).slice(0, 8);
   const releaseHub = await getMultiSourceReleaseHub();
+  const promoted = releaseHub.promotedRelease;
 
   return NextResponse.json({
     releaseHub: {
@@ -29,23 +27,14 @@ export async function GET() {
       provinceImpact: releaseHub.provinceImpact,
       sourceStatuses: releaseHub.sourceStatuses,
     },
-    promotedRelease: latestMajorEconomicRelease,
-    plainEnglishSummary: latestMajorEconomicRelease.plainEnglishSummary,
-    readerTakeaway: latestMajorEconomicRelease.readerTakeaway,
-    weeklyPulse: getWeeklyPulseSummary(),
+    promotedRelease: promoted,
+    plainEnglishSummary: promoted?.plainEnglishSummary ?? null,
+    readerTakeaway: promoted?.headlineFacts[0] ?? null,
+    weeklyPulse: buildLiveWeeklyPulseSummary(releaseHub),
     dailyReleaseFeed: rankedEntries,
     canadaDate,
-    isPromotedReleaseToday: isCanadaReleaseToday(latestMajorEconomicRelease.releaseDate),
+    isPromotedReleaseToday: promoted?.releaseDate === canadaDate,
     schedule: economicReleaseSchedule,
-    automationPlan: {
-      detect: "Poll the Statistics Canada release calendar and known The Daily source URLs on scheduled release mornings.",
-      fetch: "Fetch official release pages and StatCan tables for configured table IDs.",
-      analyze:
-        "Run deterministic rules first: headline number, direction, surprise/momentum, household impact, sector winners/losers, next release date.",
-      promote:
-        "If importance is major and releaseDate matches today, show the release module above the homepage score. On Fridays, publish the weekly summary module.",
-      llmOptional:
-        "An LLM API is useful for richer plain-English summaries and social-card copy, but core fetching, ranking, source links, charts, and promotion should work without it.",
-    },
+    coverage: "Official releases, parsed metrics, province breakdowns, source links and the rolling weekly briefing.",
   });
 }

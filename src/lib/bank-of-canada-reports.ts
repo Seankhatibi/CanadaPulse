@@ -241,7 +241,7 @@ function themeSignals(report: BocReportLink, reportText: string): ReleaseChartPa
 async function fetchReportPage(link: BocReportLink) {
   const response = await fetch(link.url, {
     headers: { "User-Agent": "Canada Pulse Bank of Canada report monitor" },
-    next: { revalidate: 60 * 60 },
+    next: { revalidate: 60 * 60, tags: ["canada-pulse-bank-of-canada"] },
     signal: AbortSignal.timeout(6000),
   });
 
@@ -271,7 +271,7 @@ export async function fetchBankOfCanadaReportReleases(): Promise<NormalizedRelea
     reportFamilies.map(async (family) => {
         const response = await fetch(family.url, {
           headers: { "User-Agent": "Canada Pulse Bank of Canada report monitor" },
-          next: { revalidate: 60 * 60 * 3 },
+          next: { revalidate: 60 * 60 * 3, tags: ["canada-pulse-bank-of-canada"] },
           signal: AbortSignal.timeout(6000),
         });
 

@@ -10,7 +10,7 @@ export type StatCanRefreshResult = {
 
 export async function fetchStatCanFullTableDownloadCsv(productId: string) {
   const response = await fetch(`${statCanWdsRestBase}/getFullTableDownloadCSV/${productId}/en`, {
-    next: { revalidate: 60 * 60 * 24 },
+    next: { revalidate: 60 * 60 * 24, tags: ["canada-pulse-statcan"] },
   });
 
   if (!response.ok) {
@@ -25,7 +25,7 @@ export async function fetchStatCanLatestVectorData(vectorIds: string[], periods 
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(vectorIds.map((vectorId) => ({ vectorId: Number(vectorId), latestN: periods }))),
-    next: { revalidate: 60 * 60 },
+    next: { revalidate: 60 * 60, tags: ["canada-pulse-statcan"] },
   });
 
   if (!response.ok) {
@@ -40,11 +40,12 @@ export async function refreshStatCanDailyReleaseFacts(): Promise<StatCanRefreshR
 
   return {
     rowsFetched: entries.length,
-    rowsChanged: entries.length,
+    rowsChanged: 0,
     entries,
     metadata: {
       adapter: "StatCanAdapter",
       mode: "daily-release-feed",
+      changeDetection: "database-upsert",
       topRelease: entries[0]?.title ?? null,
     },
   };

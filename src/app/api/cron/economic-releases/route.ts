@@ -1,11 +1,7 @@
-import {
-  economicReleaseSchedule,
-  getCanadaReleaseDate,
-  getWeeklyPulseSummary,
-  isCanadaReleaseToday,
-  latestMajorEconomicRelease,
-} from "@/lib/economic-releases";
+import { getCanadaReleaseDate } from "@/lib/economic-releases";
 import { fetchStatCanDailyEntries, rankDailyEntries } from "@/lib/statcan-daily";
+import { buildLiveWeeklyPulseSummary } from "@/lib/live-weekly-pulse";
+import { getMultiSourceReleaseHub } from "@/lib/release-hub";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -18,9 +14,10 @@ export async function GET(request: Request) {
 
   const now = new Date();
   const today = getCanadaReleaseDate(now);
-  const dueSources = economicReleaseSchedule.filter((source) => source.nextReleaseDate === today);
   const dailyEntries = await fetchStatCanDailyEntries().catch(() => []);
   const rankedEntries = rankDailyEntries(dailyEntries).slice(0, 10);
+  const releaseHub = await getMultiSourceReleaseHub();
+  const promoted = releaseHub.promotedRelease;
   const weekday = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Toronto",
     weekday: "long",
@@ -31,27 +28,13 @@ export async function GET(request: Request) {
     checkedAt: now.toISOString(),
     canadaDate: today,
     mode: weekday === "Friday" ? "daily-check-and-friday-weekly-pulse" : "daily-release-check",
-    dueSources,
     latestStatCanDailyEntries: rankedEntries,
-    promotedRelease: isCanadaReleaseToday(latestMajorEconomicRelease.releaseDate, now)
-      ? latestMajorEconomicRelease
-      : null,
+    promotedRelease: promoted?.releaseDate === today ? promoted : null,
     homepageTopPayload: {
-      showWhen: "Any major source-backed release is new today, or when an editor pins a major release.",
-      currentFallback: latestMajorEconomicRelease,
-      plainEnglishSummary: latestMajorEconomicRelease.plainEnglishSummary,
+      showWhen: "Any major source-backed release is new today, or the latest consequential release remains current.",
+      currentLead: promoted,
+      plainEnglishSummary: promoted?.plainEnglishSummary ?? null,
     },
-    fridayWeeklyPayload: weekday === "Friday" ? getWeeklyPulseSummary(now) : null,
-    nextActions: [
-      "Check Statistics Canada Daily and release-calendar URLs for due official releases.",
-      "Fetch linked StatCan tables for the latest reference period.",
-      "Run deterministic metric rules to classify hot, weak, mixed, stable, and watch signals.",
-      "Persist the release package, source URLs, table IDs, and homepage promotion flag.",
-      "On Fridays, publish the weekly pulse summary block for homepage and Weekly Pulse.",
-      "Optionally call an LLM for richer plain-English summary, social card copy, and myth-vs-reality prompts after source-backed facts are locked.",
-    ],
-    llmRequired: false,
-    llmUsefulFor:
-      "Richer narrative analysis, share-card headlines, and chart explanations. The core release detection, fetch, and promotion logic should remain deterministic and source-backed.",
+    fridayWeeklyPayload: weekday === "Friday" ? buildLiveWeeklyPulseSummary(releaseHub, now) : null,
   });
 }

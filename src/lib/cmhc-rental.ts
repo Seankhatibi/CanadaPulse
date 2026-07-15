@@ -36,7 +36,7 @@ async function fetchOfficial(url: string, timeoutMs: number) {
     try {
       const response = await fetch(url, {
         headers: { "User-Agent": "Canada Pulse CMHC rental importer" },
-        next: { revalidate: 12 * 60 * 60 },
+        next: { revalidate: 12 * 60 * 60, tags: ["canada-pulse-cmhc"] },
         signal: AbortSignal.timeout(timeoutMs),
       });
       if (response.ok || (response.status < 500 && response.status !== 429)) return response;

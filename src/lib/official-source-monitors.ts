@@ -184,7 +184,7 @@ function extractNumberSignals(text: string, lens: string): ReleaseChartPayload["
 async function fetchHtml(url: string) {
   const response = await fetch(url, {
     headers: { "User-Agent": "Canada Pulse official release monitor" },
-    next: { revalidate: 60 * 60 * 6 },
+    next: { revalidate: 60 * 60 * 6, tags: ["canada-pulse-official-monitors"] },
     signal: AbortSignal.timeout(3500),
   });
 
@@ -270,7 +270,7 @@ export async function fetchIrccOpenDataSignals(): Promise<IrccOpenDataSignal[]> 
     topics.map(async ({ topic, query }) => {
       const searchUrl = `https://open.canada.ca/data/api/3/action/package_search?q=${encodeURIComponent(query)}&rows=1`;
       const response = await fetch(searchUrl, {
-        next: { revalidate: 60 * 60 * 12 },
+        next: { revalidate: 60 * 60 * 12, tags: ["canada-pulse-official-monitors"] },
         signal: AbortSignal.timeout(3500),
       });
       if (!response.ok) throw new Error(`Open Government search failed ${topic}: ${response.status}`);
@@ -292,7 +292,7 @@ export async function fetchIrccOpenDataSignals(): Promise<IrccOpenDataSignal[]> 
       if (activeResource?.id) {
         const datastoreUrl = `https://open.canada.ca/data/api/3/action/datastore_search?resource_id=${activeResource.id}&limit=1`;
         const datastoreResponse = await fetch(datastoreUrl, {
-          next: { revalidate: 60 * 60 * 12 },
+          next: { revalidate: 60 * 60 * 12, tags: ["canada-pulse-official-monitors"] },
           signal: AbortSignal.timeout(2500),
         }).catch(() => null);
         if (datastoreResponse?.ok) {

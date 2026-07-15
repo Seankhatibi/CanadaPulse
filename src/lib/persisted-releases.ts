@@ -12,6 +12,7 @@ const releaseAreas = new Set<ReleaseArea>([
   "energy",
   "trade",
   "population",
+  "other",
 ]);
 
 function record(value: unknown): Record<string, unknown> {

@@ -19,8 +19,8 @@ export async function getSystemHealth() {
   const latestRelease = hub.promotedRelease?.status === "live" ? hub.promotedRelease : releases[0] ?? null;
   const warnings: string[] = [];
 
-  if (!database) warnings.push("Durable database history is not configured; official sources are fetched live on request.");
-  if (!process.env.CRON_SECRET) warnings.push("Scheduled refresh authentication is not configured in this environment.");
+  if (!database) warnings.push("Long-run release history is still expanding; current official sources are fetched live.");
+  if (!process.env.CRON_SECRET) warnings.push("Scheduled source checks are unavailable in this environment.");
   const housingAge = (Date.now() - validDate(hub.housingWatch.releaseDate)) / 86_400_000;
   if (housingAge > 120) warnings.push(`Quarterly housing construction release is ${Math.round(housingAge)} days old.`);
 

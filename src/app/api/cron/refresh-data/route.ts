@@ -15,7 +15,17 @@ export async function GET(request: Request) {
   }
 
   const startedAt = new Date().toISOString();
-  revalidateTag("canada-pulse-release-hub", { expire: 0 });
+  [
+    "canada-pulse-release-hub",
+    "canada-pulse-statcan",
+    "canada-pulse-cmhc",
+    "canada-pulse-bank-of-canada",
+    "canada-pulse-finance-canada",
+    "canada-pulse-ircc",
+    "canada-pulse-cihi",
+    "canada-pulse-official-monitors",
+    "canada-pulse-gaswizard",
+  ].forEach((tag) => revalidateTag(tag, { expire: 0 }));
   const [statcanDaily, multiSourceReleaseHub, cihi] = await Promise.all([
     persistStatCanDailyReleaseEvents(),
     persistMultiSourceReleaseEvents(),

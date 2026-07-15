@@ -5,6 +5,7 @@ import { fetchIrccImmigrationSnapshot } from "../src/lib/ircc-immigration";
 import { buildReleaseExplainer, fetchStatCanDailyEntryFromUrl } from "../src/lib/statcan-daily";
 import { fetchStatCanReleaseData } from "../src/lib/statcan-release-data";
 import { fetchStatCanCpiSnapshot } from "../src/lib/statcan-cpi";
+import { normalizeStatCanDailyRelease } from "../src/lib/release-hub";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -42,6 +43,14 @@ async function main() {
   assert(fallbackMetric("Unemployment rate")?.display === "6.5%", "LFS fallback unemployment-rate level was parsed incorrectly.");
   assert(fallbackMetric("Unemployment rate")?.direction === "down", "LFS fallback unemployment-rate direction was parsed incorrectly.");
   assert(fallbackMetric("Unemployment rate")?.changeDisplay === "-0.1 pts", "LFS fallback unemployment-rate move was parsed incorrectly.");
+
+  const employmentInsuranceUrl = "https://www150.statcan.gc.ca/n1/daily-quotidien/260618/dq260618d-eng.htm";
+  const employmentInsuranceEntry = await fetchStatCanDailyEntryFromUrl(employmentInsuranceUrl);
+  assert(employmentInsuranceEntry, "Unpromoted Employment Insurance release was not fetched.");
+  const employmentInsurance = await normalizeStatCanDailyRelease(employmentInsuranceEntry);
+  assert(employmentInsurance.status === "live", `Unpromoted release did not load table data on demand: ${employmentInsurance.status}`);
+  assert(employmentInsurance.chartPayloads.some((chart) => chart.points.length > 0), "Unpromoted release has no on-demand structured metrics.");
+  assert(employmentInsurance.sourceLinks.some((link) => link.url === employmentInsuranceUrl), "Unpromoted release lost its official source trail.");
 
   const gdpEntry = await fetchStatCanDailyEntryFromUrl("https://www150.statcan.gc.ca/n1/daily-quotidien/260630/dq260630a-eng.htm");
   assert(gdpEntry, "GDP by industry release was not fetched.");
@@ -90,7 +99,7 @@ async function main() {
   assert(asylum && asylum.value > 1_000, `IRCC asylum total failed integrity range: ${asylum?.value}`);
   assert(permanentResidents.provinceValues.some((item) => item.province === "Ontario"), "IRCC Ontario province row is missing.");
 
-  console.log("Official release integrity audit passed: LFS, GDP, vacancies, CPI, Finance Canada, CMHC construction/rental and IRCC values and units are correctly identified.");
+  console.log("Official release integrity audit passed: major and unpromoted StatCan releases, CPI, Finance Canada, CMHC construction/rental and IRCC values and units are correctly identified.");
 }
 
 main().catch((error) => {

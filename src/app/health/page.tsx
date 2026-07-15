@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ExternalLink, HeartPulse, ShieldCheck } from "lucide-react";
+import { ArrowRight, ExternalLink, HeartPulse, Minus, ShieldCheck, TrendingUp } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { fetchCihiHealthSnapshot } from "@/lib/cihi-health";
 
@@ -7,7 +7,6 @@ export const dynamic = "force-dynamic";
 
 export default async function HealthPage() {
   const health = await fetchCihiHealthSnapshot();
-  const max = Math.max(...health.metrics.map((metric) => Math.abs(metric.numeric)), 1);
 
   return (
     <AppShell variant="light">
@@ -23,8 +22,10 @@ export default async function HealthPage() {
             <article key={metric.label} className="bg-white p-5 sm:p-6">
               <p className="text-xs font-black uppercase tracking-[0.1em] text-stone-500">{metric.label}</p>
               <p className="mt-4 font-mono text-4xl font-black text-stone-950">{metric.value}</p>
-              <p className="mt-2 font-mono text-xs font-black text-red-700">{metric.change}</p>
-              <div className="mt-5 h-2 overflow-hidden rounded-full bg-stone-100"><div className="h-full rounded-full bg-red-700" style={{ width: `${Math.max(5, Math.abs(metric.numeric) / max * 100)}%` }} /></div>
+              <p className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-red-50 px-2.5 py-1 font-mono text-xs font-black text-red-800">
+                {metric.change.startsWith("+") ? <TrendingUp className="size-3.5" aria-hidden="true" /> : <Minus className="size-3.5" aria-hidden="true" />}
+                {metric.change}
+              </p>
               <p className="mt-3 text-sm leading-6 text-stone-600">{metric.note}</p>
             </article>
           ))}
@@ -41,6 +42,7 @@ export default async function HealthPage() {
             <ShieldCheck className="size-6 text-emerald-700" aria-hidden="true" />
             <h2 className="mt-4 text-2xl font-black text-stone-950">Health evidence standard</h2>
             <p className="mt-3 text-sm leading-6 text-stone-600">These values are parsed from CIHI’s National Health Expenditure Trends page. The source is checked twice daily; the annual reference period remains visible even when newer economic data exists elsewhere.</p>
+            <p className="mt-3 text-sm font-semibold leading-6 text-stone-700">{health.dataNote}</p>
             <Link href="/data-status" className="mt-5 inline-flex items-center gap-2 text-sm font-black text-red-700">Check source freshness <ArrowRight className="size-4" aria-hidden="true" /></Link>
           </div>
         </section>

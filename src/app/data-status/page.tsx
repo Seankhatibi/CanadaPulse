@@ -38,9 +38,9 @@ export default async function DataStatusPage() {
               icon: Radio,
             },
             {
-              label: "Historical persistence",
-              value: health.persistence === "database" ? "Database active" : "Live request mode",
-              note: health.persistence === "database" ? "Release and refresh history is stored." : "Sources load live; durable history requires DATABASE_URL.",
+              label: "Historical archive",
+              value: health.persistence === "database" ? "Archive active" : "Live source mode",
+              note: health.persistence === "database" ? "Release and refresh history is stored." : "Current official values load live while long-run archive coverage expands.",
               icon: Database,
             },
           ].map((item) => {

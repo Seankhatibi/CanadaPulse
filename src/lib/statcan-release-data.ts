@@ -300,7 +300,7 @@ async function fetchWdsTableSnapshot(productId: string): Promise<StatCanReleaseT
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify([{ productId: Number(productId) }]),
-    next: { revalidate: 60 * 60 },
+    next: { revalidate: 60 * 60, tags: ["canada-pulse-statcan"] },
   });
   if (!metadataResponse.ok) return null;
   const metadataPayload = (await metadataResponse.json()) as Array<{ status?: string; object?: WdsMetadata }>;
@@ -335,7 +335,7 @@ async function fetchWdsTableSnapshot(productId: string): Promise<StatCanReleaseT
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(requests.map(({ productId: pid, coordinate, latestN }) => ({ productId: pid, coordinate, latestN }))),
-    next: { revalidate: 60 * 60 },
+    next: { revalidate: 60 * 60, tags: ["canada-pulse-statcan"] },
   });
   if (!dataResponse.ok) return null;
   const payload = (await dataResponse.json()) as Array<{
@@ -526,7 +526,7 @@ export async function fetchStatCanReleaseData(entry: StatCanDailyEntry): Promise
   const releaseUrl = normalizeReleaseUrl(entry.href);
   const releaseResponse = await fetch(releaseUrl, {
     headers: { "User-Agent": "Canada Pulse StatCan table importer" },
-    next: { revalidate: 60 * 60 },
+    next: { revalidate: 60 * 60, tags: ["canada-pulse-statcan"] },
   });
 
   if (!releaseResponse.ok) {
@@ -535,7 +535,7 @@ export async function fetchStatCanReleaseData(entry: StatCanDailyEntry): Promise
 
   const releaseHtml = await releaseResponse.text();
   const companionHtml = (await Promise.all(extractCompanionTableUrls(releaseHtml, releaseUrl).map(async (url) => {
-    const response = await fetch(url, { headers: { "User-Agent": "Canada Pulse StatCan table importer" }, next: { revalidate: 60 * 60 } });
+    const response = await fetch(url, { headers: { "User-Agent": "Canada Pulse StatCan table importer" }, next: { revalidate: 60 * 60, tags: ["canada-pulse-statcan"] } });
     return response.ok ? response.text() : "";
   }))).join("\n");
   const tableIds = [...new Set([...extractTableIds(releaseHtml), ...extractTableIds(companionHtml)])];
@@ -546,7 +546,7 @@ export async function fetchStatCanReleaseData(entry: StatCanDailyEntry): Promise
       tableLinks.slice(0, 3).map(async (link) => {
         const response = await fetch(link.csvUrl, {
           headers: { "User-Agent": "Canada Pulse StatCan table importer" },
-          next: { revalidate: 60 * 60 },
+          next: { revalidate: 60 * 60, tags: ["canada-pulse-statcan"] },
         });
 
         if (!response.ok) return null;

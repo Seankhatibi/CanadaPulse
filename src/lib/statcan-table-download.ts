@@ -60,7 +60,7 @@ export async function fetchStatCanTableCsv(productId: string) {
 
   const zipResponse = await fetch(response.object, {
     headers: { "User-Agent": "Canada Pulse official table importer" },
-    next: { revalidate: 60 * 60 * 6 },
+    next: { revalidate: 60 * 60 * 6, tags: ["canada-pulse-statcan"] },
   });
 
   if (!zipResponse.ok) {

@@ -80,7 +80,7 @@ async function fetchGasWizardCity(city: { city: string; slug: string }) {
       "user-agent": "CanadaPulse/0.1 (+https://localhost; source attribution dashboard)",
       accept: "text/html,application/xhtml+xml",
     },
-    next: { revalidate: 60 * 60 },
+    next: { revalidate: 60 * 60, tags: ["canada-pulse-gaswizard"] },
   });
 
   if (!response.ok) {
@@ -113,7 +113,7 @@ export async function getGasWizardPulse(): Promise<GasWizardPulse> {
         "user-agent": "CanadaPulse/0.1 (+https://localhost; source attribution dashboard)",
         accept: "text/html,application/xhtml+xml",
       },
-      next: { revalidate: 60 * 60 },
+      next: { revalidate: 60 * 60, tags: ["canada-pulse-gaswizard"] },
     });
 
     if (historyResponse.ok) {

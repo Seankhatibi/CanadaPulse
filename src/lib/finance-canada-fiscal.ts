@@ -72,7 +72,7 @@ function metric(label: string, current: number, previous: number, explanation: s
 export async function fetchFinanceCanadaFiscalSnapshot(): Promise<FinanceCanadaFiscalSnapshot> {
   const indexResponse = await fetch(publicationsUrl, {
     headers: { "User-Agent": "Canada Pulse Finance Canada importer" },
-    next: { revalidate: 6 * 60 * 60 },
+    next: { revalidate: 6 * 60 * 60, tags: ["canada-pulse-finance-canada"] },
     signal: AbortSignal.timeout(8_000),
   });
   if (!indexResponse.ok) throw new Error(`Finance Canada publications fetch failed: ${indexResponse.status}`);
@@ -82,7 +82,7 @@ export async function fetchFinanceCanadaFiscalSnapshot(): Promise<FinanceCanadaF
   const sourceUrl = new URL(latest[1], publicationsUrl).toString();
   const response = await fetch(sourceUrl, {
     headers: { "User-Agent": "Canada Pulse Finance Canada importer" },
-    next: { revalidate: 6 * 60 * 60 },
+    next: { revalidate: 6 * 60 * 60, tags: ["canada-pulse-finance-canada"] },
     signal: AbortSignal.timeout(8_000),
   });
   if (!response.ok) throw new Error(`Finance Canada Fiscal Monitor fetch failed: ${response.status}`);

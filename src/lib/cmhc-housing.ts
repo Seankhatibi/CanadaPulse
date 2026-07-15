@@ -74,7 +74,7 @@ export async function fetchCmhcHousingConstructionData(): Promise<CmhcHousingCon
   const [{ csv, downloadUrl }, sourceResponse] = await Promise.all([
     fetchStatCanTableCsv(productId),
     fetch(sourceUrl, {
-      next: { revalidate: 12 * 60 * 60 },
+      next: { revalidate: 12 * 60 * 60, tags: ["canada-pulse-cmhc"] },
       signal: AbortSignal.timeout(8_000),
     }).catch(() => null),
   ]);

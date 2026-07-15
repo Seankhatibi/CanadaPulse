@@ -41,7 +41,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams?: Pr
           </div>
         </section>
 
-        <section className="flex gap-3 rounded-xl border border-stone-200 bg-white p-5"><Database className="mt-0.5 size-5 shrink-0 text-red-700" aria-hidden="true" /><div><h2 className="font-black text-stone-950">Archive coverage</h2><p className="mt-2 text-sm leading-6 text-stone-600">The live archive combines current normalized multi-source releases with recent Statistics Canada Daily entries. Durable long-run history will expand once production Postgres is connected.</p></div></section>
+        <section className="flex gap-3 rounded-xl border border-stone-200 bg-white p-5"><Database className="mt-0.5 size-5 shrink-0 text-red-700" aria-hidden="true" /><div><h2 className="font-black text-stone-950">Archive coverage</h2><p className="mt-2 text-sm leading-6 text-stone-600">The archive combines normalized multi-source briefs with the recent Statistics Canada Daily feed. Older releases are being added as source-backed history expands.</p></div></section>
       </div>
     </AppShell>
   );

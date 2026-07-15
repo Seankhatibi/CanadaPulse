@@ -67,11 +67,11 @@ export default async function PulseReleasePage({
   searchParams,
 }: {
   params: Promise<{ source: string; slug: string }>;
-  searchParams?: Promise<{ date?: string }>;
+  searchParams?: Promise<{ date?: string; url?: string }>;
 }) {
   const { source, slug } = await params;
   const query = await searchParams;
-  const release = await findHubRelease(source, slug, query?.date);
+  const release = await findHubRelease(source, slug, query?.date, query?.url);
 
   if (!release) notFound();
 

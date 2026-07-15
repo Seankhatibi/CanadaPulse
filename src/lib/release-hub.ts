@@ -9,6 +9,7 @@ import { fetchBankOfCanadaReportReleases } from "@/lib/bank-of-canada-reports";
 import { fetchOfficialReportMonitors, type OfficialReportMonitor } from "@/lib/official-source-monitors";
 import {
   fetchStatCanDailyEntries,
+  fetchStatCanDailyEntryFromUrl,
   buildReleaseExplainer,
   getEntriesForReleaseDate,
   getLatestDailyReleaseDate,
@@ -27,7 +28,8 @@ export type ReleaseArea =
   | "fiscal"
   | "energy"
   | "trade"
-  | "population";
+  | "population"
+  | "other";
 
 export type ReleaseFactStatus = "live" | "source_linked" | "summary_only" | "error";
 
@@ -109,13 +111,15 @@ function canadaDate(date = new Date()) {
   return canadaDateFormatter.format(date);
 }
 
-function slugify(value: string) {
+export function slugifyReleaseTitle(value: string) {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 90);
 }
+
+const slugify = slugifyReleaseTitle;
 
 function sourceHref(source: string, slug: string) {
   return `/pulse-release/${source}/${slug}`;
@@ -142,7 +146,7 @@ function classifyStatCanAreas(entry: StatCanDailyEntry): ReleaseArea[] {
   if (/trade|export|import/.test(text)) areas.add("trade");
   if (/energy|oil|gas|electricity|natural resources/.test(text)) areas.add("energy");
 
-  return areas.size ? [...areas] : ["population"];
+  return areas.size ? [...areas] : ["other"];
 }
 
 function isMajorStatCanTitle(title: string) {
@@ -209,7 +213,7 @@ async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper:
   return results;
 }
 
-async function statCanReleaseFromEntry(entry: StatCanDailyEntry, promotedHref?: string): Promise<NormalizedRelease> {
+export async function normalizeStatCanDailyRelease(entry: StatCanDailyEntry, promotedHref?: string): Promise<NormalizedRelease> {
   const releaseData = await fetchStatCanReleaseDataReliably(entry);
   const summarySignals = buildReleaseExplainer(entry).signals.filter((signal) => signal.label !== "Release detected");
   const releaseSignals = releaseData?.signals.length ? releaseData.signals : summarySignals;
@@ -295,7 +299,7 @@ async function statCanReleaseFromEntry(entry: StatCanDailyEntry, promotedHref?: 
 
 async function fetchValetObservation(series: string) {
   const response = await fetch(`https://www.bankofcanada.ca/valet/observations/${series}/json?recent=1`, {
-    next: { revalidate: 60 * 60 },
+    next: { revalidate: 60 * 60, tags: ["canada-pulse-bank-of-canada"] },
   });
 
   if (!response.ok) {
@@ -1125,7 +1129,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     [...rollingMajorStatCan.slice(0, 5), ...rankDailyEntries(statCanToday).slice(0, 5)]
       .map((entry) => [entry.href, entry]),
   ).values()].slice(0, 9);
-  const statCanReleases = await mapWithConcurrency(rankedStatCan, 3, statCanReleaseFromEntry);
+  const statCanReleases = await mapWithConcurrency(rankedStatCan, 3, normalizeStatCanDailyRelease);
   const [cpiWatch, housingWatch, rentalWatch, bankOfCanada, bankOfCanadaReports, financeCanada, ircc, officialMonitors] = await Promise.all([
     cpiWatchPromise,
     housingWatchPromise,
@@ -1187,7 +1191,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
         status: bankOfCanadaReports.length ? "live" : bankOfCanada.status,
         note: bankOfCanadaReports.length
           ? `${bankOfCanadaReports.length} report families monitored plus Valet rate observations.`
-          : "Valet rate observation connected; report monitor fallback active.",
+          : "Valet rate observations are live; no current report page was confirmed in this check.",
       },
       { source: "Open Government / IRCC", status: ircc.status, note: "Monthly PR, study permit, TFWP, IMP and asylum resources imported with provincial breakdowns." },
       { source: "Finance Canada", status: financeCanada.status, note: "Latest Fiscal Monitor revenue, expense, deficit and debt-charge tables connected." },
@@ -1211,11 +1215,20 @@ export const getMultiSourceReleaseHub = unstable_cache(
   { revalidate: 5 * 60, tags: ["canada-pulse-release-hub"] },
 );
 
-export async function findHubRelease(source: string, slug: string, releaseDate?: string) {
+export async function findHubRelease(source: string, slug: string, releaseDate?: string, sourceUrl?: string) {
   const hub = await getMultiSourceReleaseHub();
   const current = hub.todayQueue.find((release) =>
     release.source === source && release.slug === slug && (!releaseDate || release.releaseDate === releaseDate),
   );
   if (current) return current;
-  return findPersistedRelease(source, slug, releaseDate).catch(() => null);
+  const persisted = await findPersistedRelease(source, slug, releaseDate).catch(() => null);
+  if (source !== "statcan") return persisted;
+  if (persisted?.status === "live" && hasStructuredMetrics(persisted)) return persisted;
+
+  const entries = await fetchStatCanDailyEntries().catch(() => []);
+  const entry = entries.find((item) => slugifyReleaseTitle(item.title) === slug)
+    ?? (sourceUrl || persisted?.sourceUrl
+      ? await fetchStatCanDailyEntryFromUrl(sourceUrl ?? persisted?.sourceUrl ?? "").catch(() => null)
+      : null);
+  return entry ? normalizeStatCanDailyRelease(entry) : persisted;
 }
