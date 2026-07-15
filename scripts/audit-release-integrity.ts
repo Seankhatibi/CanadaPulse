@@ -2,7 +2,7 @@ import { fetchCmhcHousingConstructionData } from "../src/lib/cmhc-housing";
 import { fetchCmhcRentalSnapshot } from "../src/lib/cmhc-rental";
 import { fetchFinanceCanadaFiscalSnapshot } from "../src/lib/finance-canada-fiscal";
 import { fetchIrccImmigrationSnapshot } from "../src/lib/ircc-immigration";
-import { fetchStatCanDailyEntryFromUrl } from "../src/lib/statcan-daily";
+import { buildReleaseExplainer, fetchStatCanDailyEntryFromUrl } from "../src/lib/statcan-daily";
 import { fetchStatCanReleaseData } from "../src/lib/statcan-release-data";
 import { fetchStatCanCpiSnapshot } from "../src/lib/statcan-cpi";
 
@@ -27,6 +27,21 @@ async function main() {
   const provinceTable = labour.tables.find((table) => /by province/i.test(table.title));
   const provinceGroups = new Set(provinceTable?.rows.map((row) => row.group).filter(Boolean));
   assert(provinceGroups.has("Ontario") && !provinceGroups.has("North Shore, Nova Scotia"), "LFS geography normalization included sub-provincial regions.");
+
+  const labourFallback = buildReleaseExplainer({
+    title: "Labour Force Survey, June 2026",
+    href: labourUrl,
+    published: "2026-07-10T08:30:00-04:00",
+    summary: "Employment rose by 0.1% in June. The employment rate rose 0.1 percentage points to 60.8%. The unemployment rate fell 0.1 percentage points to 6.5%.",
+    feed: "Labour",
+  });
+  const fallbackMetric = (label: string) => labourFallback.signals.find((signal) => signal.label === label);
+  assert(fallbackMetric("Employment")?.display === "0.1%", "LFS fallback employment change was mislabeled as a level.");
+  assert(fallbackMetric("Employment rate")?.display === "60.8%", "LFS fallback employment-rate level was parsed incorrectly.");
+  assert(fallbackMetric("Employment rate")?.changeDisplay === "+0.1 pts", "LFS fallback employment-rate move was parsed incorrectly.");
+  assert(fallbackMetric("Unemployment rate")?.display === "6.5%", "LFS fallback unemployment-rate level was parsed incorrectly.");
+  assert(fallbackMetric("Unemployment rate")?.direction === "down", "LFS fallback unemployment-rate direction was parsed incorrectly.");
+  assert(fallbackMetric("Unemployment rate")?.changeDisplay === "-0.1 pts", "LFS fallback unemployment-rate move was parsed incorrectly.");
 
   const gdpEntry = await fetchStatCanDailyEntryFromUrl("https://www150.statcan.gc.ca/n1/daily-quotidien/260630/dq260630a-eng.htm");
   assert(gdpEntry, "GDP by industry release was not fetched.");

@@ -178,8 +178,8 @@ function extractPercentSignals(text: string) {
     return {
       label: index === 0 ? "Main percentage signal" : `Percentage signal ${index + 1}`,
       value,
-      display: `${value > 0 ? "+" : ""}${value}%`,
-      direction: value > 0 ? "up" : value < 0 ? "down" : "neutral",
+      display: `${match[1].startsWith("+") ? "+" : ""}${value}%`,
+      direction: match[1].startsWith("+") ? "up" : match[1].startsWith("-") ? "down" : "neutral",
       plainEnglish: sentence,
     } satisfies ReleaseChartPayload["points"][number];
   });
@@ -187,48 +187,55 @@ function extractPercentSignals(text: string) {
 
 function themeSignals(report: BocReportLink, reportText: string): ReleaseChartPayload["points"] {
   const text = reportText.toLowerCase();
-  const points: ReleaseChartPayload["points"] = [
+  const themes = [
     {
-      label: "Mortgage/rate pressure",
-      value: /mortgage|housing|household debt|interest rate|policy rate/.test(text) ? 88 : 54,
-      display: /mortgage|housing|household debt|interest rate|policy rate/.test(text) ? "High" : "Watch",
-      direction: "up",
-      plainEnglish: "Canada Pulse reads Bank reports through the lens of borrowing costs, mortgage renewals and household debt.",
+      label: "Mortgages and rates",
+      pattern: /mortgage|housing|household debt|interest rate|policy rate/,
+      plainEnglish: "The report discusses borrowing costs, mortgage renewals, housing or household debt.",
     },
     {
-      label: "Inflation pressure",
-      value: /inflation|prices|cpi|2%/.test(text) ? 84 : 48,
-      display: /inflation|prices|cpi|2%/.test(text) ? "High" : "Watch",
-      direction: "up",
-      plainEnglish: "Inflation language matters because it shapes rate expectations and household purchasing power.",
+      label: "Inflation and prices",
+      pattern: /inflation|prices|cpi|2%/,
+      plainEnglish: "The report discusses inflation or prices, which can shape rate expectations and purchasing power.",
     },
     {
-      label: "Growth/jobs signal",
-      value: /growth|labour|employment|business|investment|gdp/.test(text) ? 72 : 42,
-      display: /growth|labour|employment|business|investment|gdp/.test(text) ? "Active" : "Watch",
-      direction: "neutral",
-      plainEnglish: "Growth and jobs signals show whether Canadians should expect a stronger or weaker economy.",
+      label: "Growth and jobs",
+      pattern: /growth|labour|employment|business|investment|gdp/,
+      plainEnglish: "The report discusses economic growth, employment, business conditions or investment.",
     },
     {
-      label: "Financial stability risk",
-      value: /vulnerabilities|risk|stability|financial system|banks|credit/.test(text) ? 86 : 45,
-      display: /vulnerabilities|risk|stability|financial system|banks|credit/.test(text) ? "Elevated" : "Watch",
-      direction: "up",
-      plainEnglish: "Financial stability language matters when household debt, banks or market stress are in the report.",
+      label: "Financial stability",
+      pattern: /vulnerabilities|risk|stability|financial system|banks|credit/,
+      plainEnglish: "The report discusses financial-system vulnerabilities, banks, credit or market risk.",
     },
   ];
+  const points: ReleaseChartPayload["points"] = themes
+    .filter((theme) => theme.pattern.test(text))
+    .map((theme) => ({
+      label: theme.label,
+      value: 1,
+      display: "Discussed",
+      direction: "neutral",
+      plainEnglish: theme.plainEnglish,
+    }));
 
   if (report.family.label.includes("Consumer")) {
-    points[0] = {
+    points.unshift({
       label: "Household anxiety",
-      value: 88,
-      display: "High",
-      direction: "up",
+      value: 1,
+      display: "Report focus",
+      direction: "neutral",
       plainEnglish: "Consumer expectations reports are most useful for understanding how households feel about inflation, jobs and debt.",
-    };
+    });
   }
 
-  return points;
+  return points.length ? points : [{
+    label: "Bank of Canada narrative",
+    value: 1,
+    display: "Report focus",
+    direction: "neutral",
+    plainEnglish: "Canada Pulse has not assigned a numerical score to this report's qualitative language.",
+  }];
 }
 
 async function fetchReportPage(link: BocReportLink) {
@@ -286,10 +293,9 @@ export async function fetchBankOfCanadaReportReleases(): Promise<NormalizedRelea
       const slug = slugify(link.title);
       const percentSignals = extractPercentSignals(report.text);
       const thematicSignals = themeSignals(link, report.text);
-      const chartPoints = percentSignals.length ? [...percentSignals, ...thematicSignals].slice(0, 7) : thematicSignals;
       const headlineFacts = [
         report.description,
-        ...chartPoints.slice(0, 3).map((point) => `${point.label}: ${point.display}`),
+        ...percentSignals.slice(0, 3).map((point) => `${point.label}: ${point.display}`),
       ];
 
       return {
@@ -306,31 +312,17 @@ export async function fetchBankOfCanadaReportReleases(): Promise<NormalizedRelea
         geographyLevel: "federal",
         affectedAreas: link.family.areas,
         headlineFacts,
-        provinceBreakdown: [
-          {
-            province: "Ontario",
-            value: "Rate-sensitive",
-            note: "Large mortgage and rent markets make Bank of Canada report language especially relevant.",
-            score: link.family.housingImpact,
-          },
-          {
-            province: "British Columbia",
-            value: "Rate-sensitive",
-            note: "High home prices increase exposure to mortgage and credit conditions.",
-            score: Math.min(100, link.family.housingImpact + 2),
-          },
-          {
-            province: "Alberta",
-            value: "Growth-sensitive",
-            note: "Energy, migration and credit conditions can shift provincial outlook quickly.",
-            score: Math.max(55, link.family.importance - 8),
-          },
-        ],
+        provinceBreakdown: [],
         chartPayloads: [
+          ...(percentSignals.length ? [{
+            title: `${link.family.label} reported percentages`,
+            kind: "bar" as const,
+            points: percentSignals,
+          }] : []),
           {
-            title: `${link.family.label} signal map`,
-            kind: "bar",
-            points: chartPoints,
+            title: `${link.family.label} topics discussed`,
+            kind: "qualitative" as const,
+            points: thematicSignals,
           },
         ],
         sourceLinks: [
@@ -344,7 +336,7 @@ export async function fetchBankOfCanadaReportReleases(): Promise<NormalizedRelea
         promoted: link.family.importance >= 80,
         status: "live",
         plainEnglishSummary:
-          `${link.family.label} is now monitored by Canada Pulse. ${report.description} The app turns the report language into rate, inflation, housing, growth and stability signals.`,
+          `${link.family.label} is monitored by Canada Pulse. ${report.description} Topic labels describe what the report discusses; they are not numerical Bank of Canada scores.`,
         socialSummary: `${link.title}: ${report.description}`.slice(0, 240),
       } satisfies NormalizedRelease;
     }),

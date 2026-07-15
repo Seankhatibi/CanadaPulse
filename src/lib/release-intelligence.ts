@@ -17,7 +17,9 @@ export function getMetricMeaning(point: ReleaseChartPayload["points"][number]): 
 }
 
 function uniqueMetrics(release: NormalizedRelease) {
-  const metrics = release.chartPayloads.flatMap((chart) => chart.points);
+  const metrics = release.chartPayloads
+    .filter((chart) => chart.kind !== "qualitative")
+    .flatMap((chart) => chart.points);
   return [...new Map(metrics.map((metric) => [`${metric.label}-${metric.display}`, metric])).values()];
 }
 
@@ -96,8 +98,10 @@ export function buildReleaseIntelligence(release: NormalizedRelease) {
     provinceRank,
     takeaways: [...new Set(takeaways)],
     evidenceLevel:
-      release.status === "live" && release.chartPayloads.some((chart) => chart.points.length >= 2)
+      release.status === "live" && release.chartPayloads.some((chart) => chart.kind !== "qualitative" && chart.points.length)
         ? "Official values loaded"
+        : release.status === "live" && release.chartPayloads.some((chart) => chart.kind === "qualitative" && chart.points.length)
+          ? "Official report analyzed"
         : release.status === "summary_only"
           ? "Official release summary"
           : "Source monitor",

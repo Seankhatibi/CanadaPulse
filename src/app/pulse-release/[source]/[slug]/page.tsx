@@ -76,6 +76,8 @@ export default async function PulseReleasePage({
   if (!release) notFound();
 
   const intelligence = buildReleaseIntelligence(release);
+  const hasMetrics = intelligence.metrics.length > 0;
+  const isNarrativeReport = intelligence.evidenceLevel === "Official report analyzed";
 
   return (
     <AppShell>
@@ -136,23 +138,29 @@ export default async function PulseReleasePage({
         <section>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-red-700">Key metrics</p>
-              <h2 className="mt-1 text-3xl font-black text-stone-950">What changed in the release</h2>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-red-700">{isNarrativeReport ? "Report type" : "Key metrics"}</p>
+              <h2 className="mt-1 text-3xl font-black text-stone-950">
+                {isNarrativeReport ? "Narrative analysis, without invented scores" : "What changed in the release"}
+              </h2>
             </div>
-            <p className="text-xs text-stone-500">Values are not normalized across different units.</p>
+            <p className="text-xs text-stone-500">
+              {isNarrativeReport ? "Topics come from the official report text." : "Values are not normalized across different units."}
+            </p>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {intelligence.metrics.length ? (
+            {hasMetrics ? (
               intelligence.metrics.map((metric) => <MetricCard key={`${metric.label}-${metric.display}`} metric={metric} />)
             ) : (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                The official release was detected, but structured table values are not available yet.
+              <p className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+                {isNarrativeReport
+                  ? "This is a narrative report. Canada Pulse identifies its main topics below without presenting text themes as measured statistics."
+                  : "The official release was detected, but structured table values are not available yet."}
               </p>
             )}
           </div>
         </section>
 
-        <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+        <section className={`grid gap-5 ${hasMetrics ? "lg:grid-cols-[1.05fr_0.95fr]" : ""}`}>
           <div className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-red-700">Research read</p>
             <h2 className="mt-2 text-2xl font-black text-stone-950">Five facts worth carrying forward</h2>
@@ -168,7 +176,7 @@ export default async function PulseReleasePage({
             </div>
           </div>
 
-          <div className="grid gap-4">
+          {hasMetrics ? <div className="grid gap-4">
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
               <h2 className="text-lg font-black text-emerald-950">Improving signals</h2>
               <div className="mt-3 space-y-2">
@@ -185,7 +193,7 @@ export default async function PulseReleasePage({
                 )) : <p className="text-sm text-red-900">No clearly worsening metric was identified.</p>}
               </div>
             </div>
-          </div>
+          </div> : null}
         </section>
 
         <ReleaseVisualBreakdowns charts={release.chartPayloads} />

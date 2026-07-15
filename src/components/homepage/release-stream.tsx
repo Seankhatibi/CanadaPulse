@@ -11,6 +11,12 @@ function editorialRank(release: NormalizedRelease) {
   return release.releaseType === "valet-rate-observation" ? 0 : 1;
 }
 
+function officialMetricCount(release: NormalizedRelease) {
+  return release.chartPayloads
+    .filter((chart) => chart.kind !== "qualitative")
+    .reduce((total, chart) => total + chart.points.length, 0);
+}
+
 export function ReleaseStream({ releases }: { releases: NormalizedRelease[] }) {
   const recent = [...new Map(
     releases
@@ -33,7 +39,9 @@ export function ReleaseStream({ releases }: { releases: NormalizedRelease[] }) {
         </Link>
       </div>
       <div className="mt-5 grid gap-3 md:grid-cols-2">
-        {recent.map((release) => (
+        {recent.map((release) => {
+          const metricCount = officialMetricCount(release);
+          return (
           <Link key={release.id} href={release.href} className="group rounded-xl border border-stone-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-red-300 hover:shadow-lg">
             <div className="flex items-center justify-between gap-3">
               <span className="rounded-md bg-stone-100 px-2 py-1 text-xs font-black uppercase tracking-[0.12em] text-stone-700">{release.publisher}</span>
@@ -45,11 +53,12 @@ export function ReleaseStream({ releases }: { releases: NormalizedRelease[] }) {
             <h3 className="mt-4 text-xl font-black leading-snug text-stone-950 group-hover:text-red-800">{release.title}</h3>
             <p className="mt-3 line-clamp-2 text-sm leading-6 text-stone-600">{release.plainEnglishSummary}</p>
             <div className="mt-4 flex items-center justify-between gap-3 border-t border-stone-100 pt-3">
-              <span className="text-xs font-bold text-stone-500">{release.chartPayloads.reduce((total, chart) => total + chart.points.length, 0)} structured metrics</span>
+              <span className="text-xs font-bold text-stone-500">{metricCount ? `${metricCount} official metrics` : "Official report summary"}</span>
               <ArrowRight className="size-4 text-red-700 transition group-hover:translate-x-0.5" aria-hidden="true" />
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

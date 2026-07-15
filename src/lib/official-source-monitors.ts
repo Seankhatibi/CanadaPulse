@@ -154,8 +154,8 @@ function extractNumberSignals(text: string, lens: string): ReleaseChartPayload["
   const sentences = text.split(/(?<=[.!?])\s+/).filter((sentence) => sentence.length > 35);
   const matches = sentences
     .flatMap((sentence) => {
-      const local = [...sentence.matchAll(/(?:\$|C\$)?\s*([+-]?\d+(?:\.\d+)?)\s*(billion|million|%|per cent|percent|MW|GWh|barrels|bpd)?/gi)];
-      return local.slice(0, 2).map((match) => ({ sentence, raw: match[0], value: Number(match[1]), unit: match[2] ?? "" }));
+      const local = [...sentence.matchAll(/(?:\$|C\$)?\s*([+-]?\d+(?:\.\d+)?)\s*(billion|million|%|per cent|percent|MW|GWh|barrels|bpd)\b/gi)];
+      return local.slice(0, 2).map((match) => ({ sentence, raw: match[0], value: Number(match[1]), unit: match[2] }));
     })
     .filter((item) => Number.isFinite(item.value) && Math.abs(item.value) > 0)
     .slice(0, 6);
@@ -206,6 +206,7 @@ export async function fetchOfficialReportMonitors(): Promise<OfficialReportMonit
       const confirmedDate = extractDate(detailHtml);
       const confirmedRelease = Boolean(confirmedDate && detailUrl !== monitor.pageUrl && !/publications|data analysis/i.test(title));
       const releaseDate = confirmedDate ?? "1970-01-01";
+      const releasePoints = confirmedRelease ? points : [];
 
       return {
         ...monitor,
@@ -216,21 +217,23 @@ export async function fetchOfficialReportMonitors(): Promise<OfficialReportMonit
         confirmedRelease,
         headlineFacts: [
           description || `Canada Pulse fetched the official ${monitor.publisher} source.`,
-          ...points.slice(0, 3).map((point) => `${point.label}: ${point.display}`),
+          ...releasePoints.slice(0, 3).map((point) => `${point.label}: ${point.display}`),
         ],
-        chartPayloads: [
+        chartPayloads: releasePoints.length ? [
           {
             title: `${monitor.publisher} signal map`,
             kind: "bar" as const,
-            points,
+            points: releasePoints,
           },
-        ],
+        ] : [],
         sourceLinks: [
           { label: "Latest monitored item", url: detailUrl },
           { label: `${monitor.publisher} source page`, url: monitor.pageUrl },
         ],
         plainEnglishSummary:
-          `${monitor.publisher} is now live in the release hub. Canada Pulse watches this source for ${monitor.lens}, then turns new official pages into chartable signals and plain-English pressure reads.`,
+          confirmedRelease
+            ? `${monitor.publisher} published a dated item monitored by Canada Pulse. The app watches this source for ${monitor.lens} and only charts values that carry an explicit unit.`
+            : `Canada Pulse monitors ${monitor.publisher} for ${monitor.lens}. No new dated report with chartable values was confirmed in this check.`,
         socialSummary: `${monitor.publisher} watch: ${title}`.slice(0, 220),
       };
     }),

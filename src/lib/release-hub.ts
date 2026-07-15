@@ -33,7 +33,7 @@ export type ReleaseFactStatus = "live" | "source_linked" | "summary_only" | "err
 
 export type ReleaseChartPayload = {
   title: string;
-  kind: "bar" | "metric-strip" | "province-rank";
+  kind: "bar" | "metric-strip" | "province-rank" | "qualitative";
   points: Array<{
     label: string;
     value: number;
@@ -167,8 +167,36 @@ function scoreRelease(areas: ReleaseArea[], text: string) {
   return Math.min(score, 100);
 }
 
+async function fetchStatCanReleaseDataReliably(entry: StatCanDailyEntry) {
+  let latest: Awaited<ReturnType<typeof fetchStatCanReleaseData>> | null = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      latest = await fetchStatCanReleaseData(entry);
+      if (latest.sourceStatus === "table_data_loaded" || (!latest.tableLinks.length && !latest.tableIds.length)) return latest;
+    } catch {
+      latest = null;
+    }
+    if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  return latest;
+}
+
+async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper: (item: T) => Promise<R>) {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 async function statCanReleaseFromEntry(entry: StatCanDailyEntry, promotedHref?: string): Promise<NormalizedRelease> {
-  const releaseData = await fetchStatCanReleaseData(entry).catch(() => null);
+  const releaseData = await fetchStatCanReleaseDataReliably(entry);
   const summarySignals = buildReleaseExplainer(entry).signals.filter((signal) => signal.label !== "Release detected");
   const releaseSignals = releaseData?.signals.length ? releaseData.signals : summarySignals;
   const areas = classifyStatCanAreas(entry);
@@ -1080,10 +1108,10 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     .filter((entry) => isMajorStatCanTitle(entry.title))
     .sort((a, b) => b.published.localeCompare(a.published));
   const rankedStatCan = [...new Map(
-    [...rankDailyEntries(statCanToday).slice(0, 5), ...rollingMajorStatCan.slice(0, 5)]
+    [...rollingMajorStatCan.slice(0, 5), ...rankDailyEntries(statCanToday).slice(0, 5)]
       .map((entry) => [entry.href, entry]),
   ).values()].slice(0, 9);
-  const statCanReleases = await Promise.all(rankedStatCan.map((entry) => statCanReleaseFromEntry(entry)));
+  const statCanReleases = await mapWithConcurrency(rankedStatCan, 3, statCanReleaseFromEntry);
   const [cpiWatch, housingWatch, rentalWatch, bankOfCanada, bankOfCanadaReports, financeCanada, ircc, officialMonitors] = await Promise.all([
     cpiWatchPromise,
     housingWatchPromise,

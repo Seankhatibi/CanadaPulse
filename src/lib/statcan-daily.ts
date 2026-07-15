@@ -377,15 +377,33 @@ function extractSummarySignals(entry: StatCanDailyEntry): ReleaseSignal[] {
         .split(/(?<=[.!?])\s+/)
         .find((part) => part.includes(match[0]))
         ?.trim() || entry.summary;
+    const matchIndex = Math.max(0, sentence.indexOf(match[0]));
+    const before = sentence.slice(0, matchIndex);
+    const context = `${before.slice(-90)} ${sentence.slice(matchIndex, matchIndex + match[0].length + 24)}`;
+    const pointMove = before.match(/(rose|increased|grew|climbed|declined|fell|decreased|dropped)\s+(?:by\s+)?(\d+(?:\.\d+)?)\s+percentage points?\s+to\s*$/i);
+    const nearbyMove = before.match(/(rose|increased|grew|climbed|was up|declined|fell|decreased|dropped|was down)\s+(?:by\s+)?$/i);
+    const signed = /^[+-]/.test(match[1]);
+    const moveWord = (pointMove?.[1] ?? nearbyMove?.[1] ?? "").toLowerCase();
+    const moveDirection = /declined|fell|decreased|dropped|down/.test(moveWord) ? -1 : moveWord ? 1 : 0;
+    const directionValue = pointMove ? moveDirection : signed ? Math.sign(value) : moveDirection;
+    const change = pointMove
+      ? Number(pointMove[2]) * moveDirection
+      : signed || moveDirection ? Math.abs(value) * (directionValue || 1) : null;
+    const isLevel = Boolean(pointMove) || /(?:to|at|was|stood at|reached)\s*$/i.test(before);
+    const labelContext = signed && !isLevel ? before.slice(-90) : context;
+    const display = `${!isLevel && signed && value > 0 ? "+" : ""}${value}%`;
+    const changeDisplay = pointMove
+      ? `${change && change > 0 ? "+" : ""}${change?.toFixed(1)} pts`
+      : change === null ? undefined : `${change > 0 ? "+" : ""}${change}%`;
 
     return {
-      label: signalLabel(sentence, index),
+      label: signalLabel(labelContext, index),
       value,
-      display: `${value > 0 ? "+" : ""}${value}%`,
-      direction: value > 0 ? "up" : value < 0 ? "down" : "neutral",
+      display,
+      direction: directionValue > 0 ? "up" : directionValue < 0 ? "down" : "neutral",
       explanation: sentence,
-      change: value,
-      changeDisplay: `${value > 0 ? "+" : ""}${value}%`,
+      change,
+      changeDisplay,
       period: entry.published.slice(0, 10),
     };
   });
