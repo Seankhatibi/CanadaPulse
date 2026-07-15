@@ -129,7 +129,7 @@ export function ProvinceRankChart({ points, maxItems = 6 }: { points: HomepageVi
           <div key={`${point.label}-${point.display}`} className="rounded-md border border-stone-200 bg-white p-3">
             <div className="flex items-baseline justify-between gap-3">
               <span className="min-w-0 truncate text-sm font-black text-stone-950">
-                <span className="mr-2 font-mono text-xs text-red-700">#{index + 1}</span>
+                <span className="mr-2 font-mono text-xs text-red-700">#{point.rank ?? index + 1}</span>
                 {point.label}
               </span>
               <span className={`shrink-0 font-mono text-sm font-black ${classes.text}`}>{point.display}</span>

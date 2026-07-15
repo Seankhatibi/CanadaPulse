@@ -33,3 +33,7 @@ export const provinceSymbols: Record<string, { symbol: string; motto: string; ac
 export function getProvince(slug: string) {
   return provinces.find((province) => province.slug === slug);
 }
+
+export function getProvinceByName(name: string) {
+  return provinces.find((province) => province.name === name);
+}

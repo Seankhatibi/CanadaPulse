@@ -94,9 +94,9 @@ export function ResearchAreaPage({ brief }: { brief: AreaBrief }) {
             <p className="text-xs font-black uppercase tracking-[0.15em] text-red-300">Provincial evidence</p>
             <h2 className="mt-2 text-3xl font-black">Where the latest release hits differently</h2>
             <div className="mt-5 grid gap-2 md:grid-cols-2">
-              {brief.lead.intelligence.provinceRank.slice(0, 10).map((province, index) => (
+              {brief.lead.intelligence.provinceRank.slice(0, 10).map((province) => (
                 <div key={province.province} className="flex items-center gap-3 border-t border-white/10 py-3">
-                  <span className="font-mono text-xs text-red-300">{String(index + 1).padStart(2, "0")}</span>
+                  <span className="font-mono text-xs text-red-300">{String(province.comparableRank).padStart(2, "0")}</span>
                   <span className="min-w-0 flex-1 font-bold">{province.province}</span>
                   <span className="font-mono font-black">{province.value}</span>
                 </div>

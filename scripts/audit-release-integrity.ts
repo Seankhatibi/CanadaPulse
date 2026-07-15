@@ -3,15 +3,31 @@ import { fetchCmhcRentalSnapshot } from "../src/lib/cmhc-rental";
 import { fetchFinanceCanadaFiscalSnapshot } from "../src/lib/finance-canada-fiscal";
 import { fetchIrccImmigrationSnapshot } from "../src/lib/ircc-immigration";
 import { buildReleaseExplainer, fetchStatCanDailyEntryFromUrl } from "../src/lib/statcan-daily";
-import { fetchStatCanReleaseData } from "../src/lib/statcan-release-data";
+import { fetchStatCanReleaseData, formatWdsValue } from "../src/lib/statcan-release-data";
 import { fetchStatCanCpiSnapshot } from "../src/lib/statcan-cpi";
 import { normalizeStatCanDailyRelease } from "../src/lib/release-hub";
+import { buildProvincePeerRows } from "../src/lib/province-research";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
 async function main() {
+  assert(formatWdsValue("Electric Power Selling Price Index", 142.2) === "142.2", "A price index was formatted as currency.");
+  assert(formatWdsValue("Job vacancies", 177_340) === "177,340", "A job-vacancy count was formatted as a percentage.");
+  const peerCheck = buildProvincePeerRows([
+    { province: "Ontario", value: "$4.6B", note: "", score: 10 },
+    { province: "Alberta", value: "$1.6B", note: "", score: 90 },
+    { province: "Quebec", value: "$2.8B", note: "", score: 20 },
+  ], "Ontario");
+  assert(peerCheck.rank === 1 && peerCheck.peerRows[0]?.province === "Ontario", "Province comparisons ranked internal scores instead of reported values.");
+  const tieCheck = buildProvincePeerRows([
+    { province: "Ontario", value: "7.0%", note: "", score: 10 },
+    { province: "Alberta", value: "7.0%", note: "", score: 90 },
+    { province: "Quebec", value: "6.1%", note: "", score: 20 },
+  ], "Alberta");
+  assert(tieCheck.rank === 1, "Equal province values did not receive the same rank.");
+
   const labourUrl = "https://www150.statcan.gc.ca/n1/daily-quotidien/260710/dq260710a-eng.htm";
   const labourEntry = await fetchStatCanDailyEntryFromUrl(labourUrl);
   assert(labourEntry, "Labour Force Survey release was not fetched.");

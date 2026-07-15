@@ -4,6 +4,8 @@ import { AppShell } from "@/components/app-shell";
 import { CompareProvincePicker } from "@/components/compare-province-picker";
 import { provinces } from "@/lib/province-directory";
 import { getProvinceResearchBrief } from "@/lib/province-research";
+import { parseComparableProvinceValue } from "@/lib/province-values";
+import { formatReferencePeriod, formatReleaseDate } from "@/lib/release-format";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +14,7 @@ function validProvince(slug: string | undefined, fallback: string) {
 }
 
 function numericValue(value: string) {
-  const parsed = Number(value.replace(/[^0-9.-]/g, ""));
-  return Number.isFinite(parsed) ? parsed : 0;
+  return parseComparableProvinceValue(value) ?? 0;
 }
 
 export default async function ComparePage({ searchParams }: { searchParams?: Promise<{ left?: string; right?: string }> }) {
@@ -49,19 +50,24 @@ export default async function ComparePage({ searchParams }: { searchParams?: Pro
             {comparisons.length ? comparisons.map((comparison) => {
               const leftNumber = numericValue(comparison.left.value);
               const rightNumber = numericValue(comparison.right.value);
-              const max = Math.max(leftNumber, rightNumber, 1);
+              const max = Math.max(Math.abs(leftNumber), Math.abs(rightNumber), 1);
               return (
                 <article key={comparison.release.id} className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div><p className="text-xs font-black uppercase tracking-[0.12em] text-stone-500">{comparison.release.publisher}</p><h3 className="mt-2 text-2xl font-black text-stone-950">{comparison.release.title}</h3></div>
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.12em] text-stone-500">{comparison.release.publisher} · {formatReleaseDate(comparison.release.releaseDate)}</p>
+                      <h3 className="mt-2 text-2xl font-black text-stone-950">{comparison.release.title}</h3>
+                      <p className="mt-2 text-xs font-bold text-stone-500">Reference period: {formatReferencePeriod(comparison.release.referencePeriod)}</p>
+                    </div>
                     <Link href={comparison.release.href} className="inline-flex items-center gap-2 text-sm font-black text-red-700">Open source breakdown <ArrowRight className="size-4" aria-hidden="true" /></Link>
                   </div>
                   <div className="mt-6 grid gap-5 md:grid-cols-2">
                     {[{ province: left.province, fact: comparison.left, number: leftNumber }, { province: right.province, fact: comparison.right, number: rightNumber }].map((item) => (
                       <div key={item.province.slug} className="rounded-xl bg-stone-50 p-5">
                         <div className="flex items-center justify-between gap-3"><p className="font-black text-stone-950">{item.province.name}</p><p className="font-mono text-3xl font-black text-stone-950">{item.fact.value}</p></div>
-                        <div className="mt-4 h-3 overflow-hidden rounded-full bg-stone-200"><div className="h-full rounded-full bg-red-700" style={{ width: `${Math.max(6, item.number / max * 100)}%` }} /></div>
+                        <div className="mt-4 h-3 overflow-hidden rounded-full bg-stone-200"><div className="h-full rounded-full bg-red-700" style={{ width: `${Math.max(6, Math.abs(item.number) / max * 100)}%` }} /></div>
                         <p className="mt-3 text-sm leading-6 text-stone-600">{item.fact.note}</p>
+                        <p className="mt-2 text-xs font-bold text-stone-500">Rank {item.fact.rank} of {item.fact.peerCount} reported jurisdictions</p>
                       </div>
                     ))}
                   </div>

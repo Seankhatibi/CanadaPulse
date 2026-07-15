@@ -5,6 +5,7 @@ export type HomepageVisualPoint = {
   label: string;
   value: number;
   display: string;
+  rank?: number;
   note?: string;
   direction?: "up" | "down" | "neutral";
   meaning?: "good" | "bad" | "mixed";
@@ -67,10 +68,11 @@ function releaseToStory(release: NormalizedRelease, topic: string, headline: str
       direction: metric.direction,
       meaning: pointMeaning(metric.label, metric.direction),
     })),
-    provincePoints: hasOfficialProvinceRows ? release.provinceBreakdown.slice(0, 6).map((province) => ({
+    provincePoints: hasOfficialProvinceRows ? intelligence.provinceRank.slice(0, 6).map((province) => ({
       label: province.province,
-      value: province.score,
+      value: province.comparableValue,
       display: province.value,
+      rank: province.comparableRank,
       note: province.note,
       direction: "neutral",
       meaning: "mixed",

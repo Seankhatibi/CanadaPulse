@@ -17,6 +17,7 @@ import { ShareStatButton } from "@/components/share-stat-button";
 import { findHubRelease } from "@/lib/release-hub";
 import { buildReleaseIntelligence, type ResearchMetric } from "@/lib/release-intelligence";
 import { formatReferencePeriod, formatReleaseDate } from "@/lib/release-format";
+import { getProvinceByName } from "@/lib/province-directory";
 
 export const dynamic = "force-dynamic";
 
@@ -211,20 +212,21 @@ export default async function PulseReleasePage({
               </Link>
             </div>
             <div className="mt-5 grid gap-2 md:hidden">
-              {intelligence.provinceRank.map((province, index) => (
-                <div key={province.province} className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+              {intelligence.provinceRank.map((province) => {
+                const provinceRecord = getProvinceByName(province.province);
+                return <div key={province.province} className="rounded-lg border border-stone-200 bg-stone-50 p-4">
                   <div className="flex items-start gap-3">
-                    <span className="font-mono text-xs font-black text-red-700">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="font-mono text-xs font-black text-red-700">{String(province.comparableRank).padStart(2, "0")}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
-                        <p className="font-black text-stone-950">{province.province}</p>
+                        {provinceRecord ? <Link href={`/province/${provinceRecord.slug}`} className="font-black text-stone-950 hover:text-red-800">{province.province}</Link> : <p className="font-black text-stone-950">{province.province}</p>}
                         <p className="shrink-0 font-mono text-lg font-black text-stone-950">{province.value}</p>
                       </div>
                       <p className="mt-2 text-sm leading-6 text-stone-600">{province.note}</p>
                     </div>
                   </div>
-                </div>
-              ))}
+                </div>;
+              })}
             </div>
             <div className="mt-5 hidden overflow-x-auto md:block">
               <table className="w-full min-w-[640px] border-collapse text-left">
@@ -237,14 +239,17 @@ export default async function PulseReleasePage({
                   </tr>
                 </thead>
                 <tbody>
-                  {intelligence.provinceRank.map((province, index) => (
-                    <tr key={province.province} className="border-b border-stone-100">
-                      <td className="px-3 py-3 font-mono text-sm text-stone-500">{index + 1}</td>
-                      <td className="px-3 py-3 font-bold text-stone-950">{province.province}</td>
+                  {intelligence.provinceRank.map((province) => {
+                    const provinceRecord = getProvinceByName(province.province);
+                    return <tr key={province.province} className="border-b border-stone-100">
+                      <td className="px-3 py-3 font-mono text-sm text-stone-500">{province.comparableRank}</td>
+                      <td className="px-3 py-3 font-bold text-stone-950">
+                        {provinceRecord ? <Link href={`/province/${provinceRecord.slug}`} className="hover:text-red-800">{province.province}</Link> : province.province}
+                      </td>
                       <td className="px-3 py-3 font-mono font-black text-stone-950">{province.value}</td>
                       <td className="px-3 py-3 text-sm text-stone-600">{province.note}</td>
-                    </tr>
-                  ))}
+                    </tr>;
+                  })}
                 </tbody>
               </table>
             </div>

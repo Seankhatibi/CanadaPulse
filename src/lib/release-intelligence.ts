@@ -1,4 +1,5 @@
 import { hasQualitativeAnalysis, hasStructuredMetrics, type NormalizedRelease, type ReleaseChartPayload } from "@/lib/release-hub";
+import { rankComparableProvinceValues } from "@/lib/province-values";
 
 export type MetricMeaning = "positive" | "negative" | "mixed";
 
@@ -79,7 +80,7 @@ export function buildReleaseIntelligence(release: NormalizedRelease) {
   const positive = metrics.filter((metric) => metric.meaning === "positive");
   const negative = metrics.filter((metric) => metric.meaning === "negative");
   const mixed = metrics.filter((metric) => metric.meaning === "mixed");
-  const provinceRank = [...release.provinceBreakdown].sort((a, b) => b.score - a.score);
+  const provinceRank = rankComparableProvinceValues(release.provinceBreakdown);
   const takeaways = metrics
     .filter((metric) => metric.changeDisplay || metric.plainEnglish)
     .slice(0, 5)

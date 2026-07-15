@@ -14,5 +14,9 @@ export function formatReleaseDate(value: string) {
 
 export function formatReferencePeriod(value: string) {
   if (/^\d{4}-\d{2}-\d{2}T/.test(value)) return formatReleaseDate(value.slice(0, 10));
-  return value.replace(/^Latest official table period:\s*/i, "");
+  const normalized = value
+    .replace(/^Latest official (?:table )?period:\s*/i, "")
+    .replace(/^Latest official quarter:\s*/i, "");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return formatReleaseDate(normalized);
+  return normalized;
 }

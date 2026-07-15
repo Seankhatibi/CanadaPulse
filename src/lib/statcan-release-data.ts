@@ -284,7 +284,7 @@ function rankedMembers(dimension: WdsDimension) {
   return [...dimension.member].sort((a, b) => memberPriority(b) - memberPriority(a) || a.memberId - b.memberId);
 }
 
-function formatWdsValue(label: string, value: number, scalarFactorCode = 0) {
+export function formatWdsValue(label: string, value: number, scalarFactorCode = 0) {
   const scaled = value * 10 ** scalarFactorCode;
   if (/rate|percent|percentage|index/i.test(label)) return `${value.toFixed(1)}${/rate|percent|percentage/i.test(label) ? "%" : ""}`;
   if (/value|price|sales|income|revenue|permit/i.test(label)) {
@@ -354,6 +354,7 @@ async function fetchWdsTableSnapshot(productId: string): Promise<StatCanReleaseT
     const label = [...request.context, request.topic.memberNameEn].join(": ");
     const latestValue = latest.value * 10 ** (latest.scalarFactorCode ?? 0);
     const previousValue = previous ? previous.value * 10 ** (previous.scalarFactorCode ?? 0) : null;
+    const displayLabel = /index/i.test(metadata.cubeTitleEn) ? `${metadata.cubeTitleEn}: ${label}` : label;
     return [{
       group: request.geo.memberNameEn,
       label,
@@ -362,8 +363,8 @@ async function fetchWdsTableSnapshot(productId: string): Promise<StatCanReleaseT
       previous: previousValue,
       change: previousValue === null ? null : Number((latestValue - previousValue).toFixed(2)),
       changePeriod: previous ? `${previous.refPer} to ${latest.refPer}` : latest.refPer,
-      display: formatWdsValue(label, latest.value, latest.scalarFactorCode),
-      previousDisplay: previous ? formatWdsValue(label, previous.value, previous.scalarFactorCode) : undefined,
+      display: formatWdsValue(displayLabel, latest.value, latest.scalarFactorCode),
+      previousDisplay: previous ? formatWdsValue(displayLabel, previous.value, previous.scalarFactorCode) : undefined,
       latestPeriod: latest.refPer,
       previousPeriod: previous?.refPer ?? latest.refPer,
     }];
