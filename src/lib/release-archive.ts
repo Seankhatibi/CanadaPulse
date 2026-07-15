@@ -1,4 +1,4 @@
-import { getMultiSourceReleaseHub } from "@/lib/release-hub";
+import { countStructuredMetrics, getMultiSourceReleaseHub, hasQualitativeAnalysis, type NormalizedRelease } from "@/lib/release-hub";
 import { fetchStatCanDailyEntries, rankDailyEntries } from "@/lib/statcan-daily";
 import { unstable_cache } from "next/cache";
 import { getPersistedReleases } from "@/lib/persisted-releases";
@@ -9,7 +9,7 @@ export type ArchiveRelease = {
   publisher: string;
   releaseDate: string;
   summary: string;
-  status: "structured" | "summary" | "source-linked";
+  status: "structured" | "narrative-report" | "summary" | "source-linked";
   metricCount: number;
   areas: string[];
   href: string;
@@ -19,6 +19,13 @@ export type ArchiveRelease = {
 function timestamp(value: string) {
   const parsed = Date.parse(`${value.slice(0, 10)}T12:00:00Z`);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function evidenceStatus(release: NormalizedRelease): ArchiveRelease["status"] {
+  if (release.status === "source_linked") return "source-linked";
+  if (release.status !== "live") return "summary";
+  if (countStructuredMetrics(release)) return "structured";
+  return hasQualitativeAnalysis(release) ? "narrative-report" : "summary";
 }
 
 async function buildReleaseArchive() {
@@ -34,8 +41,8 @@ async function buildReleaseArchive() {
     publisher: release.publisher,
     releaseDate: release.releaseDate,
     summary: release.plainEnglishSummary,
-    status: release.status === "live" ? "structured" : release.status === "source_linked" ? "source-linked" : "summary",
-    metricCount: release.chartPayloads.reduce((total, chart) => total + chart.points.length, 0),
+    status: evidenceStatus(release),
+    metricCount: countStructuredMetrics(release),
     areas: release.affectedAreas,
     href: release.href,
     sourceUrl: release.sourceUrl,
@@ -64,10 +71,8 @@ async function buildReleaseArchive() {
       publisher: release.publisher,
       releaseDate: release.releaseDate,
       summary: release.plainEnglishSummary,
-      status: release.status === "live" && release.chartPayloads.some((chart) => chart.points.length)
-        ? "structured"
-        : release.status === "source_linked" ? "source-linked" : "summary",
-      metricCount: release.chartPayloads.reduce((total, chart) => total + chart.points.length, 0),
+      status: evidenceStatus(release),
+      metricCount: countStructuredMetrics(release),
       areas: release.affectedAreas,
       href: release.href,
       sourceUrl: release.sourceUrl,

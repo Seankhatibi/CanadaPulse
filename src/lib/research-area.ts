@@ -1,4 +1,4 @@
-import { getMultiSourceReleaseHub, type NormalizedRelease } from "@/lib/release-hub";
+import { getMultiSourceReleaseHub, hasStructuredMetrics, type NormalizedRelease } from "@/lib/release-hub";
 import { buildReleaseIntelligence } from "@/lib/release-intelligence";
 
 export type ResearchAreaSlug = "economy" | "housing" | "population" | "youth" | "government" | "trade" | "energy";
@@ -89,7 +89,7 @@ const preferredLead: Record<ResearchAreaSlug, (release: NormalizedRelease) => bo
   population: (release) => release.source === "open-government-ircc",
   youth: (release) => /labour force survey/i.test(release.title),
   government: (release) => release.source === "finance-canada",
-  trade: (release) => /business outlook survey/i.test(release.title),
+  trade: (release) => /international merchandise trade|merchandise trade/i.test(release.title),
   energy: (release) => release.source === "cer-nrcan",
 };
 
@@ -108,7 +108,7 @@ export async function getResearchAreaBrief(slug: ResearchAreaSlug) {
       const statusDifference = Number(b.status === "live") - Number(a.status === "live");
       return statusDifference || releaseTimestamp(b) - releaseTimestamp(a) || b.importanceScore - a.importanceScore;
     });
-  const hasValues = (release: NormalizedRelease) => release.status === "live" && release.chartPayloads.some((chart) => chart.points.length);
+  const hasValues = (release: NormalizedRelease) => release.status === "live" && hasStructuredMetrics(release);
   const lead = releases.find((release) => hasValues(release) && preferredLead[slug](release)) ?? releases.find(hasValues) ?? releases[0] ?? null;
 
   return {

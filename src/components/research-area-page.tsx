@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowDown, ArrowRight, ArrowUp, CheckCircle2, Clock3, Database, Minus } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { formatReferencePeriod, formatReleaseDate } from "@/lib/release-format";
+import { countStructuredMetrics, hasQualitativeAnalysis } from "@/lib/release-hub";
 import type { getResearchAreaBrief } from "@/lib/research-area";
 
 type AreaBrief = Awaited<ReturnType<typeof getResearchAreaBrief>>;
@@ -66,14 +67,17 @@ export function ResearchAreaPage({ brief }: { brief: AreaBrief }) {
           <h2 className="mt-2 text-3xl font-black text-stone-950">Recent official releases</h2>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {brief.releases.map((release) => {
-              const metricCount = release.chartPayloads.reduce((total, chart) => total + chart.points.length, 0);
+              const metricCount = countStructuredMetrics(release);
+              const evidenceLabel = metricCount
+                ? `${metricCount} values`
+                : hasQualitativeAnalysis(release) ? "report analysis" : "summary only";
               return (
                 <Link key={release.id} href={release.href} className="group rounded-xl border border-stone-200 bg-white p-5 transition hover:border-red-300 hover:shadow-lg">
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className="font-black uppercase tracking-[0.1em] text-stone-700">{release.publisher}</span>
                     <span className="text-stone-400">{formatReleaseDate(release.releaseDate)}</span>
                     <span className={`ml-auto rounded-md px-2 py-1 font-black ${release.status === "live" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
-                      {release.status === "live" ? `${metricCount} values` : "summary only"}
+                      {release.status === "live" ? evidenceLabel : "summary only"}
                     </span>
                   </div>
                   <h3 className="mt-4 text-xl font-black leading-snug text-stone-950 group-hover:text-red-800">{release.title}</h3>

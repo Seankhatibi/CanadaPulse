@@ -92,7 +92,7 @@ export default async function DataStatusPage() {
           <div className="rounded-2xl border border-stone-200 bg-white p-5">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="size-5 text-emerald-700" aria-hidden="true" />
-              <h2 className="text-xl font-black text-stone-950">Recent structured releases</h2>
+              <h2 className="text-xl font-black text-stone-950">Recent official releases</h2>
             </div>
             <div className="mt-4 divide-y divide-stone-200">
               {health.recentReleases.map((release) => (
@@ -102,7 +102,7 @@ export default async function DataStatusPage() {
                     <p className="mt-1 text-xs text-stone-500">{release.publisher} · {release.releaseDate}</p>
                   </div>
                   <span className="inline-flex shrink-0 items-center gap-2 text-xs font-black text-red-700">
-                    {release.metrics} metrics
+                    {release.evidence === "structured" ? `${release.metrics} metrics` : release.evidence === "narrative" ? "report analysis" : "summary"}
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </span>
                 </Link>

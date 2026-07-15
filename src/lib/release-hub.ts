@@ -75,6 +75,20 @@ export type NormalizedRelease = {
   socialSummary: string;
 };
 
+export function countStructuredMetrics(release: NormalizedRelease) {
+  return release.chartPayloads
+    .filter((chart) => chart.kind !== "qualitative")
+    .reduce((total, chart) => total + chart.points.length, 0);
+}
+
+export function hasStructuredMetrics(release: NormalizedRelease) {
+  return countStructuredMetrics(release) > 0;
+}
+
+export function hasQualitativeAnalysis(release: NormalizedRelease) {
+  return release.chartPayloads.some((chart) => chart.kind === "qualitative" && chart.points.length > 0);
+}
+
 export type ReleaseHubPayload = {
   generatedAt: string;
   promotedRelease: NormalizedRelease | null;
@@ -1129,7 +1143,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
   const promotionScore = (release: NormalizedRelease) => {
     const ageDays = Math.max(0, (Date.now() - releaseTimestamp(release)) / 86_400_000);
     const freshness = ageDays <= 1 ? 45 : ageDays <= 4 ? 30 : ageDays <= 14 ? 15 : ageDays <= 45 ? 0 : -35;
-    const evidence = release.status === "live" && release.chartPayloads.some((chart) => chart.points.length) ? 18 : -20;
+    const evidence = release.status === "live" && hasStructuredMetrics(release) ? 18 : -20;
     return release.importanceScore + freshness + evidence;
   };
   const todayQueue = [cpiWatch, housingWatch, rentalWatch, bankOfCanada, ...bankOfCanadaReports, financeCanada, ircc, ...officialMonitors, ...statCanReleases].sort(
@@ -1145,10 +1159,10 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     (release) =>
       release.promoted &&
       release.status === "live" &&
-      release.chartPayloads.some((chart) => chart.points.length) &&
+      hasStructuredMetrics(release) &&
       isEditorialRelease(release) &&
       release.releaseType !== "valet-rate-observation",
-  ) ?? todayQueue.find((release) => release.status === "live" && release.chartPayloads.some((chart) => chart.points.length)) ?? null;
+  ) ?? todayQueue.find((release) => release.status === "live" && hasStructuredMetrics(release)) ?? null;
 
   return {
     generatedAt: new Date().toISOString(),

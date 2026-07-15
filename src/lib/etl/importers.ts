@@ -1,7 +1,7 @@
 import { getPrisma } from "@/lib/prisma";
 import { refreshStatCanDailyReleaseFacts } from "@/lib/etl/statcan-adapter";
 import { fetchStatCanReleaseData } from "@/lib/statcan-release-data";
-import { getMultiSourceReleaseHub, type NormalizedRelease } from "@/lib/release-hub";
+import { countStructuredMetrics, getMultiSourceReleaseHub, type NormalizedRelease } from "@/lib/release-hub";
 import { getLatestDailyReleaseDate, rankDailyEntries } from "@/lib/statcan-daily";
 
 function releaseSlug(value: string) {
@@ -316,7 +316,7 @@ export async function persistMultiSourceReleaseEvents() {
             releaseType: release.releaseType,
             geographyLevel: release.geographyLevel,
             status: release.status,
-            metricCount: release.chartPayloads.reduce((total, chart) => total + chart.points.length, 0),
+            metricCount: countStructuredMetrics(release),
             title: release.title,
             referencePeriod: release.referencePeriod,
             affectedIndicators: release.affectedAreas,

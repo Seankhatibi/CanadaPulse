@@ -1,4 +1,4 @@
-import type { NormalizedRelease, ReleaseHubPayload } from "@/lib/release-hub";
+import { hasStructuredMetrics, type NormalizedRelease, type ReleaseHubPayload } from "@/lib/release-hub";
 import { buildReleaseIntelligence } from "@/lib/release-intelligence";
 
 export type HomepageVisualPoint = {
@@ -88,7 +88,7 @@ function releaseToStory(release: NormalizedRelease, topic: string, headline: str
 }
 
 function findRelease(releases: NormalizedRelease[], predicate: (release: NormalizedRelease) => boolean) {
-  return releases.find((release) => release.status === "live" && release.chartPayloads.some((chart) => chart.points.length) && predicate(release));
+  return releases.find((release) => release.status === "live" && hasStructuredMetrics(release) && predicate(release));
 }
 
 export function buildHomepageFeed({ releaseHub }: { releaseHub: ReleaseHubPayload; gasMetric?: string; gasNote?: string }): HomepageFeed {
@@ -99,7 +99,7 @@ export function buildHomepageFeed({ releaseHub }: { releaseHub: ReleaseHubPayloa
     { topic: "Rates", headline: "What are borrowing conditions doing to households?", tone: "amber" as const, release: findRelease(releases, (item) => item.releaseType === "valet-rate-observation") },
     { topic: "Population", headline: "Which official population datasets changed?", tone: "cyan" as const, release: findRelease(releases, (item) => item.source === "open-government-ircc") },
     { topic: "Prices", headline: "What is getting more expensive fastest?", tone: "amber" as const, release: findRelease(releases, (item) => item.releaseType === "statcan-cpi-watch") },
-    { topic: "Trade", headline: "What are Canadian businesses seeing ahead?", tone: "blue" as const, release: findRelease(releases, (item) => /business outlook survey/i.test(item.title)) },
+    { topic: "Trade", headline: "Are Canadian exports strengthening or weakening?", tone: "blue" as const, release: findRelease(releases, (item) => /international merchandise trade|merchandise trade/i.test(item.title)) },
     { topic: "Energy", headline: "What changed in Canada's energy system?", tone: "green" as const, release: findRelease(releases, (item) => item.source === "cer-nrcan") },
     { topic: "Government money", headline: "How much is Ottawa collecting, spending and borrowing?", tone: "blue" as const, release: findRelease(releases, (item) => item.source === "finance-canada") },
   ];

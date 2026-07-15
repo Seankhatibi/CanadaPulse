@@ -1,4 +1,4 @@
-import type { NormalizedRelease, ReleaseChartPayload } from "@/lib/release-hub";
+import { hasQualitativeAnalysis, hasStructuredMetrics, type NormalizedRelease, type ReleaseChartPayload } from "@/lib/release-hub";
 
 export type MetricMeaning = "positive" | "negative" | "mixed";
 
@@ -98,9 +98,9 @@ export function buildReleaseIntelligence(release: NormalizedRelease) {
     provinceRank,
     takeaways: [...new Set(takeaways)],
     evidenceLevel:
-      release.status === "live" && release.chartPayloads.some((chart) => chart.kind !== "qualitative" && chart.points.length)
+      release.status === "live" && hasStructuredMetrics(release)
         ? "Official values loaded"
-        : release.status === "live" && release.chartPayloads.some((chart) => chart.kind === "qualitative" && chart.points.length)
+        : release.status === "live" && hasQualitativeAnalysis(release)
           ? "Official report analyzed"
         : release.status === "summary_only"
           ? "Official release summary"

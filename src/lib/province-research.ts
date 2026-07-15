@@ -1,5 +1,5 @@
 import { provinces, provinceSymbols } from "@/lib/province-directory";
-import { getMultiSourceReleaseHub } from "@/lib/release-hub";
+import { getMultiSourceReleaseHub, hasStructuredMetrics } from "@/lib/release-hub";
 import { buildReleaseIntelligence } from "@/lib/release-intelligence";
 
 export type ProvinceResearchArea = "overview" | "housing" | "population" | "government" | "trade" | "energy";
@@ -36,8 +36,8 @@ export async function getProvinceResearchBrief(slug: string, area: ProvinceResea
     const row = release.provinceBreakdown.find((item) => item.province === province.name);
     return row ? [{ ...row, release }] : [];
   });
-  const lead = releases.find((release) => hasVerifiedProvinceRows(release.source) && release.status === "live" && release.chartPayloads.some((chart) => chart.points.length))
-    ?? releases.find((release) => release.status === "live" && release.chartPayloads.some((chart) => chart.points.length))
+  const lead = releases.find((release) => hasVerifiedProvinceRows(release.source) && release.status === "live" && hasStructuredMetrics(release))
+    ?? releases.find((release) => release.status === "live" && hasStructuredMetrics(release))
     ?? null;
 
   return {

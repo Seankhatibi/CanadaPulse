@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays } from "lucide-react";
-import type { NormalizedRelease } from "@/lib/release-hub";
+import { countStructuredMetrics, type NormalizedRelease } from "@/lib/release-hub";
 
 function timestamp(release: NormalizedRelease) {
   const parsed = Date.parse(release.releaseDate.length === 7 ? `${release.releaseDate}-01` : release.releaseDate);
@@ -9,12 +9,6 @@ function timestamp(release: NormalizedRelease) {
 
 function editorialRank(release: NormalizedRelease) {
   return release.releaseType === "valet-rate-observation" ? 0 : 1;
-}
-
-function officialMetricCount(release: NormalizedRelease) {
-  return release.chartPayloads
-    .filter((chart) => chart.kind !== "qualitative")
-    .reduce((total, chart) => total + chart.points.length, 0);
 }
 
 export function ReleaseStream({ releases }: { releases: NormalizedRelease[] }) {
@@ -40,7 +34,7 @@ export function ReleaseStream({ releases }: { releases: NormalizedRelease[] }) {
       </div>
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         {recent.map((release) => {
-          const metricCount = officialMetricCount(release);
+          const metricCount = countStructuredMetrics(release);
           return (
           <Link key={release.id} href={release.href} className="group rounded-xl border border-stone-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-red-300 hover:shadow-lg">
             <div className="flex items-center justify-between gap-3">

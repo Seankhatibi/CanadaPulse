@@ -1,6 +1,6 @@
 import { getDbLiveDataPayload } from "@/lib/db-live-data";
 import { fetchCihiHealthSnapshot } from "@/lib/cihi-health";
-import { getMultiSourceReleaseHub } from "@/lib/release-hub";
+import { countStructuredMetrics, getMultiSourceReleaseHub, hasQualitativeAnalysis } from "@/lib/release-hub";
 
 function validDate(value: string) {
   const timestamp = Date.parse(value.length === 7 ? `${value}-01T12:00:00Z` : value);
@@ -36,21 +36,25 @@ export async function getSystemHealth() {
           referencePeriod: latestRelease.referencePeriod,
           status: latestRelease.status,
           href: latestRelease.href,
-          metrics: latestRelease.chartPayloads.reduce((total, chart) => total + chart.points.length, 0),
+          metrics: countStructuredMetrics(latestRelease),
         }
       : null,
     sourceStatuses: [
       ...hub.sourceStatuses,
       { source: "CIHI", status: cihi.status === "live" ? "live" as const : "source_linked" as const, note: `National Health Expenditure Trends ${cihi.period}; ${cihi.metrics.length} parsed values.` },
     ],
-    recentReleases: releases.slice(0, 8).map((release) => ({
-      title: release.title,
-      publisher: release.publisher,
-      releaseDate: release.releaseDate,
-      status: release.status,
-      href: release.href,
-      metrics: release.chartPayloads.reduce((total, chart) => total + chart.points.length, 0),
-    })),
+    recentReleases: releases.slice(0, 8).map((release) => {
+      const metrics = countStructuredMetrics(release);
+      return {
+        title: release.title,
+        publisher: release.publisher,
+        releaseDate: release.releaseDate,
+        status: release.status,
+        href: release.href,
+        metrics,
+        evidence: metrics ? "structured" as const : hasQualitativeAnalysis(release) ? "narrative" as const : "summary" as const,
+      };
+    }),
     refreshRuns: database?.latestRuns.slice(0, 8) ?? [],
     warnings,
   };
