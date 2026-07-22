@@ -10,8 +10,11 @@ export type ResearchMetric = ReleaseChartPayload["points"][number] & {
 const negativeWhenRising = /unemployment|inflation|price|rent|mortgage|debt|cost|deficit|pressure|risk|gap/i;
 const positiveWhenRising = /employment|participation|wage|compensation|productivity|starts|completions|exports|investment|income|access/i;
 
-export function getMetricMeaning(point: ReleaseChartPayload["points"][number]): MetricMeaning {
+export function getMetricMeaning(point: ReleaseChartPayload["points"][number], releaseTitle = ""): MetricMeaning {
   if (point.direction === "neutral") return "mixed";
+  const cpiPressureMetric = /consumer price|inflation/i.test(releaseTitle)
+    && /all-items|food|shelter|rent|gasoline|energy/i.test(point.label);
+  if (cpiPressureMetric) return point.direction === "up" ? "negative" : "positive";
   if (negativeWhenRising.test(point.label)) return point.direction === "up" ? "negative" : "positive";
   if (positiveWhenRising.test(point.label)) return point.direction === "up" ? "positive" : "negative";
   return "mixed";
@@ -75,7 +78,7 @@ export function buildReleaseIntelligence(release: NormalizedRelease) {
     .slice(0, 12)
     .map((metric) => ({
       ...metric,
-      meaning: getMetricMeaning(metric),
+      meaning: getMetricMeaning(metric, release.title),
     }));
   const positive = metrics.filter((metric) => metric.meaning === "positive");
   const negative = metrics.filter((metric) => metric.meaning === "negative");

@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import {
   ArrowDown,
   ArrowLeft,
@@ -21,6 +23,76 @@ import { formatReferencePeriod, formatReleaseDate } from "@/lib/release-format";
 import { getProvinceByName } from "@/lib/province-directory";
 
 export const dynamic = "force-dynamic";
+
+type ReleaseParams = Promise<{ source: string; slug: string }>;
+type ReleaseSearchParams = Promise<{ date?: string | string[]; url?: string | string[] }>;
+
+const getReleasePageData = cache((source: string, slug: string, releaseDate?: string, sourceUrl?: string) =>
+  findHubRelease(source, slug, releaseDate, sourceUrl),
+);
+
+function firstParam(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function compactDescription(value: string, limit = 220) {
+  if (value.length <= limit) return value;
+  return `${value.slice(0, limit - 1).trimEnd()}…`;
+}
+
+function releasePath(source: string, slug: string, releaseDate?: string, sourceUrl?: string) {
+  const query = new URLSearchParams();
+  if (releaseDate) query.set("date", releaseDate);
+  if (sourceUrl) query.set("url", sourceUrl);
+  const suffix = query.size ? `?${query.toString()}` : "";
+  return `/pulse-release/${encodeURIComponent(source)}/${encodeURIComponent(slug)}${suffix}`;
+}
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: ReleaseParams;
+  searchParams: ReleaseSearchParams;
+}): Promise<Metadata> {
+  const { source, slug } = await params;
+  const query = await searchParams;
+  const releaseDate = firstParam(query.date);
+  const sourceUrl = firstParam(query.url);
+  const release = await getReleasePageData(source, slug, releaseDate, sourceUrl);
+  if (!release) return { title: "Official release unavailable", robots: { index: false, follow: false } };
+
+  const intelligence = buildReleaseIntelligence(release);
+  const primary = intelligence.metrics[0];
+  const description = compactDescription(primary
+    ? `${intelligence.verdict} ${primary.plainEnglish}`
+    : release.plainEnglishSummary);
+  const canonical = releasePath(source, slug, release.releaseDate, release.sourceUrl);
+  const imageQuery = new URLSearchParams({
+    source,
+    slug,
+    date: release.releaseDate,
+    url: release.sourceUrl,
+  });
+  const image = `/api/og/release?${imageQuery.toString()}`;
+
+  return {
+    title: release.title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title: release.title,
+      description,
+      url: canonical,
+      siteName: "Canada Pulse",
+      locale: "en_CA",
+      type: "article",
+      publishedTime: release.releaseDate,
+      images: [{ url: image, width: 1200, height: 630, alt: `${release.title} data breakdown` }],
+    },
+    twitter: { card: "summary_large_image", title: release.title, description, images: [image] },
+  };
+}
 
 function MetricArrow({ metric }: { metric: ResearchMetric }) {
   const className =
@@ -70,12 +142,12 @@ export default async function PulseReleasePage({
   params,
   searchParams,
 }: {
-  params: Promise<{ source: string; slug: string }>;
-  searchParams?: Promise<{ date?: string; url?: string }>;
+  params: ReleaseParams;
+  searchParams?: ReleaseSearchParams;
 }) {
   const { source, slug } = await params;
   const query = await searchParams;
-  const release = await findHubRelease(source, slug, query?.date, query?.url);
+  const release = await getReleasePageData(source, slug, firstParam(query?.date), firstParam(query?.url));
 
   if (!release) notFound();
 
