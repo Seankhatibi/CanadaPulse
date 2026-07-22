@@ -16,6 +16,13 @@ export const metadata: Metadata = {
     siteName: "Canada Pulse",
     locale: "en_CA",
     type: "website",
+    images: [{ url: "/api/og/province", width: 1200, height: 630, alt: "Canada Pulse province explorer" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Canada Pulse | Canadian Economic Intelligence",
+    description: "Current official Canadian data, made understandable province by province.",
+    images: ["/api/og/province"],
   },
 };
 

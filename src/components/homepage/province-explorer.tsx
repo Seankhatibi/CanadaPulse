@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, BriefcaseBusiness, Building2, CircleDollarSign, Home, Minus, Users } from "lucide-react";
 import { ShareStatButton } from "@/components/share-stat-button";
 import type { ProvinceExplorerCategoryId, ProvinceExplorerData } from "@/lib/province-explorer-data";
@@ -43,9 +43,21 @@ function checkedAt(value: string) {
   }).format(new Date(value));
 }
 
-export function ProvinceExplorer({ data }: { data: ProvinceExplorerData }) {
-  const [categoryId, setCategoryId] = useState<ProvinceExplorerCategoryId>(data.categories[0]?.id ?? "jobs");
-  const [provinceSlug, setProvinceSlug] = useState(data.defaultProvince);
+export function ProvinceExplorer({
+  data,
+  initialCategory,
+  initialProvince,
+}: {
+  data: ProvinceExplorerData;
+  initialCategory?: ProvinceExplorerCategoryId;
+  initialProvince?: string;
+}) {
+  const startingCategory = data.categories.find((item) => item.id === initialCategory) ?? data.categories[0];
+  const startingProvince = (startingCategory?.values.some((value) => value.slug === initialProvince)
+    ? initialProvince
+    : data.defaultProvince) ?? startingCategory?.values[0]?.slug ?? "ontario";
+  const [categoryId, setCategoryId] = useState<ProvinceExplorerCategoryId>(startingCategory?.id ?? "jobs");
+  const [provinceSlug, setProvinceSlug] = useState(startingProvince);
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
   const category = data.categories.find((item) => item.id === categoryId) ?? data.categories[0];
 
@@ -57,6 +69,14 @@ export function ProvinceExplorer({ data }: { data: ProvinceExplorerData }) {
   }, [category, hoveredSlug, provinceSlug]);
   const hovered = category?.values.find((value) => value.slug === hoveredSlug) ?? null;
   const visible = hovered ?? selected;
+
+  useEffect(() => {
+    if (!category || !selected) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("province", selected.slug);
+    url.searchParams.set("topic", category.id);
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [category, selected]);
 
   if (!category || !selected || !visible) return null;
 
@@ -167,7 +187,7 @@ export function ProvinceExplorer({ data }: { data: ProvinceExplorerData }) {
   }
 
   return (
-    <section className="-mx-3 overflow-hidden bg-[#071315] text-white sm:-mx-6" aria-label="Province explorer">
+    <section className="-mx-3 overflow-hidden bg-[#071315] text-white sm:-mx-6" aria-label="Province explorer" data-selected-province={selectedValue.slug} data-selected-topic={category.id}>
       <div className="lg:grid lg:grid-cols-[0.72fr_1.28fr]">
         <div className="hidden min-h-[760px] border-r border-white/10 lg:block">
           {renderHeader()}

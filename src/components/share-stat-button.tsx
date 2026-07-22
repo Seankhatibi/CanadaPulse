@@ -1,6 +1,7 @@
 "use client";
 
-import { Share2 } from "lucide-react";
+import { Check, Share2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export function ShareStatButton({
   text,
@@ -11,16 +12,34 @@ export function ShareStatButton({
   title?: string;
   variant?: "dark" | "light";
 }) {
+  const [result, setResult] = useState<"shared" | "copied" | null>(null);
+
+  useEffect(() => {
+    if (!result) return;
+    const timer = window.setTimeout(() => setResult(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [result]);
+
   async function share() {
     const url = window.location.href;
-    const shareText = `${text}\n\nCanada Pulse: ${url}`;
+    const shareText = `${text}\n\nCanada Pulse`;
 
     if (navigator.share) {
-      await navigator.share({ title: "Canada Pulse", text: shareText, url }).catch(() => undefined);
+      try {
+        await navigator.share({ title: "Canada Pulse", text: shareText, url });
+        setResult("shared");
+      } catch {
+        return;
+      }
       return;
     }
 
-    await navigator.clipboard?.writeText(shareText).catch(() => undefined);
+    try {
+      await navigator.clipboard.writeText(`${shareText}: ${url}`);
+      setResult("copied");
+    } catch {
+      return;
+    }
   }
 
   return (
@@ -35,8 +54,8 @@ export function ShareStatButton({
           : "border-white/10 bg-white/10 text-stone-200 hover:bg-white/15"
       }`}
     >
-      <Share2 className="size-3.5" aria-hidden="true" />
-      Share
+      {result ? <Check className="size-3.5" aria-hidden="true" /> : <Share2 className="size-3.5" aria-hidden="true" />}
+      <span aria-live="polite">{result === "shared" ? "Shared" : result === "copied" ? "Link copied" : "Share"}</span>
     </button>
   );
 }
