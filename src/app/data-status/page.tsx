@@ -39,8 +39,12 @@ export default async function DataStatusPage() {
             },
             {
               label: "Historical archive",
-              value: health.persistence === "database" ? "Archive active" : "Live source mode",
-              note: health.persistence === "database" ? "Release and refresh history is stored." : "Current official values load live while long-run archive coverage expands.",
+              value: health.persistence === "database" ? "Archive active" : health.persistence === "degraded" ? "Needs attention" : "Live source mode",
+              note: health.persistence === "database"
+                ? `${health.archive?.releaseEvents ?? 0} releases stored; last successful refresh ${health.archive?.latestSuccessfulRefresh ? new Date(health.archive.latestSuccessfulRefresh).toLocaleString("en-CA") : "unavailable"}.`
+                : health.persistence === "degraded"
+                  ? "The database is connected, but a successful archive refresh has not been verified."
+                  : "Current official values load live while durable archive setup is pending.",
               icon: Database,
             },
           ].map((item) => {
@@ -64,6 +68,31 @@ export default async function DataStatusPage() {
             </div>
             <div className="mt-3 space-y-2">
               {health.warnings.map((warning) => <p key={warning} className="text-sm text-amber-900">{warning}</p>)}
+            </div>
+          </section>
+        ) : null}
+
+        {health.refreshRuns.length ? (
+          <section className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
+            <div className="flex items-center gap-2">
+              <Radio className="size-5 text-red-700" aria-hidden="true" />
+              <h2 className="text-xl font-black text-stone-950">Recent source refreshes</h2>
+            </div>
+            <div className="mt-4">
+              <div className="hidden grid-cols-[1.6fr_0.65fr_1fr_0.45fr_0.45fr] gap-4 border-b border-stone-200 pb-3 text-xs font-black uppercase tracking-[0.1em] text-stone-500 md:grid">
+                <span>Job</span><span>Status</span><span>Finished</span><span>Fetched</span><span>Changed</span>
+              </div>
+              <div className="divide-y divide-stone-100">
+                {health.refreshRuns.map((run) => (
+                  <article key={run.id} className="grid gap-3 py-4 md:grid-cols-[1.6fr_0.65fr_1fr_0.45fr_0.45fr] md:items-center md:gap-4">
+                    <p className="font-bold text-stone-950">{run.jobName}</p>
+                    <div><span className={`rounded-md px-2 py-1 text-xs font-black ${run.status === "SUCCESS" ? "bg-emerald-100 text-emerald-800" : run.status === "FAILED" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-900"}`}>{run.status.toLowerCase()}</span></div>
+                    <p className="text-sm text-stone-600">{run.finishedAt ? new Date(run.finishedAt).toLocaleString("en-CA") : "Running"}</p>
+                    <p className="text-sm text-stone-600 md:font-mono"><span className="font-bold text-stone-950 md:hidden">Fetched: </span>{run.rowsFetched.toLocaleString("en-CA")}</p>
+                    <p className="text-sm text-stone-600 md:font-mono"><span className="font-bold text-stone-950 md:hidden">Changed: </span>{run.rowsChanged.toLocaleString("en-CA")}</p>
+                  </article>
+                ))}
+              </div>
             </div>
           </section>
         ) : null}

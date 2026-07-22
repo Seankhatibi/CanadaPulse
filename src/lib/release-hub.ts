@@ -16,7 +16,7 @@ import {
   rankDailyEntries,
   type StatCanDailyEntry,
 } from "@/lib/statcan-daily";
-import { findPersistedRelease } from "@/lib/persisted-releases";
+import { findLatestPersistedReleaseByType, findPersistedRelease } from "@/lib/persisted-releases";
 
 export type ReleaseArea =
   | "economy"
@@ -77,6 +77,7 @@ export type NormalizedRelease = {
   status: ReleaseFactStatus;
   plainEnglishSummary: string;
   socialSummary: string;
+  archiveFallback?: boolean;
 };
 
 export function countStructuredMetrics(release: NormalizedRelease) {
@@ -91,6 +92,23 @@ export function hasStructuredMetrics(release: NormalizedRelease) {
 
 export function hasQualitativeAnalysis(release: NormalizedRelease) {
   return release.chartPayloads.some((chart) => chart.kind === "qualitative" && chart.points.length > 0);
+}
+
+async function recoverArchivedOfficialRelease(current: NormalizedRelease) {
+  if (current.status === "live" && hasStructuredMetrics(current)) return current;
+  const archived = await findLatestPersistedReleaseByType(current.source, current.releaseType).catch(() => null);
+  if (!archived || !hasStructuredMetrics(archived)) return current;
+
+  return {
+    ...archived,
+    promoted: false,
+    archiveFallback: true,
+    headlineFacts: [
+      `The current source check did not return structured values. Canada Pulse is showing the last verified official release from ${archived.releaseDate}.`,
+      ...archived.headlineFacts,
+    ],
+    plainEnglishSummary: `Last verified official release (${archived.referencePeriod}). ${archived.plainEnglishSummary}`,
+  } satisfies NormalizedRelease;
 }
 
 export type ReleaseHubPayload = {
@@ -1134,7 +1152,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
       .map((entry) => [entry.href, entry]),
   ).values()].slice(0, 9);
   const statCanReleases = await mapWithConcurrency(rankedStatCan, 3, normalizeStatCanDailyRelease);
-  const [cpiWatch, housingWatch, rentalWatch, bankOfCanada, bankOfCanadaReports, financeCanada, ircc, officialMonitors] = await Promise.all([
+  const [currentCpiWatch, currentHousingWatch, currentRentalWatch, currentBankOfCanada, bankOfCanadaReports, currentFinanceCanada, currentIrcc, officialMonitors] = await Promise.all([
     cpiWatchPromise,
     housingWatchPromise,
     rentalWatchPromise,
@@ -1143,6 +1161,14 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     financeCanadaPromise,
     irccPromise,
     officialMonitorsPromise,
+  ]);
+  const [cpiWatch, housingWatch, rentalWatch, bankOfCanada, financeCanada, ircc] = await Promise.all([
+    recoverArchivedOfficialRelease(currentCpiWatch),
+    recoverArchivedOfficialRelease(currentHousingWatch),
+    recoverArchivedOfficialRelease(currentRentalWatch),
+    recoverArchivedOfficialRelease(currentBankOfCanada),
+    recoverArchivedOfficialRelease(currentFinanceCanada),
+    recoverArchivedOfficialRelease(currentIrcc),
   ]);
   const releaseTimestamp = (release: NormalizedRelease) => {
     const timestamp = Date.parse(release.releaseDate.length === 7 ? `${release.releaseDate}-01T12:00:00Z` : release.releaseDate);
@@ -1166,6 +1192,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
   const promotedRelease = todayQueue.find(
     (release) =>
       release.promoted &&
+      !release.archiveFallback &&
       release.status === "live" &&
       hasStructuredMetrics(release) &&
       isEditorialRelease(release) &&
@@ -1186,19 +1213,21 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
     sourceStatuses: [
       {
         source: "Statistics Canada",
-        status: cpiWatch.status === "live" || statCanReleases.some((release) => release.status === "live") ? "live" : "summary_only",
-        note: "Daily releases plus direct CPI WDS vectors and rolling Daily URL probes connected.",
+        status: currentCpiWatch.status === "live" || statCanReleases.some((release) => release.status === "live") ? "live" : "summary_only",
+        note: currentCpiWatch.status === "live"
+          ? "Daily releases plus direct CPI WDS vectors and rolling Daily URL probes connected."
+          : "Current CPI source check is unavailable; any displayed structured CPI values come from the dated official archive.",
       },
-      { source: "CMHC", status: housingWatch.status === "live" && rentalWatch.status === "live" ? "live" : "source_linked", note: "Quarterly construction starts and annual Rental Market Survey rent, vacancy and turnover tables connected." },
+      { source: "CMHC", status: currentHousingWatch.status === "live" && currentRentalWatch.status === "live" ? "live" : "source_linked", note: currentHousingWatch.status === "live" && currentRentalWatch.status === "live" ? "Quarterly construction starts and annual Rental Market Survey rent, vacancy and turnover tables connected." : "A current CMHC source check is unavailable; dated archived official values may be shown." },
       {
         source: "Bank of Canada",
-        status: bankOfCanadaReports.length ? "live" : bankOfCanada.status,
+        status: bankOfCanadaReports.length ? "live" : currentBankOfCanada.status,
         note: bankOfCanadaReports.length
           ? `${bankOfCanadaReports.length} report families monitored plus Valet rate observations.`
           : "Valet rate observations are live; no current report page was confirmed in this check.",
       },
-      { source: "Open Government / IRCC", status: ircc.status, note: "Monthly PR, study permit, TFWP, IMP and asylum resources imported with provincial breakdowns." },
-      { source: "Finance Canada", status: financeCanada.status, note: "Latest Fiscal Monitor revenue, expense, deficit and debt-charge tables connected." },
+      { source: "Open Government / IRCC", status: currentIrcc.status, note: currentIrcc.status === "live" ? "Monthly PR, study permit, TFWP, IMP and asylum resources imported with provincial breakdowns." : "The current IRCC import is unavailable; dated archived official values may be shown." },
+      { source: "Finance Canada", status: currentFinanceCanada.status, note: currentFinanceCanada.status === "live" ? "Latest Fiscal Monitor revenue, expense, deficit and debt-charge tables connected." : "The current Fiscal Monitor import is unavailable; dated archived official values may be shown." },
       {
         source: "CER / NRCan",
         status: officialMonitors.some((release) => release.source === "cer-nrcan" && release.status === "live") ? "live" : "source_linked",

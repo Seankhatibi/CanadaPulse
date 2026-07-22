@@ -81,7 +81,7 @@ function releaseToStory(release: NormalizedRelease, topic: string, headline: str
     period: release.releaseDate,
     href: release.href,
     shareText: release.socialSummary,
-    trustStatus: release.status === "live" ? "live" : "source-linked",
+    trustStatus: release.status === "live" && !release.archiveFallback ? "live" : "source-linked",
     priority: release.importanceScore,
     tone,
     whyItMatters: intelligence.verdict,

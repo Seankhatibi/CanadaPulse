@@ -21,12 +21,12 @@ export function buildLiveWeeklyPulseSummary(releaseHub: ReleaseHubPayload, date 
   const weekday = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", weekday: "long" }).format(date);
   const weekStart = date.getTime() - 7 * 86_400_000;
   const releases = releaseHub.todayQueue
-    .filter((release) => release.status === "live" && timestamp(release) >= weekStart)
+    .filter((release) => release.status === "live" && !release.archiveFallback && timestamp(release) >= weekStart)
     .sort((a, b) => timestamp(b) - timestamp(a) || b.importanceScore - a.importanceScore);
   const lead = releaseHub.promotedRelease ?? releases[0] ?? null;
   const rateWatch = releases.find((release) => release.releaseType === "valet-rate-observation");
   const tradeWatch = releases.find((release) => /merchandise trade/i.test(release.title));
-  const housingWatch = releaseHub.housingWatch.status === "live" ? releaseHub.housingWatch : null;
+  const housingWatch = releaseHub.housingWatch.status === "live" && !releaseHub.housingWatch.archiveFallback ? releaseHub.housingWatch : null;
   const highlights = uniqueFacts([
     ...(lead?.headlineFacts.slice(0, 3) ?? []),
     housingWatch?.headlineFacts[0],

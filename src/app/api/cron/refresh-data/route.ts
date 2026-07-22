@@ -31,9 +31,11 @@ export async function GET(request: Request) {
     persistMultiSourceReleaseEvents(),
     fetchCihiHealthSnapshot(),
   ]);
+  const persistenceReady = statcanDaily.persisted && multiSourceReleaseHub.persisted;
+  const ok = !isProduction || persistenceReady;
 
   return Response.json({
-    ok: true,
+    ok,
     startedAt,
     finishedAt: new Date().toISOString(),
     jobs: {
@@ -53,5 +55,5 @@ export async function GET(request: Request) {
       energy: "CER/NRCan source linked in Release Hub",
       pbo: "PBO reports source linked in Release Hub",
     },
-  });
+  }, { status: ok ? 200 : 503 });
 }

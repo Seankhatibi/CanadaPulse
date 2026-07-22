@@ -14,19 +14,23 @@ export async function getSystemHealth() {
     fetchCihiHealthSnapshot(),
   ]);
   const releases = hub.todayQueue
-    .filter((release) => release.status === "live" && validDate(release.releaseDate))
+    .filter((release) => release.status === "live" && !release.archiveFallback && validDate(release.releaseDate))
     .sort((a, b) => validDate(b.releaseDate) - validDate(a.releaseDate));
   const latestRelease = hub.promotedRelease?.status === "live" ? hub.promotedRelease : releases[0] ?? null;
   const warnings: string[] = [];
+  const databaseConfigured = Boolean(process.env.DATABASE_URL);
+  const archiveActive = Boolean(database?.archive.active);
 
-  if (!database) warnings.push("Long-run release history is still expanding; current official sources are fetched live.");
+  if (!databaseConfigured) warnings.push("Durable release history is not connected; current official sources are fetched live.");
+  else if (!archiveActive) warnings.push("The database is connected, but the release archive has not completed a successful refresh.");
   if (!process.env.CRON_SECRET) warnings.push("Scheduled source checks are unavailable in this environment.");
   const housingAge = (Date.now() - validDate(hub.housingWatch.releaseDate)) / 86_400_000;
   if (housingAge > 120) warnings.push(`Quarterly housing construction release is ${Math.round(housingAge)} days old.`);
 
   return {
     generatedAt: new Date().toISOString(),
-    persistence: database ? "database" as const : "request-time" as const,
+    persistence: archiveActive ? "database" as const : databaseConfigured ? "degraded" as const : "request-time" as const,
+    archive: database?.archive ?? null,
     scheduler: process.env.CRON_SECRET ? "configured" as const : "not-configured" as const,
     latestRelease: latestRelease
       ? {

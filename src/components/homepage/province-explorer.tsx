@@ -20,10 +20,27 @@ const icons = {
   newcomers: Users,
 } satisfies Record<ProvinceExplorerCategoryId, typeof Home>;
 
+const youthSignalLabels: Partial<Record<ProvinceExplorerCategoryId, string>> = {
+  jobs: "Job pressure",
+  rent: "Rent pressure",
+  prices: "Price pressure",
+  homes: "Home pipeline",
+};
+
 function categoryMeaning(highMeaning: "pressure" | "positive" | "neutral") {
   if (highMeaning === "pressure") return { low: "Less pressure", high: "More pressure" };
   if (highMeaning === "positive") return { low: "Fewer", high: "More" };
   return { low: "Lower flow", high: "Higher flow" };
+}
+
+function checkedAt(value: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
 }
 
 export function ProvinceExplorer({ data }: { data: ProvinceExplorerData }) {
@@ -50,17 +67,18 @@ export function ProvinceExplorer({ data }: { data: ProvinceExplorerData }) {
     const value = item.values.find((candidate) => candidate.slug === selected.slug);
     return value ? [{ category: item, value }] : [];
   });
+  const youthSignals = selectedProvinceValues.filter(({ category: item }) => youthSignalLabels[item.id]);
 
   function renderHeader() {
     return (
       <div className="px-4 py-6 sm:px-8 lg:px-9 lg:py-8">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
           <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" aria-hidden="true" />
-          Live official province rows
+          Official province rows | checked {checkedAt(data.generatedAt)} ET
         </div>
         <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-red-300">Your Canada right now</p>
-        <h1 className="mt-2 text-4xl font-black leading-tight sm:text-5xl lg:text-5xl">What does your future look like here?</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Compare work, rent, prices, housing supply and population across every province.</p>
+        <h1 className="mt-2 text-4xl font-black leading-tight sm:text-5xl lg:text-5xl">Can you build a life in your province?</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Work, rent, prices, new homes and population, compared with the same official yardstick across Canada.</p>
 
         <div className="mt-6 grid grid-cols-2 gap-2" aria-label="Map data category">
           {data.categories.map((item) => {
@@ -111,6 +129,26 @@ export function ProvinceExplorer({ data }: { data: ProvinceExplorerData }) {
             <span>{selectedValue.note}</span>
           </div>
         </div>
+
+        {youthSignals.length > 0 ? (
+          <div className="mt-5" aria-label={`${selectedValue.province} youth reality check`}>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-red-300">Youth reality check</p>
+              <p className="font-mono text-[11px] font-black text-slate-500">Ranked nationally</p>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+              {youthSignals.map(({ category: item, value }) => (
+                <div key={item.id} className="border-t border-white/10 pt-2.5">
+                  <p className="text-[11px] font-bold text-slate-400">{youthSignalLabels[item.id]}</p>
+                  <div className="mt-1 flex items-baseline justify-between gap-2">
+                    <p className="font-mono text-base font-black text-white">{value.display}</p>
+                    <p className={`font-mono text-xs font-black ${item.highMeaning === "positive" ? "text-emerald-300" : value.rank <= 3 ? "text-red-300" : "text-cyan-300"}`}>#{value.rank}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <p className="mt-4 text-sm leading-6 text-slate-300">{category.context}</p>
         <p className="mt-3 text-[11px] font-semibold text-slate-500">{category.source} | {category.period}</p>

@@ -150,6 +150,21 @@ export async function findPersistedRelease(source: string, slug: string, release
   return event ? normalizePersistedRelease(event) : null;
 }
 
+export async function findLatestPersistedReleaseByType(source: string, releaseType: string) {
+  if (!process.env.DATABASE_URL) return null;
+  const prisma = getPrisma();
+  const event = await prisma.releaseEvent.findFirst({
+    where: {
+      source,
+      releaseType,
+      status: "live",
+      metricCount: { gt: 0 },
+    },
+    orderBy: [{ releaseDate: "desc" }, { updatedAt: "desc" }],
+  });
+  return event ? normalizePersistedRelease(event) : null;
+}
+
 export async function getPersistedReleases(limit = 500) {
   if (!process.env.DATABASE_URL) return [];
   const prisma = getPrisma();

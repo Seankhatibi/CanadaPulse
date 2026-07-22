@@ -9,6 +9,7 @@
     "lint": "eslint",
     "audit:public-data": "node scripts/audit-public-data.mjs",
     "audit:release-integrity": "tsx scripts/audit-release-integrity.ts",
+    "audit:persistence-policy": "tsx scripts/audit-release-persistence-policy.ts",
     "db:generate": "prisma generate",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:push": "prisma db push",

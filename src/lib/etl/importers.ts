@@ -1,4 +1,5 @@
 import { getPrisma } from "@/lib/prisma";
+import { shouldReplacePersistedRelease } from "@/lib/release-persistence-policy";
 import { refreshStatCanDailyReleaseFacts } from "@/lib/etl/statcan-adapter";
 import { fetchStatCanReleaseData } from "@/lib/statcan-release-data";
 import { countStructuredMetrics, getMultiSourceReleaseHub, type NormalizedRelease } from "@/lib/release-hub";
@@ -40,14 +41,24 @@ async function upsertReleaseEventIfChanged({
 }) {
   const prisma = getPrisma();
   const where = { sourceUrl_releaseDate: { sourceUrl, releaseDate } };
-  const existing = await prisma.releaseEvent.findUnique({ where });
+  let existing = await prisma.releaseEvent.findUnique({ where });
 
   if (!existing) {
-    await prisma.releaseEvent.create({
-      data: { ...data, sourceUrl, releaseDate } as never,
-    });
-    return true;
+    try {
+      await prisma.releaseEvent.create({
+        data: { ...data, sourceUrl, releaseDate } as never,
+      });
+      return true;
+    } catch (error) {
+      if (!(typeof error === "object" && error !== null && "code" in error && error.code === "P2002")) {
+        throw error;
+      }
+      existing = await prisma.releaseEvent.findUnique({ where });
+      if (!existing) throw error;
+    }
   }
+
+  if (!shouldReplacePersistedRelease(existing, data)) return false;
 
   const comparableKeys = [
     "sourceDatasetId",
@@ -75,6 +86,23 @@ async function upsertReleaseEventIfChanged({
 
   await prisma.releaseEvent.update({ where, data: data as never });
   return true;
+}
+
+async function updateSourceDatasetCheckpoint(sourceDatasetId: string, checkedAt = new Date()) {
+  const prisma = getPrisma();
+  const latestLiveRelease = await prisma.releaseEvent.findFirst({
+    where: { sourceDatasetId, status: "live" },
+    orderBy: [{ releaseDate: "desc" }, { updatedAt: "desc" }],
+    select: { referencePeriod: true },
+  });
+
+  await prisma.sourceDataset.update({
+    where: { id: sourceDatasetId },
+    data: {
+      lastCheckedAt: checkedAt,
+      latestKnownPeriod: latestLiveRelease?.referencePeriod ?? undefined,
+    },
+  });
 }
 
 function getReleaseScore(entry: unknown) {
@@ -144,12 +172,12 @@ export async function runWithRefreshLog<T>({
           message: error instanceof Error ? error.message : String(error),
         },
       },
-    });
+    }).catch(() => undefined);
     if (sourceDataset) {
       await prisma.sourceDataset.update({
         where: { id: sourceDataset.id },
         data: { lastCheckedAt: new Date() },
-      });
+      }).catch(() => undefined);
     }
     throw error;
   }
@@ -177,13 +205,6 @@ export async function persistStatCanDailyReleaseEvents() {
           .slice(0, 12)
           .map((entry) => entry.href),
       );
-      if (sourceDataset) {
-        await prisma.sourceDataset.update({
-          where: { id: sourceDataset.id },
-          data: { latestKnownPeriod: latestDate },
-        });
-      }
-
       for (const entry of result.entries) {
         const score = getReleaseScore(entry);
         const affectedAreas = inferReleaseAreas(`${entry.title} ${entry.summary}`);
@@ -235,6 +256,8 @@ export async function persistStatCanDailyReleaseEvents() {
         if (changed) rowsChanged += 1;
       }
 
+      if (sourceDataset) await updateSourceDatasetCheckpoint(sourceDataset.id);
+
       return { ...result, rowsChanged, sourceVersion: latestDate };
     },
   });
@@ -260,7 +283,9 @@ export async function persistMultiSourceReleaseEvents() {
     run: async () => {
       const hub = await getMultiSourceReleaseHub();
       const releasesToPersist = hub.todayQueue.filter(
-        (release) => !(release.source === "statcan" && release.releaseType === "official-daily-release"),
+        (release) =>
+          !release.archiveFallback &&
+          !(release.source === "statcan" && release.releaseType === "official-daily-release"),
       );
 
       if (!process.env.DATABASE_URL) {
@@ -278,6 +303,7 @@ export async function persistMultiSourceReleaseEvents() {
 
       const prisma = getPrisma();
       let rowsChanged = 0;
+      const touchedSourceDatasets = new Set<string>();
 
       for (const release of releasesToPersist) {
         const sourceDatasetSlug = sourceDatasetSlugForRelease(release);
@@ -329,15 +355,13 @@ export async function persistMultiSourceReleaseEvents() {
         });
         if (changed) rowsChanged += 1;
         if (sourceDataset) {
-          await prisma.sourceDataset.update({
-            where: { id: sourceDataset.id },
-            data: {
-              lastCheckedAt: new Date(),
-              latestKnownPeriod: release.status === "live" ? release.referencePeriod : sourceDataset.latestKnownPeriod,
-            },
-          });
+          touchedSourceDatasets.add(sourceDataset.id);
         }
       }
+
+      await Promise.all([...touchedSourceDatasets].map((sourceDatasetId) =>
+        updateSourceDatasetCheckpoint(sourceDatasetId),
+      ));
 
       return {
         rowsFetched: releasesToPersist.length,

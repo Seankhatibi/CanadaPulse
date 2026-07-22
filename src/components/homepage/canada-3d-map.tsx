@@ -22,11 +22,16 @@ export function Canada3DMap({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const onSelectRef = useRef(onSelect);
   const onHoverRef = useRef(onHover);
+  const selectedProvinceRef = useRef(selectedProvince);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
     onHoverRef.current = onHover;
   }, [onHover, onSelect]);
+
+  useEffect(() => {
+    selectedProvinceRef.current = selectedProvince;
+  }, [selectedProvince]);
 
   useEffect(() => {
     const canvasElement = canvasRef.current;
@@ -82,8 +87,8 @@ export function Canada3DMap({
           geometry.translate(-396.5, -516, 0);
           const material = new THREE.MeshStandardMaterial({
             color: fill,
-            emissive: provinceSlug === selectedProvince ? new THREE.Color(0x4a1117) : new THREE.Color(0x000000),
-            emissiveIntensity: provinceSlug === selectedProvince ? 0.75 : 0,
+            emissive: new THREE.Color(0x000000),
+            emissiveIntensity: 0,
             metalness: 0.24,
             roughness: 0.58,
           });
@@ -161,6 +166,14 @@ export function Canada3DMap({
     function animate() {
       mapGroup.rotation.x += ((-0.08 + pointerY * 0.018) - mapGroup.rotation.x) * 0.045;
       mapGroup.rotation.z += ((-0.025 - pointerX * 0.018) - mapGroup.rotation.z) * 0.045;
+      for (const mesh of meshes) {
+        const provinceSlug = mesh.userData.provinceSlug as string;
+        const selected = provinceSlug === selectedProvinceRef.current;
+        const hovered = provinceSlug === hoveredSlug;
+        const targetIntensity = selected ? 0.72 : hovered ? 0.42 : 0;
+        mesh.material.emissive.setHex(selected ? 0x5f161d : hovered ? 0x075966 : 0x000000);
+        mesh.material.emissiveIntensity += (targetIntensity - mesh.material.emissiveIntensity) * 0.14;
+      }
       renderer.render(scene, camera);
       frame = window.requestAnimationFrame(animate);
     }
@@ -181,7 +194,7 @@ export function Canada3DMap({
       }
       renderer.dispose();
     };
-  }, [category, selectedProvince]);
+  }, [category]);
 
   return (
     <canvas

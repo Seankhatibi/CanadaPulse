@@ -7,20 +7,30 @@ export async function getDbLiveDataPayload() {
   }
 
   const prisma = getPrisma();
-  const sourceDatasets = await prisma.sourceDataset.findMany({
-    orderBy: [{ updateStatus: "asc" }, { label: "asc" }],
-    include: { indicatorMaps: { include: { indicator: true } } },
-  });
-  const latestRuns = await prisma.dataRefreshRun.findMany({
-    orderBy: { startedAt: "desc" },
-    take: 12,
-    include: { sourceDataset: true },
-  });
-  const releaseEvents = await prisma.releaseEvent.findMany({
-    orderBy: { releaseDate: "desc" },
-    take: 8,
-    include: { sourceDataset: true },
-  });
+  const [sourceDatasets, latestRuns, releaseEvents, releaseEventCount, successfulRunCount, failedRunCount, latestSuccessfulRun] = await Promise.all([
+    prisma.sourceDataset.findMany({
+      orderBy: [{ updateStatus: "asc" }, { label: "asc" }],
+      include: { indicatorMaps: { include: { indicator: true } } },
+    }),
+    prisma.dataRefreshRun.findMany({
+      orderBy: { startedAt: "desc" },
+      take: 12,
+      include: { sourceDataset: true },
+    }),
+    prisma.releaseEvent.findMany({
+      orderBy: { releaseDate: "desc" },
+      take: 8,
+      include: { sourceDataset: true },
+    }),
+    prisma.releaseEvent.count(),
+    prisma.dataRefreshRun.count({ where: { status: "SUCCESS" } }),
+    prisma.dataRefreshRun.count({ where: { status: "FAILED" } }),
+    prisma.dataRefreshRun.findFirst({
+      where: { status: "SUCCESS" },
+      orderBy: { finishedAt: "desc" },
+      select: { finishedAt: true },
+    }),
+  ]);
 
   const live = sourceDatasets.filter((source) => source.updateStatus === "LIVE").length;
   const linked = sourceDatasets.filter((source) => source.updateStatus === "SOURCE_LINKED").length;
@@ -30,6 +40,14 @@ export async function getDbLiveDataPayload() {
 
   return {
     source: "database",
+    archive: {
+      active: sourceDatasets.length > 0 && releaseEventCount > 0 && successfulRunCount > 0,
+      sourceDatasets: sourceDatasets.length,
+      releaseEvents: releaseEventCount,
+      successfulRuns: successfulRunCount,
+      failedRuns: failedRunCount,
+      latestSuccessfulRefresh: latestSuccessfulRun?.finishedAt?.toISOString() ?? null,
+    },
     summary: {
       live,
       linked,
