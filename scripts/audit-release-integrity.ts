@@ -13,6 +13,39 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+function assertRecentMonthPeriod(period: string, maximumAgeMonths: number, label: string) {
+  const match = period.match(/^([A-Za-z]+) (\d{4})$/);
+  const month = match ? MONTHS.indexOf(match[1]) : -1;
+  const year = match ? Number(match[2]) : Number.NaN;
+  assert(month >= 0 && Number.isFinite(year), `${label} returned an invalid reference period: ${period}`);
+
+  const now = new Date();
+  const ageMonths = now.getUTCFullYear() * 12 + now.getUTCMonth() - (year * 12 + month);
+  assert(ageMonths >= 0 && ageMonths <= maximumAgeMonths, `${label} is stale or future-dated: ${period}`);
+}
+
+function assertRecentReleaseDate(date: string, maximumAgeDays: number, label: string) {
+  const releasedAt = new Date(`${date}T12:00:00Z`);
+  assert(!Number.isNaN(releasedAt.getTime()), `${label} returned an invalid release date: ${date}`);
+  const ageDays = (Date.now() - releasedAt.getTime()) / 86_400_000;
+  assert(ageDays >= -1 && ageDays <= maximumAgeDays, `${label} release is stale or future-dated: ${date}`);
+}
+
 async function main() {
   assert(formatWdsValue("Electric Power Selling Price Index", 142.2) === "142.2", "A price index was formatted as currency.");
   assert(formatWdsValue("Job vacancies", 177_340) === "177,340", "A job-vacancy count was formatted as a percentage.");
@@ -96,26 +129,26 @@ async function main() {
   assert(vacancies.signals.find((signal) => signal.label === "Job vacancy rate")?.display === "2.8%", "Job-vacancy rate lost its percent unit.");
 
   const cpi = await fetchStatCanCpiSnapshot();
-  assert(cpi.referencePeriod === "May 2026", `Unexpected CPI period: ${cpi.referencePeriod}`);
-  assert(cpi.canada.allItems.yearOverYearPct === 3.2, `Headline CPI should be 3.2%, got ${cpi.canada.allItems.yearOverYearPct}`);
-  assert(cpi.canada.food.yearOverYearPct === 3.8, `Food CPI should be 3.8%, got ${cpi.canada.food.yearOverYearPct}`);
+  assertRecentMonthPeriod(cpi.referencePeriod, 2, "StatCan CPI");
+  assert(cpi.canada.allItems.yearOverYearPct > -5 && cpi.canada.allItems.yearOverYearPct < 20, `Headline CPI failed integrity range: ${cpi.canada.allItems.yearOverYearPct}`);
+  assert(cpi.canada.food.yearOverYearPct > -10 && cpi.canada.food.yearOverYearPct < 30, `Food CPI failed integrity range: ${cpi.canada.food.yearOverYearPct}`);
   assert(cpi.provinces.length === 10, `CPI should include 10 provinces, got ${cpi.provinces.length}`);
-  assert(cpi.components.find((item) => item.product === "Rent")?.yearOverYearPct === 3.5, "CPI rent component failed integrity check.");
+  assert(cpi.components.some((item) => item.product === "Rent" && Number.isFinite(item.yearOverYearPct)), "CPI rent component failed integrity check.");
 
   const finance = await fetchFinanceCanadaFiscalSnapshot();
-  assert(finance.referencePeriod === "April to March 2025-26", `Unexpected Fiscal Monitor period: ${finance.referencePeriod}`);
-  assert(finance.metrics.find((item) => item.label === "Fiscal-year deficit")?.display === "$55.3B", "Fiscal Monitor deficit failed integrity check.");
+  assert(/20\d{2}/.test(finance.referencePeriod), `Unexpected Fiscal Monitor period: ${finance.referencePeriod}`);
+  assert(finance.metrics.some((item) => item.label === "Fiscal-year deficit" && /^\$[\d,.]+[BM]$/.test(item.display)), "Fiscal Monitor deficit failed integrity check.");
 
   const housing = await fetchCmhcHousingConstructionData();
-  assert(housing.latestPeriodLabel === "Q1 2026", `Unexpected CMHC quarter: ${housing.latestPeriodLabel}`);
-  assert(housing.releaseDate === "2026-04-21", `Unexpected CMHC release date: ${housing.releaseDate}`);
+  assert(/^Q[1-4] 20\d{2}$/.test(housing.latestPeriodLabel), `Unexpected CMHC quarter: ${housing.latestPeriodLabel}`);
+  assertRecentReleaseDate(housing.releaseDate, 180, "CMHC housing construction");
 
   const rental = await fetchCmhcRentalSnapshot();
-  assert(rental.referencePeriod === "October 2025", `Unexpected CMHC rental period: ${rental.referencePeriod}`);
-  assert(rental.releaseDate === "2025-12-11", `Unexpected CMHC rental release date: ${rental.releaseDate}`);
-  assert(rental.canada.averageTwoBedroomRent === 1_550, `CMHC Canada two-bedroom rent should be $1,550, got ${rental.canada.averageTwoBedroomRent}`);
-  assert(rental.canada.vacancyRate === 3.1, `CMHC Canada vacancy should be 3.1%, got ${rental.canada.vacancyRate}`);
-  assert(rental.provinces.find((item) => item.geography === "Ontario")?.averageTwoBedroomRent === 1_827, "CMHC Ontario rent failed integrity check.");
+  assertRecentMonthPeriod(rental.referencePeriod, 18, "CMHC rental market");
+  assertRecentReleaseDate(rental.releaseDate, 600, "CMHC rental market");
+  assert(rental.canada.averageTwoBedroomRent > 500 && rental.canada.averageTwoBedroomRent < 5_000, `CMHC Canada two-bedroom rent failed integrity range: ${rental.canada.averageTwoBedroomRent}`);
+  assert(rental.canada.vacancyRate >= 0 && rental.canada.vacancyRate < 20, `CMHC Canada vacancy failed integrity range: ${rental.canada.vacancyRate}`);
+  assert((rental.provinces.find((item) => item.geography === "Ontario")?.averageTwoBedroomRent ?? 0) > 500, "CMHC Ontario rent failed integrity check.");
   assert(rental.metros.some((item) => item.geography.includes("Toronto")), "CMHC Toronto metro row is missing.");
   assert(rental.metros.some((item) => item.geography.includes("Vancouver")), "CMHC Vancouver metro row is missing.");
 

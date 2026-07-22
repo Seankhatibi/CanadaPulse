@@ -18,7 +18,7 @@ export function LatestReleaseHero({ release }: { release: NormalizedRelease }) {
             <span className="rounded-md bg-stone-100 px-2.5 py-1 text-stone-700">{release.publisher}</span>
             <span className="text-stone-500">{formatReleaseDate(release.releaseDate)}</span>
           </div>
-          <h1 className="mt-6 max-w-4xl text-4xl font-black leading-tight text-stone-950 sm:text-6xl">{release.title}</h1>
+          <h2 className="mt-6 max-w-4xl text-4xl font-black leading-tight text-stone-950 sm:text-6xl">{release.title}</h2>
           <p className="mt-5 max-w-3xl text-xl font-bold leading-8 text-stone-800">{intelligence.verdict}</p>
           {showSummary ? <p className="mt-4 max-w-3xl text-base leading-7 text-stone-600">{release.plainEnglishSummary}</p> : null}
 
