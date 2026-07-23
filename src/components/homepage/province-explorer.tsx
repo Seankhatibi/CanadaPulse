@@ -106,6 +106,8 @@ export function ProvinceExplorer({
   const salaryAtThirtyPercent = monthlyRent > 0 ? (monthlyRent * 12) / 0.3 : 0;
   const burdenWidth = Math.min(rentBurden, 60) / 60 * 100;
   const rentShareUrl = `/?province=${encodeURIComponent(selectedValue.slug)}&topic=rent&income=${income}`;
+  const compareProvince = selectedValue.slug === "alberta" ? "ontario" : "alberta";
+  const compareUrl = `/compare?left=${encodeURIComponent(selectedValue.slug)}&right=${compareProvince}&income=${income}`;
 
   function renderHeader() {
     return (
@@ -311,6 +313,9 @@ export function ProvinceExplorer({
             <div className="flex flex-col gap-2 sm:flex-row">
               <Link href={rentSignal.value.href} className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-white px-3 text-sm font-black text-stone-950 hover:bg-slate-200">
                 Open housing data <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+              <Link href={compareUrl} className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-cyan-300/40 bg-cyan-300/10 px-3 text-sm font-black text-cyan-200 hover:bg-cyan-300/20">
+                Compare this salary <ArrowRight className="size-4" aria-hidden="true" />
               </Link>
               <ShareStatButton
                 url={rentShareUrl}
