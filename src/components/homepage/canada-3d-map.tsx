@@ -4,9 +4,14 @@ import { useEffect, useRef } from "react";
 import canadaMap from "@svg-maps/canada";
 import * as THREE from "three";
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
-import type { ProvinceExplorerCategory } from "@/lib/province-explorer-data";
 
 type ProvinceMesh = THREE.Mesh<THREE.ExtrudeGeometry, THREE.MeshStandardMaterial>;
+type CanadaMapCategory = {
+  label: string;
+  lowColor: string;
+  highColor: string;
+  values: Array<{ slug: string; abbr: string; intensity: number }>;
+};
 
 export function Canada3DMap({
   category,
@@ -14,7 +19,7 @@ export function Canada3DMap({
   onSelect,
   onHover,
 }: {
-  category: ProvinceExplorerCategory;
+  category: CanadaMapCategory;
   selectedProvince: string;
   onSelect: (provinceSlug: string) => void;
   onHover: (provinceSlug: string | null) => void;

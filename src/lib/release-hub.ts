@@ -1242,11 +1242,49 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
   };
 }
 
-export const getMultiSourceReleaseHub = unstable_cache(
+const getCachedMultiSourceReleaseHub = unstable_cache(
   buildMultiSourceReleaseHub,
-  ["canada-pulse-release-hub-v4"],
-  { revalidate: 5 * 60, tags: ["canada-pulse-release-hub"] },
+  ["canada-pulse-release-hub-v5"],
+  { revalidate: 30 * 60, tags: ["canada-pulse-release-hub"] },
 );
+
+const lastVerifiedReleaseById = new Map<string, NormalizedRelease>();
+
+function retainLastVerifiedRelease(release: NormalizedRelease) {
+  if (release.status === "live" && hasStructuredMetrics(release) && !release.archiveFallback) {
+    lastVerifiedReleaseById.set(release.id, release);
+    return release;
+  }
+
+  const previous = lastVerifiedReleaseById.get(release.id);
+  if (!previous || !hasStructuredMetrics(previous)) return release;
+
+  return {
+    ...previous,
+    promoted: false,
+    archiveFallback: true,
+    headlineFacts: [
+      `The latest source check was unavailable. Canada Pulse is retaining the verified official release from ${previous.releaseDate}.`,
+      ...previous.headlineFacts,
+    ],
+    plainEnglishSummary: `Last verified official release (${previous.referencePeriod}). ${previous.plainEnglishSummary}`,
+  } satisfies NormalizedRelease;
+}
+
+export async function getMultiSourceReleaseHub() {
+  const hub = await getCachedMultiSourceReleaseHub();
+  const todayQueue = hub.todayQueue.map(retainLastVerifiedRelease);
+  const releaseById = new Map(todayQueue.map((release) => [release.id, release]));
+  const promotedRelease = hub.promotedRelease ? releaseById.get(hub.promotedRelease.id) ?? hub.promotedRelease : null;
+  const housingWatch = releaseById.get(hub.housingWatch.id) ?? retainLastVerifiedRelease(hub.housingWatch);
+
+  return {
+    ...hub,
+    todayQueue,
+    promotedRelease: promotedRelease?.archiveFallback ? null : promotedRelease,
+    housingWatch,
+  } satisfies ReleaseHubPayload;
+}
 
 export async function findHubRelease(source: string, slug: string, releaseDate?: string, sourceUrl?: string) {
   const hub = await getMultiSourceReleaseHub();
