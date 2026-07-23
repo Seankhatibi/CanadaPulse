@@ -7,10 +7,12 @@ export function ShareStatButton({
   text,
   title = "Share this stat",
   variant = "dark",
+  url,
 }: {
   text: string;
   title?: string;
   variant?: "dark" | "light";
+  url?: string;
 }) {
   const [result, setResult] = useState<"shared" | "copied" | null>(null);
 
@@ -21,12 +23,12 @@ export function ShareStatButton({
   }, [result]);
 
   async function share() {
-    const url = window.location.href;
+    const shareUrl = url ? new URL(url, window.location.href).toString() : window.location.href;
     const shareText = `${text}\n\nCanada Pulse`;
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Canada Pulse", text: shareText, url });
+        await navigator.share({ title: "Canada Pulse", text: shareText, url: shareUrl });
         setResult("shared");
       } catch {
         return;
@@ -35,7 +37,7 @@ export function ShareStatButton({
     }
 
     try {
-      await navigator.clipboard.writeText(`${shareText}: ${url}`);
+      await navigator.clipboard.writeText(`${shareText}: ${shareUrl}`);
       setResult("copied");
     } catch {
       return;

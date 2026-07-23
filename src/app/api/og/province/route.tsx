@@ -20,12 +20,25 @@ type CardState = {
   period: string;
   accent: string;
   bars: Array<{ abbr: string; height: number; selected: boolean }>;
+  scenario?: {
+    income: number;
+    burden: number;
+    afterRent: number;
+  };
 };
+
+function parseIncome(value: string | null) {
+  if (!value) return null;
+  const income = Number(value);
+  if (!Number.isFinite(income)) return null;
+  return Math.round(Math.min(200_000, Math.max(30_000, income)) / 1_000) * 1_000;
+}
 
 async function getCardState(request: Request): Promise<CardState | null> {
   const url = new URL(request.url);
   const provinceSlug = url.searchParams.get("province");
   const topic = url.searchParams.get("topic");
+  const income = parseIncome(url.searchParams.get("income"));
   if (!provinceSlug || !topic) return null;
 
   try {
@@ -33,6 +46,14 @@ async function getCardState(request: Request): Promise<CardState | null> {
     const category = data.categories.find((item) => item.id === topic);
     const value = category?.values.find((item) => item.slug === provinceSlug);
     if (!category || !value) return null;
+
+    const scenario = category.id === "rent" && income
+      ? {
+          income,
+          burden: (value.value / (income / 12)) * 100,
+          afterRent: (income / 12) - value.value,
+        }
+      : undefined;
 
     return {
       province: value.province,
@@ -46,6 +67,7 @@ async function getCardState(request: Request): Promise<CardState | null> {
       source: category.source,
       period: category.period,
       accent: category.highColor,
+      scenario,
       bars: category.values
         .slice()
         .sort((left, right) => left.rank - right.rank)
@@ -61,6 +83,14 @@ async function getCardState(request: Request): Promise<CardState | null> {
 }
 
 function SocialCard({ state }: { state: CardState | null }) {
+  const question = state?.scenario
+    ? `What does rent take from a $${Math.round(state.scenario.income / 1_000)}k salary?`
+    : state?.question;
+  const display = state?.scenario ? `${state.scenario.burden.toFixed(0)}%` : state?.display;
+  const note = state?.scenario
+    ? `${state.display}/month leaves $${Math.round(state.scenario.afterRent).toLocaleString("en-CA")} gross per month before tax and other costs.`
+    : state?.note;
+
   return (
     <div
       style={{
@@ -90,12 +120,12 @@ function SocialCard({ state }: { state: CardState | null }) {
           <div style={{ width: "57%", display: "flex", flexDirection: "column", justifyContent: "space-between", paddingRight: 46 }}>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div style={{ display: "flex", color: "#ff9ca2", fontSize: 19, fontWeight: 900, letterSpacing: 2.2 }}>{state.province.toUpperCase()} · {state.category.toUpperCase()}</div>
-              <div style={{ display: "flex", marginTop: 16, fontSize: 42, lineHeight: 1.08, fontWeight: 900 }}>{state.question}</div>
+              <div style={{ display: "flex", marginTop: 16, fontSize: 42, lineHeight: 1.08, fontWeight: 900 }}>{question}</div>
               <div style={{ display: "flex", alignItems: "flex-end", marginTop: 22 }}>
-                <div style={{ display: "flex", fontSize: 92, lineHeight: 0.9, fontWeight: 900, letterSpacing: -2 }}>{state.display}</div>
+                <div style={{ display: "flex", fontSize: 92, lineHeight: 0.9, fontWeight: 900, letterSpacing: -2 }}>{display}</div>
                 <div style={{ display: "flex", marginLeft: 22, paddingBottom: 7, color: state.accent, fontSize: 27, fontWeight: 900 }}>#{state.rank} of {state.rankOutOf}</div>
               </div>
-              <div style={{ display: "flex", marginTop: 18, color: "#cbd5e1", fontSize: 21, lineHeight: 1.35 }}>{state.note}</div>
+              <div style={{ display: "flex", marginTop: 18, color: "#cbd5e1", fontSize: 21, lineHeight: 1.35 }}>{note}</div>
             </div>
             <div style={{ display: "flex", color: "#71828c", fontSize: 16, fontWeight: 700 }}>{state.source} · {state.period}</div>
           </div>

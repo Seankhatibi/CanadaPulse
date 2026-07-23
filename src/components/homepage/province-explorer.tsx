@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, BriefcaseBusiness, Building2, CircleDollarSign, Home, Minus, Users } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, BriefcaseBusiness, Building2, CircleDollarSign, Home, Minus, WalletCards, Users } from "lucide-react";
 import { ShareStatButton } from "@/components/share-stat-button";
 import type { ProvinceExplorerCategoryId, ProvinceExplorerData } from "@/lib/province-explorer-data";
 
@@ -43,14 +43,22 @@ function checkedAt(value: string) {
   }).format(new Date(value));
 }
 
+const money = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
+
+function compactSalary(value: number) {
+  return `$${Math.round(value / 1_000)}k`;
+}
+
 export function ProvinceExplorer({
   data,
   initialCategory,
   initialProvince,
+  initialIncome = 60_000,
 }: {
   data: ProvinceExplorerData;
   initialCategory?: ProvinceExplorerCategoryId;
   initialProvince?: string;
+  initialIncome?: number;
 }) {
   const startingCategory = data.categories.find((item) => item.id === initialCategory) ?? data.categories[0];
   const startingProvince = (startingCategory?.values.some((value) => value.slug === initialProvince)
@@ -59,6 +67,7 @@ export function ProvinceExplorer({
   const [categoryId, setCategoryId] = useState<ProvinceExplorerCategoryId>(startingCategory?.id ?? "jobs");
   const [provinceSlug, setProvinceSlug] = useState(startingProvince);
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
+  const [income, setIncome] = useState(initialIncome);
   const category = data.categories.find((item) => item.id === categoryId) ?? data.categories[0];
 
   const selected = useMemo(() => {
@@ -75,8 +84,9 @@ export function ProvinceExplorer({
     const url = new URL(window.location.href);
     url.searchParams.set("province", selected.slug);
     url.searchParams.set("topic", category.id);
+    url.searchParams.set("income", String(income));
     window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
-  }, [category, selected]);
+  }, [category, income, selected]);
 
   if (!category || !selected || !visible) return null;
 
@@ -88,6 +98,14 @@ export function ProvinceExplorer({
     return value ? [{ category: item, value }] : [];
   });
   const youthSignals = selectedProvinceValues.filter(({ category: item }) => youthSignalLabels[item.id]);
+  const rentSignal = selectedProvinceValues.find(({ category: item }) => item.id === "rent");
+  const monthlyIncome = income / 12;
+  const monthlyRent = rentSignal?.value.value ?? 0;
+  const rentBurden = monthlyRent > 0 ? (monthlyRent / monthlyIncome) * 100 : 0;
+  const incomeAfterRent = monthlyIncome - monthlyRent;
+  const salaryAtThirtyPercent = monthlyRent > 0 ? (monthlyRent * 12) / 0.3 : 0;
+  const burdenWidth = Math.min(rentBurden, 60) / 60 * 100;
+  const rentShareUrl = `/?province=${encodeURIComponent(selectedValue.slug)}&topic=rent&income=${income}`;
 
   function renderHeader() {
     return (
@@ -187,7 +205,7 @@ export function ProvinceExplorer({
   }
 
   return (
-    <section className="-mx-3 overflow-hidden bg-[#071315] text-white sm:-mx-6" aria-label="Province explorer" data-selected-province={selectedValue.slug} data-selected-topic={category.id}>
+    <section className="-mx-3 overflow-hidden bg-[#071315] text-white sm:-mx-6" aria-label="Province explorer" data-selected-province={selectedValue.slug} data-selected-topic={category.id} data-income={income}>
       <div className="lg:grid lg:grid-cols-[0.72fr_1.28fr]">
         <div className="hidden min-h-[760px] border-r border-white/10 lg:block">
           {renderHeader()}
@@ -231,6 +249,77 @@ export function ProvinceExplorer({
           );
         })}
       </div>
+
+      {rentSignal ? (
+        <div className="border-t border-white/10 bg-[#0b1b1e] px-4 py-7 sm:px-8 sm:py-9 lg:px-10" aria-label={`${selectedValue.province} rent burden calculator`}>
+          <div className="grid gap-7 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-amber-300">
+                <WalletCards className="size-4" aria-hidden="true" />
+                Young renter math
+              </div>
+              <h2 className="mt-3 max-w-xl text-2xl font-black leading-tight sm:text-3xl">What does rent take from a {compactSalary(income)} salary in {selectedValue.province}?</h2>
+              <div className="mt-5 flex items-end justify-between gap-4">
+                <label htmlFor="annual-income" className="text-sm font-bold text-slate-300">Annual gross income</label>
+                <output htmlFor="annual-income" className="font-mono text-2xl font-black text-white">{money.format(income)}</output>
+              </div>
+              <input
+                id="annual-income"
+                type="range"
+                min="30000"
+                max="200000"
+                step="5000"
+                value={income}
+                onInput={(event) => setIncome(Number(event.currentTarget.value))}
+                className="mt-3 h-8 w-full cursor-pointer accent-red-500"
+                aria-describedby="income-assumption"
+              />
+              <div className="flex justify-between font-mono text-[11px] font-bold text-slate-500"><span>$30k</span><span>$200k</span></div>
+            </div>
+
+            <div>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">Gross income spent on rent</p>
+                  <p className={`mt-1 font-mono text-5xl font-black ${rentBurden > 40 ? "text-red-300" : rentBurden > 30 ? "text-amber-300" : "text-emerald-300"}`}>{rentBurden.toFixed(0)}%</p>
+                </div>
+                <p className="font-mono text-sm font-black text-slate-300">{rentSignal.value.display}/month</p>
+              </div>
+              <div className="relative mt-4 h-3 overflow-hidden rounded-full bg-white/10">
+                <div className={`h-full rounded-full ${rentBurden > 40 ? "bg-red-500" : rentBurden > 30 ? "bg-amber-400" : "bg-emerald-400"}`} style={{ width: `${burdenWidth}%` }} />
+                <div className="absolute inset-y-0 left-1/2 w-0.5 bg-white" title="30% affordability line" />
+              </div>
+              <div className="mt-2 flex justify-between text-[11px] font-bold text-slate-500"><span>0%</span><span className="text-white">30% line</span><span>60%+</span></div>
+              <div className="mt-5 grid grid-cols-2 gap-4 border-y border-white/10 py-4">
+                <div>
+                  <p className="text-[11px] font-bold text-slate-400">Gross monthly income left</p>
+                  <p className="mt-1 font-mono text-xl font-black text-white">{money.format(incomeAfterRent)}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-bold text-slate-400">Salary for rent at 30%</p>
+                  <p className="mt-1 font-mono text-xl font-black text-white">{money.format(salaryAtThirtyPercent)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-4 border-t border-white/10 pt-5 sm:flex-row sm:items-end sm:justify-between">
+            <div className="max-w-3xl">
+              <p id="income-assumption" className="text-xs leading-5 text-slate-400">Uses CMHC average two-bedroom purpose-built rent. Gross-income scenario; excludes tax and all other expenses.</p>
+              <p className="mt-1 text-[11px] font-semibold text-slate-500">{rentSignal.category.source} | {rentSignal.category.period}</p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Link href={rentSignal.value.href} className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-white px-3 text-sm font-black text-stone-950 hover:bg-slate-200">
+                Open housing data <ArrowRight className="size-4" aria-hidden="true" />
+              </Link>
+              <ShareStatButton
+                url={rentShareUrl}
+                text={`${selectedValue.province}: average two-bedroom rent takes ${rentBurden.toFixed(0)}% of gross monthly income on a ${compactSalary(income)} salary, leaving ${money.format(incomeAfterRent)} before tax and other costs.`}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

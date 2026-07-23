@@ -15,7 +15,9 @@ import { getMultiSourceReleaseHub } from "@/lib/release-hub";
 
 export const dynamic = "force-dynamic";
 
-type HomeSearchParams = Promise<{ province?: string | string[]; topic?: string | string[] }>;
+type HomeSearchParams = Promise<{ province?: string | string[]; topic?: string | string[]; income?: string | string[] }>;
+
+const DEFAULT_INCOME = 60_000;
 
 const getHomepageData = cache(async () => {
   const releaseHub = await getMultiSourceReleaseHub();
@@ -29,6 +31,12 @@ const getHomepageData = cache(async () => {
 
 function firstParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+function parseIncome(value?: string) {
+  const income = Number(value);
+  if (!Number.isFinite(income)) return DEFAULT_INCOME;
+  return Math.round(Math.min(200_000, Math.max(30_000, income)) / 1_000) * 1_000;
 }
 
 function resolveExplorerState(data: ProvinceExplorerData, query: Awaited<HomeSearchParams>) {
@@ -51,6 +59,7 @@ export async function generateMetadata({ searchParams }: { searchParams: HomeSea
   const query = await searchParams;
   const requestedProvince = firstParam(query.province);
   const requestedTopic = firstParam(query.topic);
+  const income = parseIncome(firstParam(query.income));
   const genericImage = "/api/og/province";
 
   if (!requestedProvince || !requestedTopic || !provinces.some((province) => province.slug === requestedProvince)) {
@@ -78,10 +87,17 @@ export async function generateMetadata({ searchParams }: { searchParams: HomeSea
     return { title: "Canada Pulse | Canadian Economic Intelligence" };
   }
 
-  const title = `${state.provinceData.province}: ${state.provinceData.display} ${state.categoryData.label.toLowerCase()}`;
-  const description = `${state.provinceData.province} ranks #${state.provinceData.rank} of ${state.provinceData.rankOutOf} for ${state.categoryData.label.toLowerCase()}. ${state.provinceData.note}`;
-  const canonical = `/?province=${encodeURIComponent(state.provinceData.slug)}&topic=${encodeURIComponent(state.categoryData.id)}`;
-  const image = `/api/og/province?province=${encodeURIComponent(state.provinceData.slug)}&topic=${encodeURIComponent(state.categoryData.id)}`;
+  const rentBurden = state.categoryData.id === "rent"
+    ? (state.provinceData.value / (income / 12)) * 100
+    : null;
+  const title = rentBurden === null
+    ? `${state.provinceData.province}: ${state.provinceData.display} ${state.categoryData.label.toLowerCase()}`
+    : `${state.provinceData.province}: ${rentBurden.toFixed(0)}% of a $${Math.round(income / 1_000)}k salary goes to rent`;
+  const description = rentBurden === null
+    ? `${state.provinceData.province} ranks #${state.provinceData.rank} of ${state.provinceData.rankOutOf} for ${state.categoryData.label.toLowerCase()}. ${state.provinceData.note}`
+    : `CMHC average two-bedroom rent is ${state.provinceData.display} a month, or ${rentBurden.toFixed(1)}% of gross monthly income on a $${income.toLocaleString("en-CA")} salary.`;
+  const canonical = `/?province=${encodeURIComponent(state.provinceData.slug)}&topic=${encodeURIComponent(state.categoryData.id)}&income=${income}`;
+  const image = `/api/og/province?province=${encodeURIComponent(state.provinceData.slug)}&topic=${encodeURIComponent(state.categoryData.id)}&income=${income}`;
 
   return {
     title,
@@ -104,6 +120,7 @@ export default async function Home({ searchParams }: { searchParams: HomeSearchP
   const query = await searchParams;
   const { releaseHub, feed, weekly, provinceExplorer } = await getHomepageData();
   const state = resolveExplorerState(provinceExplorer, query);
+  const income = parseIncome(firstParam(query.income));
 
   return (
     <AppShell variant="light">
@@ -111,6 +128,7 @@ export default async function Home({ searchParams }: { searchParams: HomeSearchP
         data={provinceExplorer}
         initialCategory={state.category as ProvinceExplorerCategoryId | undefined}
         initialProvince={state.province}
+        initialIncome={income}
       />
       {releaseHub.promotedRelease ? (
         <div className="py-6 sm:py-10">
