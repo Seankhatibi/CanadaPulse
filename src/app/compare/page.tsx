@@ -1,13 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Database } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { CompareProvincePicker } from "@/components/compare-province-picker";
+import { YouthProvinceBattle } from "@/components/youth-province-battle";
 import { provinces } from "@/lib/province-directory";
+import { buildProvinceExplorerData } from "@/lib/province-explorer-data";
 import { getProvinceResearchBrief } from "@/lib/province-research";
 import { parseComparableProvinceValue } from "@/lib/province-values";
 import { formatReferencePeriod, formatReleaseDate } from "@/lib/release-format";
+import { getMultiSourceReleaseHub } from "@/lib/release-hub";
 
 export const dynamic = "force-dynamic";
+
+type CompareSearchParams = Promise<{ left?: string; right?: string; income?: string }>;
 
 function validProvince(slug: string | undefined, fallback: string) {
   return provinces.some((province) => province.slug === slug) ? slug as string : fallback;
@@ -17,11 +22,56 @@ function numericValue(value: string) {
   return parseComparableProvinceValue(value) ?? 0;
 }
 
-export default async function ComparePage({ searchParams }: { searchParams?: Promise<{ left?: string; right?: string }> }) {
+function validIncome(value: string | undefined) {
+  const income = Number(value);
+  if (!Number.isFinite(income)) return 60_000;
+  return Math.round(Math.min(200_000, Math.max(30_000, income)) / 5_000) * 5_000;
+}
+
+function pairFromQuery(query: Awaited<CompareSearchParams> | undefined, eligibleSlugs: string[]) {
+  const fallbackLeft = eligibleSlugs.includes("ontario") ? "ontario" : eligibleSlugs[0] ?? "ontario";
+  const fallbackRight = eligibleSlugs.includes("alberta") ? "alberta" : eligibleSlugs.find((slug) => slug !== fallbackLeft) ?? fallbackLeft;
+  const left = query?.left && eligibleSlugs.includes(query.left) ? query.left : fallbackLeft;
+  const requestedRight = query?.right && eligibleSlugs.includes(query.right) ? query.right : fallbackRight;
+  const right = requestedRight === left ? eligibleSlugs.find((slug) => slug !== left) ?? requestedRight : requestedRight;
+  return { left, right };
+}
+
+export async function generateMetadata({ searchParams }: { searchParams: CompareSearchParams }): Promise<Metadata> {
   const query = await searchParams;
-  const leftSlug = validProvince(query?.left, "ontario");
-  const proposedRight = validProvince(query?.right, "alberta");
-  const rightSlug = proposedRight === leftSlug ? (leftSlug === "alberta" ? "ontario" : "alberta") : proposedRight;
+  const explorerData = buildProvinceExplorerData(await getMultiSourceReleaseHub());
+  const rent = explorerData.categories.find((category) => category.id === "rent");
+  const pair = pairFromQuery(query, rent?.values.map((value) => value.slug) ?? []);
+  const left = rent?.values.find((value) => value.slug === pair.left);
+  const right = rent?.values.find((value) => value.slug === pair.right);
+  const income = validIncome(query?.income);
+  const salary = `$${Math.round(income / 1_000)}k`;
+  const title = `${left?.province ?? "Province"} vs ${right?.province ?? "province"}: where does a ${salary} salary go further?`;
+  const annualGap = left && right ? Math.abs(left.value - right.value) * 12 : 0;
+  const description = left && right
+    ? `The latest CMHC average two-bedroom rents differ by $${annualGap.toLocaleString("en-CA")} per year. Compare rent burden, jobs, inflation and housing supply from official releases.`
+    : "Compare rent burden, jobs, inflation and housing supply across Canadian provinces using official releases.";
+  const canonical = `/compare?left=${encodeURIComponent(pair.left)}&right=${encodeURIComponent(pair.right)}&income=${income}`;
+  const image = `/api/og/compare?left=${encodeURIComponent(pair.left)}&right=${encodeURIComponent(pair.right)}&income=${income}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: { title, description, url: canonical, siteName: "Canada Pulse", locale: "en_CA", type: "website", images: [{ url: image, width: 1200, height: 630, alt: `${left?.province ?? "Province"} and ${right?.province ?? "province"} affordability comparison` }] },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
+  };
+}
+
+export default async function ComparePage({ searchParams }: { searchParams?: CompareSearchParams }) {
+  const query = await searchParams;
+  const income = validIncome(query?.income);
+  const releaseHub = await getMultiSourceReleaseHub();
+  const explorerData = buildProvinceExplorerData(releaseHub);
+  const eligibleSlugs = explorerData.categories.find((category) => category.id === "rent")?.values.map((value) => value.slug) ?? [];
+  const pair = pairFromQuery(query, eligibleSlugs);
+  const leftSlug = validProvince(pair.left, "ontario");
+  const rightSlug = validProvince(pair.right, "alberta");
   const [left, right] = await Promise.all([
     getProvinceResearchBrief(leftSlug, "overview"),
     getProvinceResearchBrief(rightSlug, "overview"),
@@ -36,14 +86,9 @@ export default async function ComparePage({ searchParams }: { searchParams?: Pro
   return (
     <AppShell variant="light">
       <div className="space-y-8">
-        <section className="border-b border-stone-300 pb-8">
-          <div className="flex flex-wrap gap-2 text-xs font-black uppercase tracking-[0.13em]"><span className="rounded-md bg-red-700 px-2.5 py-1 text-white">Province comparison</span><span className="rounded-md bg-emerald-50 px-2.5 py-1 text-emerald-800">Official shared tables</span></div>
-          <h1 className="mt-5 text-4xl font-black text-stone-950 sm:text-6xl">{left.province.name} vs {right.province.name}</h1>
-          <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-600">Compare only the indicators where the same official release contains a verified row for both provinces.</p>
-          <div className="mt-6"><CompareProvincePicker left={leftSlug} right={rightSlug} /></div>
-        </section>
+        <YouthProvinceBattle data={explorerData} initialLeft={leftSlug} initialRight={rightSlug} initialIncome={income} />
 
-        <section>
+        <section id="official-comparison" className="scroll-mt-24">
           <p className="text-xs font-black uppercase tracking-[0.15em] text-red-700">Like-for-like evidence</p>
           <h2 className="mt-2 text-3xl font-black text-stone-950">What the same tables show</h2>
           <div className="mt-5 grid gap-4">
