@@ -49,6 +49,7 @@ function assertRecentReleaseDate(date: string, maximumAgeDays: number, label: st
 async function main() {
   assert(formatWdsValue("Electric Power Selling Price Index", 142.2) === "142.2", "A price index was formatted as currency.");
   assert(formatWdsValue("Job vacancies", 177_340) === "177,340", "A job-vacancy count was formatted as a percentage.");
+  assert(formatWdsValue("Seasonally adjusted at annual rates, chained (2017) dollars", 2_369_309, 6) === "$2.37T", "GDP dollars were mistaken for a percentage or lost trillion scaling.");
   const peerCheck = buildProvincePeerRows([
     { province: "Ontario", value: "$4.6B", note: "", score: 10 },
     { province: "Alberta", value: "$1.6B", note: "", score: 90 },
@@ -121,6 +122,14 @@ async function main() {
   assert(allIndustries?.display === "$2.35T", `GDP level should preserve millions-of-dollars scaling, got ${allIndustries?.display}`);
   assert(allIndustries.previous === null, `GDP monthly percent change was mistaken for a previous level: ${allIndustries.previous}`);
   assert(allIndustries.changeDisplay === "+1.1%", `GDP annual change should retain percent units, got ${allIndustries.changeDisplay}`);
+
+  const quarterlyGdpEntry = await fetchStatCanDailyEntryFromUrl("https://www150.statcan.gc.ca/n1/daily-quotidien/260828/dq260828a-eng.htm");
+  assert(quarterlyGdpEntry, "Quarterly GDP release was not fetched.");
+  const quarterlyGdp = await normalizeStatCanDailyRelease(quarterlyGdpEntry);
+  assert(quarterlyGdp.referencePeriod === "Second quarter 2026", `Quarterly GDP selected a stale reference period: ${quarterlyGdp.referencePeriod}`);
+  const quarterlyGdpPoints = quarterlyGdp.chartPayloads.flatMap((chart) => chart.points);
+  assert(quarterlyGdpPoints.some((point) => point.label === "GDP" && point.display === "0.8%"), "Quarterly GDP growth was not retained beside the detailed table values.");
+  assert(quarterlyGdpPoints.some((point) => point.label === "Compensation of employees" && point.display === "$1.69T"), "Quarterly GDP income values lost official scale or period selection.");
 
   const vacanciesEntry = await fetchStatCanDailyEntryFromUrl("https://www150.statcan.gc.ca/n1/daily-quotidien/260616/dq260616b-eng.htm");
   assert(vacanciesEntry, "Job vacancies release was not fetched.");

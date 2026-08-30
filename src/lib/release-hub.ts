@@ -236,7 +236,10 @@ async function mapWithConcurrency<T, R>(items: T[], concurrency: number, mapper:
 export async function normalizeStatCanDailyRelease(entry: StatCanDailyEntry, promotedHref?: string): Promise<NormalizedRelease> {
   const releaseData = await fetchStatCanReleaseDataReliably(entry);
   const summarySignals = buildReleaseExplainer(entry).signals.filter((signal) => signal.label !== "Release detected");
-  const releaseSignals = releaseData?.signals.length ? releaseData.signals : summarySignals;
+  const tableSignals = releaseData?.signals ?? [];
+  const tableLabels = new Set(tableSignals.map((signal) => signal.label.toLowerCase()));
+  const supplementalSummarySignals = summarySignals.filter((signal) => !tableLabels.has(signal.label.toLowerCase()));
+  const releaseSignals = tableSignals.length ? [...supplementalSummarySignals, ...tableSignals] : summarySignals;
   const areas = classifyStatCanAreas(entry);
   const slug = slugify(entry.title);
   const chartPayloads: ReleaseChartPayload[] = releaseSignals.length
@@ -1244,7 +1247,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
 
 const getCachedMultiSourceReleaseHub = unstable_cache(
   buildMultiSourceReleaseHub,
-  ["canada-pulse-release-hub-v6"],
+  ["canada-pulse-release-hub-v7"],
   { revalidate: 30 * 60, tags: ["canada-pulse-release-hub"] },
 );
 

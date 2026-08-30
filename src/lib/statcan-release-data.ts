@@ -136,12 +136,41 @@ function tableIdToProductId(tableId: string) {
 }
 
 function isSimplePeriod(label: string) {
-  return /(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan\.?|Feb\.?|Mar\.?|Apr\.?|Jun\.?|Jul\.?|Aug\.?|Sep\.?|Sept\.?|Oct\.?|Nov\.?|Dec\.?)\s+\d{4}/i.test(label) &&
+  return /(?:(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan\.?|Feb\.?|Mar\.?|Apr\.?|Jun\.?|Jul\.?|Aug\.?|Sep\.?|Sept\.?|Oct\.?|Nov\.?|Dec\.?)\s+\d{4}|(?:first|second|third|fourth) quarter\s+\d{4}|Q[1-4]\s+\d{4}|^\d{4}$)/i.test(label) &&
     !/\bto\b|standard error|change|%/i.test(label);
 }
 
 function cleanPeriodLabel(value: string) {
   return value.replace(/\{[a-z]+\}/gi, "").replace(/\s+/g, " ").trim();
+}
+
+function humanizeReferencePeriod(value: string) {
+  const isoMonth = value.match(/^(\d{4})-(\d{2})-(?:01|\d{2})$/);
+  if (!isoMonth) return cleanPeriodLabel(value);
+  const date = new Date(Date.UTC(Number(isoMonth[1]), Number(isoMonth[2]) - 1, 1));
+  return new Intl.DateTimeFormat("en-CA", { month: "long", year: "numeric", timeZone: "UTC" }).format(date);
+}
+
+function expectedReleasePeriod(title: string) {
+  const quarter = title.match(/\b(first|second|third|fourth) quarter\s+(20\d{2})\b/i);
+  if (quarter) return `${quarter[1]} quarter ${quarter[2]}`.toLowerCase();
+  const shortQuarter = title.match(/\b(Q[1-4])\s+(20\d{2})\b/i);
+  if (shortQuarter) return `${shortQuarter[1]} ${shortQuarter[2]}`.toLowerCase();
+  const month = title.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(20\d{2})\b/i);
+  if (month) return `${month[1]} ${month[2]}`.toLowerCase();
+  return null;
+}
+
+function rankTablesForRelease(tables: StatCanReleaseTable[], entry: StatCanDailyEntry) {
+  const expected = expectedReleasePeriod(entry.title);
+  const releaseYear = entry.title.match(/\b(20\d{2})\b/)?.[1];
+  return [...tables].sort((a, b) => {
+    const score = (table: StatCanReleaseTable) => {
+      const period = table.latestPeriod.toLowerCase();
+      return (expected && period === expected ? 100 : 0) + (releaseYear && period.includes(releaseYear) ? 20 : 0);
+    };
+    return score(b) - score(a);
+  });
 }
 
 function formatCompactNumber(value: number) {
@@ -198,6 +227,9 @@ function formatTableChange(label: string, change: number | null, unit?: string) 
   if (/rate/i.test(label) && /except rates?/.test(normalizedUnit)) return `${sign}${absolute.toFixed(1)} pts`;
   if (/percentage point/.test(normalizedUnit)) return `${sign}${absolute.toFixed(1)} pts`;
   if (/%|percent/.test(normalizedUnit)) return `${sign}${absolute.toFixed(1)}%`;
+  if (/millions? of dollars?/.test(normalizedUnit)) return `${sign}${formatDollarScale(absolute, 1_000_000)}`;
+  if (/thousands? of dollars?/.test(normalizedUnit)) return `${sign}${formatDollarScale(absolute, 1_000)}`;
+  if (/dollars?/.test(normalizedUnit)) return `${sign}${formatDollarScale(absolute, 1)}`;
   if (/thousands?/.test(normalizedUnit)) return `${sign}${formatCompactNumber(change)}`;
   if (Number.isInteger(absolute) && absolute >= 1_000) return `${sign}${absolute.toLocaleString("en-CA")}`;
   return formatChangeDisplay(label, change);
@@ -286,12 +318,14 @@ function rankedMembers(dimension: WdsDimension) {
 
 export function formatWdsValue(label: string, value: number, scalarFactorCode = 0) {
   const scaled = value * 10 ** scalarFactorCode;
-  if (/rate|percent|percentage|index/i.test(label)) return `${value.toFixed(1)}${/rate|percent|percentage/i.test(label) ? "%" : ""}`;
-  if (/value|price|sales|income|revenue|permit/i.test(label)) {
+  if (/dollars?|value|price|sales|income|revenue|permit/i.test(label) && !/price index/i.test(label)) {
+    if (Math.abs(scaled) >= 1_000_000_000_000) return `$${(scaled / 1_000_000_000_000).toFixed(2)}T`;
     if (Math.abs(scaled) >= 1_000_000_000) return `$${(scaled / 1_000_000_000).toFixed(1)}B`;
     if (Math.abs(scaled) >= 1_000_000) return `$${(scaled / 1_000_000).toFixed(1)}M`;
     return `$${scaled.toLocaleString("en-CA", { maximumFractionDigits: 1 })}`;
   }
+  const isRate = /\b(?:unemployment|employment|participation|vacancy|interest|policy|tax|growth) rate\b|\bpercent(?:age)?\b/i.test(label);
+  if (isRate || /\bindex\b/i.test(label)) return `${value.toFixed(1)}${isRate ? "%" : ""}`;
   return scaled.toLocaleString("en-CA", { maximumFractionDigits: 1 });
 }
 
@@ -362,11 +396,11 @@ async function fetchWdsTableSnapshot(productId: string): Promise<StatCanReleaseT
       latest: latestValue,
       previous: previousValue,
       change: previousValue === null ? null : Number((latestValue - previousValue).toFixed(2)),
-      changePeriod: previous ? `${previous.refPer} to ${latest.refPer}` : latest.refPer,
+      changePeriod: previous ? `${humanizeReferencePeriod(previous.refPer)} to ${humanizeReferencePeriod(latest.refPer)}` : humanizeReferencePeriod(latest.refPer),
       display: formatWdsValue(displayLabel, latest.value, latest.scalarFactorCode),
       previousDisplay: previous ? formatWdsValue(displayLabel, previous.value, previous.scalarFactorCode) : undefined,
-      latestPeriod: latest.refPer,
-      previousPeriod: previous?.refPer ?? latest.refPer,
+      latestPeriod: humanizeReferencePeriod(latest.refPer),
+      previousPeriod: humanizeReferencePeriod(previous?.refPer ?? latest.refPer),
     }];
   });
   if (!rows.length) return null;
@@ -424,7 +458,7 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
   const changePeriod = changeColumnIndex >= 0 ? periods[changeColumnIndex] : `${previousPeriod} to ${latestPeriod}`;
   const latestUnit = hasUnitRow ? units[latestValueIndex] : undefined;
   const previousUnit = hasUnitRow ? units[previousValueIndex] : undefined;
-  const changeUnit = hasUnitRow && changeColumnIndex >= 0 ? units[changeColumnIndex] : undefined;
+  const changeUnit = hasUnitRow ? (changeColumnIndex >= 0 ? units[changeColumnIndex] : latestUnit) : undefined;
 
   let currentGroup: string | undefined;
   const rows = parsed
@@ -494,11 +528,25 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
   };
 }
 
-function signalsFromTables(tables: StatCanReleaseTable[]): ReleaseSignal[] {
+function signalPriority(releaseTitle: string, label: string) {
+  const patterns = /labour force survey/i.test(releaseTitle)
+    ? [/^employment$/i, /^unemployment rate$/i, /^participation rate$/i, /^employment rate$/i, /^unemployment$/i, /full-time employment/i, /part-time employment/i, /labour force/i]
+    : /gross domestic product by industry/i.test(releaseTitle)
+      ? [/^all industries$/i, /goods-producing/i, /services-producing/i]
+      : /gross domestic product|gdp/i.test(releaseTitle)
+        ? [/gross domestic product at market prices|^gdp$/i, /compensation of employees/i, /gross operating surplus/i, /gross mixed income/i, /household/i, /exports/i, /imports/i]
+        : [];
+  const index = patterns.findIndex((pattern) => pattern.test(label));
+  return index === -1 ? patterns.length + 1 : index;
+}
+
+function signalsFromTables(tables: StatCanReleaseTable[], releaseTitle: string): ReleaseSignal[] {
   const rows = tables[0]?.rows ?? [];
   const nationalRows = rows.filter((row) => row.group === "Canada");
   const candidates = nationalRows.length ? nationalRows : rows;
-  const signalRows = candidates.filter((row, index) => candidates.findIndex((candidate) => candidate.label === row.label) === index);
+  const signalRows = candidates
+    .filter((row, index) => candidates.findIndex((candidate) => candidate.label === row.label) === index)
+    .sort((a, b) => signalPriority(releaseTitle, a.label) - signalPriority(releaseTitle, b.label));
   const latestPeriod = tables[0]?.latestPeriod ?? "latest period";
 
   return signalRows.slice(0, 8).map((row) => {
@@ -544,7 +592,7 @@ export async function fetchStatCanReleaseData(entry: StatCanDailyEntry): Promise
 
   const tables = (
     await Promise.all(
-      tableLinks.slice(0, 3).map(async (link) => {
+      tableLinks.slice(0, 6).map(async (link) => {
         const response = await fetch(link.csvUrl, {
           headers: { "User-Agent": "Canada Pulse StatCan table importer" },
           next: { revalidate: 60 * 60, tags: ["canada-pulse-statcan"] },
@@ -558,10 +606,10 @@ export async function fetchStatCanReleaseData(entry: StatCanDailyEntry): Promise
 
   const wdsTables = tables.length ? [] : (await Promise.all(tableIds.slice(0, 2).map((tableId) => fetchWdsTableSnapshot(tableIdToProductId(tableId)).catch(() => null))))
     .filter((table): table is StatCanReleaseTable => Boolean(table));
-  const allTables = [...tables, ...wdsTables];
+  const allTables = rankTablesForRelease([...tables, ...wdsTables], entry);
   const mergedTableIds = [...new Set([...tableIds, ...allTables.flatMap((table) => table.sourceTableIds)])];
   const wdsDownloads = await fetchWdsDownloads(mergedTableIds);
-  const signals = signalsFromTables(allTables);
+  const signals = signalsFromTables(allTables, entry.title);
 
   return {
     releaseUrl,

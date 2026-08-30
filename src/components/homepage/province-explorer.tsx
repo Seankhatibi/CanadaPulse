@@ -54,11 +54,13 @@ export function ProvinceExplorer({
   initialCategory,
   initialProvince,
   initialIncome = 60_000,
+  secondaryHeading = false,
 }: {
   data: ProvinceExplorerData;
   initialCategory?: ProvinceExplorerCategoryId;
   initialProvince?: string;
   initialIncome?: number;
+  secondaryHeading?: boolean;
 }) {
   const startingCategory = data.categories.find((item) => item.id === initialCategory) ?? data.categories[0];
   const startingProvince = (startingCategory?.values.some((value) => value.slug === initialProvince)
@@ -117,7 +119,9 @@ export function ProvinceExplorer({
           Official province rows | checked {checkedAt(data.generatedAt)} ET
         </div>
         <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-red-300">Your Canada right now</p>
-        <h1 className="mt-2 text-4xl font-black leading-tight sm:text-5xl lg:text-5xl">Can you build a life in your province?</h1>
+        {secondaryHeading
+          ? <h2 className="mt-2 text-4xl font-black leading-tight sm:text-5xl lg:text-5xl">Can you build a life in your province?</h2>
+          : <h1 className="mt-2 text-4xl font-black leading-tight sm:text-5xl lg:text-5xl">Can you build a life in your province?</h1>}
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Work, rent, prices, new homes and population, compared with the same official yardstick across Canada.</p>
 
         <div className="mt-6 grid grid-cols-2 gap-2" aria-label="Map data category">
