@@ -103,9 +103,18 @@ export async function fetchFinanceCanadaFiscalSnapshot(): Promise<FinanceCanadaF
   const currentDeficit = Math.abs(balance[3]);
   const previousDeficit = Math.abs(balance[2]);
   const debtShare = Number(((Math.abs(debtCharges[3]) / revenues[3]) * 100).toFixed(1));
+  const deficitChange = currentDeficit - previousDeficit;
+  const deficitDirection = deficitChange > 0 ? "widened" : deficitChange < 0 ? "narrowed" : "was unchanged";
 
   const metrics: FiscalMetric[] = [
-    metric("Fiscal-year deficit", currentDeficit, previousDeficit, `The federal deficit widened by ${billions(currentDeficit - previousDeficit)} from the comparable prior fiscal year.`),
+    metric(
+      "Fiscal-year deficit",
+      currentDeficit,
+      previousDeficit,
+      deficitChange === 0
+        ? "The federal deficit was unchanged from the comparable prior fiscal year."
+        : `The federal deficit ${deficitDirection} by ${billions(deficitChange)} from the comparable prior fiscal year.`,
+    ),
     metric("Federal revenue", revenues[3], revenues[2], `Revenue increased by ${billions(revenues[3] - revenues[2])} year over year.`),
     metric("Program expenses", Math.abs(programExpenses[3]), Math.abs(programExpenses[2]), `Program expenses excluding actuarial losses increased by ${billions(Math.abs(programExpenses[3]) - Math.abs(programExpenses[2]))}.`),
     metric("Public debt charges", Math.abs(debtCharges[3]), Math.abs(debtCharges[2]), `Debt charges consumed ${debtShare}% of federal revenue in the period.`),
