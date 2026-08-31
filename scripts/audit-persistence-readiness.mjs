@@ -10,6 +10,8 @@ const bootstrap = read("scripts/bootstrap-production-db.ts");
 const cron = read("src/app/api/cron/refresh-data/route.ts");
 const importer = read("src/lib/etl/importers.ts");
 const releaseHub = read("src/lib/release-hub.ts");
+const dbLiveData = read("src/lib/db-live-data.ts");
+const productionVerification = read("scripts/verify-production-db.ts");
 const migrationsRoot = join(root, "prisma/migrations");
 const sourceCacheTags = [
   ["canada-pulse-statcan", "src/lib/etl/statcan-adapter.ts"],
@@ -39,11 +41,20 @@ if (bootstrap.includes("db:seed") || bootstrap.includes("prisma/seed")) {
 if (!cron.includes("!process.env.CRON_SECRET") && !cron.includes("!cronSecret")) {
   failures.push("Production cron does not fail closed when CRON_SECRET is absent.");
 }
-if (!cron.includes("status: ok ? 200 : 503")) failures.push("Production cron does not report unavailable persistence as a failed source check.");
+if (!cron.includes("const ok = coreSourcesReady && (!databaseConfigured || persistenceReady)")) {
+  failures.push("Production cron does not fail when a configured database stops persisting refreshes.");
+}
+if (!cron.includes("status: ok ? 200 : 503")) failures.push("Production cron does not return a failed HTTP status for an unhealthy refresh.");
 if (!importer.includes("shouldReplacePersistedRelease")) failures.push("Release imports do not protect stored structured evidence from downgrade.");
 if (!importer.includes("updateSourceDatasetCheckpoint")) failures.push("Source dataset checkpoints are not derived from the newest stored live release.");
 if (!importer.includes("!release.archiveFallback")) failures.push("Archived fallback releases are not excluded from fresh release writes.");
 if (!releaseHub.includes("!release.archiveFallback")) failures.push("Archived fallback releases are not excluded from homepage promotion.");
+if (!dbLiveData.includes("archiveFresh") || !dbLiveData.includes("96 * 60 * 60")) {
+  failures.push("Database health does not detect a stale release archive.");
+}
+if (!productionVerification.includes("No successful refresh run has completed in the last 96 hours.")) {
+  failures.push("Production database verification does not reject a stale refresh pipeline.");
+}
 for (const [tag, sourceFile] of sourceCacheTags) {
   if (!cron.includes(`"${tag}"`)) failures.push(`Production cron does not invalidate ${tag}.`);
   if (!read(sourceFile).includes(`"${tag}"`)) failures.push(`${sourceFile} is not attached to ${tag}.`);

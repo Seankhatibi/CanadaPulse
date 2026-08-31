@@ -57,10 +57,10 @@ export async function GET(request: Request) {
   ]);
   const statcanSummary = refreshSummary(statcanDaily);
   const multiSourceSummary = refreshSummary(multiSourceReleaseHub);
-  const coreSourcesReady = statcanDaily.status === "fulfilled" && multiSourceReleaseHub.status === "fulfilled";
-  const ok = coreSourcesReady;
   const databaseConfigured = Boolean(process.env.DATABASE_URL);
   const persistenceReady = databaseConfigured && statcanSummary.persisted && multiSourceSummary.persisted;
+  const coreSourcesReady = statcanDaily.status === "fulfilled" && multiSourceReleaseHub.status === "fulfilled";
+  const ok = coreSourcesReady && (!databaseConfigured || persistenceReady);
   const warnings = [
     ...(!databaseConfigured ? ["Durable release history is not configured; official sources were checked and caches refreshed in live-fetch mode."] : []),
     ...(databaseConfigured && !persistenceReady ? ["The source checks ran, but durable release persistence did not complete."] : []),

@@ -37,16 +37,21 @@ export async function getDbLiveDataPayload() {
   const pending = sourceDatasets.filter((source) =>
     ["IMPORT_PENDING", "NEEDS_SOURCE", "LICENSED_SOURCE_NEEDED"].includes(source.updateStatus),
   ).length;
+  const latestSuccessfulRefresh = latestSuccessfulRun?.finishedAt?.toISOString() ?? null;
+  const archiveFresh = latestSuccessfulRun?.finishedAt
+    ? Date.now() - latestSuccessfulRun.finishedAt.getTime() <= 96 * 60 * 60 * 1_000
+    : false;
 
   return {
     source: "database",
     archive: {
-      active: sourceDatasets.length > 0 && releaseEventCount > 0 && successfulRunCount > 0,
+      active: sourceDatasets.length > 0 && releaseEventCount > 0 && successfulRunCount > 0 && archiveFresh,
+      stale: successfulRunCount > 0 && !archiveFresh,
       sourceDatasets: sourceDatasets.length,
       releaseEvents: releaseEventCount,
       successfulRuns: successfulRunCount,
       failedRuns: failedRunCount,
-      latestSuccessfulRefresh: latestSuccessfulRun?.finishedAt?.toISOString() ?? null,
+      latestSuccessfulRefresh,
     },
     summary: {
       live,

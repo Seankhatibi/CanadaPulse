@@ -3,7 +3,7 @@ import { getPrisma } from "../src/lib/prisma";
 async function main() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required for production verification.");
   const prisma = getPrisma();
-  const [sourceDatasets, releaseEvents, successfulRuns, failedRuns, fallbackValues, latestRelease, latestRun] = await Promise.all([
+  const [sourceDatasets, releaseEvents, successfulRuns, failedRuns, fallbackValues, latestRelease, latestRun, latestSuccessfulRun] = await Promise.all([
     prisma.sourceDataset.count(),
     prisma.releaseEvent.count(),
     prisma.dataRefreshRun.count({ where: { status: "SUCCESS" } }),
@@ -11,6 +11,7 @@ async function main() {
     prisma.timeSeriesValue.count({ where: { dataStatus: "FALLBACK" } }),
     prisma.releaseEvent.findFirst({ orderBy: { releaseDate: "desc" } }),
     prisma.dataRefreshRun.findFirst({ orderBy: { startedAt: "desc" } }),
+    prisma.dataRefreshRun.findFirst({ where: { status: "SUCCESS" }, orderBy: { finishedAt: "desc" } }),
   ]);
 
   const failures: string[] = [];
@@ -19,6 +20,9 @@ async function main() {
   if (successfulRuns === 0) failures.push("No successful refresh run is recorded.");
   if (fallbackValues > 0) failures.push(`${fallbackValues} fallback time-series values exist in production.`);
   if (!latestRelease?.sourceUrl || !latestRelease.publisher) failures.push("Latest release is missing its official source trail.");
+  if (!latestSuccessfulRun?.finishedAt || Date.now() - latestSuccessfulRun.finishedAt.getTime() > 96 * 60 * 60 * 1_000) {
+    failures.push("No successful refresh run has completed in the last 96 hours.");
+  }
 
   const result = {
     ok: failures.length === 0,
