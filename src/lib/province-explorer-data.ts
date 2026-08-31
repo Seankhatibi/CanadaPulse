@@ -2,7 +2,7 @@ import { provinces } from "@/lib/province-directory";
 import { parseComparableProvinceValue, rankComparableProvinceValues } from "@/lib/province-values";
 import type { NormalizedRelease, ReleaseHubPayload } from "@/lib/release-hub";
 
-export type ProvinceExplorerCategoryId = "jobs" | "rent" | "prices" | "homes" | "newcomers";
+export type ProvinceExplorerCategoryId = "jobs" | "rent" | "vacancy" | "prices" | "homes" | "newcomers";
 
 export type ProvinceExplorerValue = {
   province: string;
@@ -42,6 +42,7 @@ export type ProvinceExplorerData = {
 type CategoryDefinition = Omit<ProvinceExplorerCategory, "source" | "period" | "releaseDate" | "releaseHref" | "values"> & {
   find: (release: NormalizedRelease) => boolean;
   href: (provinceSlug: string) => string;
+  rows?: (release: NormalizedRelease) => NormalizedRelease["provinceBreakdown"];
 };
 
 const definitions: CategoryDefinition[] = [
@@ -65,6 +66,26 @@ const definitions: CategoryDefinition[] = [
     lowColor: "#34d399",
     highColor: "#f59e0b",
     find: (release) => release.releaseType === "cmhc-rental-market",
+    href: (slug) => `/province/${slug}/housing`,
+  },
+  {
+    id: "vacancy",
+    label: "Vacancy",
+    question: "Where do renters have more choice?",
+    context: "Purpose-built rental vacancy rate from CMHC's latest Rental Market Survey. Lower vacancy usually signals a tighter market.",
+    highMeaning: "positive",
+    lowColor: "#ef4444",
+    highColor: "#10b981",
+    find: (release) => release.releaseType === "cmhc-rental-market",
+    rows: (release) => {
+      const chart = release.chartPayloads.find((item) => /vacancy rate by province/i.test(item.title));
+      return chart?.points.map((point) => ({
+        province: point.label,
+        value: point.display,
+        note: point.plainEnglish,
+        score: Math.round(point.value * 10),
+      })) ?? [];
+    },
     href: (slug) => `/province/${slug}/housing`,
   },
   {
@@ -109,7 +130,7 @@ function directionFromNote(note: string): ProvinceExplorerValue["direction"] {
 }
 
 function buildCategory(definition: CategoryDefinition, release: NormalizedRelease): ProvinceExplorerCategory | null {
-  const ranked = rankComparableProvinceValues(release.provinceBreakdown);
+  const ranked = rankComparableProvinceValues(definition.rows?.(release) ?? release.provinceBreakdown);
   if (ranked.length < 4) return null;
 
   const values = ranked.map((row) => row.comparableValue);

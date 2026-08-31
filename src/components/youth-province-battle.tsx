@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, BriefcaseBusiness, Building2, CircleDollarSign, Home, Shuffle, Users, WalletCards } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, Building2, CircleDollarSign, DoorOpen, Home, Shuffle, Users, WalletCards } from "lucide-react";
 import { ShareStatButton } from "@/components/share-stat-button";
 import type { ProvinceExplorerCategory, ProvinceExplorerCategoryId, ProvinceExplorerData, ProvinceExplorerValue } from "@/lib/province-explorer-data";
 
@@ -11,6 +11,7 @@ const money = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD
 const categoryIcons = {
   jobs: BriefcaseBusiness,
   rent: Home,
+  vacancy: DoorOpen,
   prices: CircleDollarSign,
   homes: Building2,
   newcomers: Users,
@@ -52,6 +53,8 @@ function ProvinceSnapshot({
   const otherPrices = valueFor(data, "prices", otherSlug);
   const homes = valueFor(data, "homes", provinceSlug);
   const otherHomes = valueFor(data, "homes", otherSlug);
+  const vacancy = valueFor(data, "vacancy", provinceSlug);
+  const otherVacancy = valueFor(data, "vacancy", otherSlug);
   if (!rent || !otherRent) return null;
 
   const burden = rent.value.value / (income / 12) * 100;
@@ -61,6 +64,7 @@ function ProvinceSnapshot({
     jobs && otherJobs ? { ...jobs, other: otherJobs.value } : null,
     prices && otherPrices ? { ...prices, other: otherPrices.value } : null,
     homes && otherHomes ? { ...homes, other: otherHomes.value } : null,
+    vacancy && otherVacancy ? { ...vacancy, other: otherVacancy.value } : null,
   ].filter((item): item is { category: ProvinceExplorerCategory; value: ProvinceExplorerValue; other: ProvinceExplorerValue } => Boolean(item));
 
   return (

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, BriefcaseBusiness, Building2, CircleDollarSign, Home, Minus, WalletCards, Users } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, BriefcaseBusiness, Building2, CircleDollarSign, DoorOpen, Home, Minus, WalletCards, Users } from "lucide-react";
 import { ShareStatButton } from "@/components/share-stat-button";
 import type { ProvinceExplorerCategoryId, ProvinceExplorerData } from "@/lib/province-explorer-data";
 
@@ -15,6 +15,7 @@ const Canada3DMap = dynamic(() => import("@/components/homepage/canada-3d-map").
 const icons = {
   jobs: BriefcaseBusiness,
   rent: Home,
+  vacancy: DoorOpen,
   prices: CircleDollarSign,
   homes: Building2,
   newcomers: Users,
@@ -23,11 +24,13 @@ const icons = {
 const youthSignalLabels: Partial<Record<ProvinceExplorerCategoryId, string>> = {
   jobs: "Job pressure",
   rent: "Rent pressure",
+  vacancy: "Rental choice",
   prices: "Price pressure",
   homes: "Home pipeline",
 };
 
-function categoryMeaning(highMeaning: "pressure" | "positive" | "neutral") {
+function categoryMeaning(categoryId: ProvinceExplorerCategoryId, highMeaning: "pressure" | "positive" | "neutral") {
+  if (categoryId === "vacancy") return { low: "Tighter market", high: "More choice" };
   if (highMeaning === "pressure") return { low: "Less pressure", high: "More pressure" };
   if (highMeaning === "positive") return { low: "Fewer", high: "More" };
   return { low: "Lower flow", high: "Higher flow" };
@@ -94,7 +97,7 @@ export function ProvinceExplorer({
 
   const selectedValue = selected;
   const DirectionIcon = selectedValue.direction === "up" ? ArrowUp : selectedValue.direction === "down" ? ArrowDown : Minus;
-  const legend = categoryMeaning(category.highMeaning);
+  const legend = categoryMeaning(category.id, category.highMeaning);
   const selectedProvinceValues = data.categories.flatMap((item) => {
     const value = item.values.find((candidate) => candidate.slug === selected.slug);
     return value ? [{ category: item, value }] : [];
@@ -134,7 +137,7 @@ export function ProvinceExplorer({
                 type="button"
                 onClick={() => setCategoryId(item.id)}
                 aria-pressed={active}
-                className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md border px-2.5 text-xs font-black transition last:col-span-2 sm:text-sm ${active ? "border-white bg-white text-stone-950" : "border-white/15 bg-white/5 text-slate-300 hover:border-white/40 hover:bg-white/10"}`}
+                className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md border px-2.5 text-xs font-black transition sm:text-sm ${active ? "border-white bg-white text-stone-950" : "border-white/15 bg-white/5 text-slate-300 hover:border-white/40 hover:bg-white/10"}`}
               >
                 <Icon className="size-4" aria-hidden="true" />
                 {item.label}
@@ -236,7 +239,7 @@ export function ProvinceExplorer({
         </div>
       </div>
 
-      <div className="grid border-t border-white/10 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid border-t border-white/10 sm:grid-cols-2 lg:grid-cols-6">
         {selectedProvinceValues.map(({ category: item, value }) => {
           const Icon = icons[item.id];
           return (

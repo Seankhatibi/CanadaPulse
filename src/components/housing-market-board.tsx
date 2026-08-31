@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { ArrowDown, ArrowRight, ArrowUp, Building2, Home, Landmark, Minus } from "lucide-react";
 import { formatReferencePeriod, formatReleaseDate } from "@/lib/release-format";
+import { provinces } from "@/lib/province-directory";
 import type { NormalizedRelease, ReleaseChartPayload } from "@/lib/release-hub";
 
 type Point = ReleaseChartPayload["points"][number];
+
+const money = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 });
+const provinceByName = new Map<string, (typeof provinces)[number]>(provinces.map((province) => [province.name, province]));
 
 function allPoints(release: NormalizedRelease | undefined) {
   return release?.chartPayloads.filter((chart) => chart.kind !== "qualitative").flatMap((chart) => chart.points) ?? [];
@@ -38,6 +42,7 @@ export function HousingMarketBoard({ releases }: { releases: NormalizedRelease[]
   const rentGrowth = findPoint(rental, /fixed-sample rent growth/i);
   const vacancy = findPoint(rental, /rental vacancy rate/i);
   const provinceRents = findChart(rental, /average two-bedroom rent by province/i)?.points ?? [];
+  const metroRents = findChart(rental, /most expensive major rental markets/i)?.points.slice(0, 6) ?? [];
   const maxProvinceRent = Math.max(...provinceRents.map((point) => Math.abs(point.value)), 1);
 
   const housingStarts = findPoint(starts, /^housing starts$/i);
@@ -69,6 +74,12 @@ export function HousingMarketBoard({ releases }: { releases: NormalizedRelease[]
             </div>
             <p className="mt-4 text-sm leading-6 text-stone-600">{rent.plainEnglish}</p>
 
+            <div className="mt-6 border-l-4 border-red-600 bg-red-50 px-4 py-4">
+              <p className="text-xs font-black uppercase tracking-[0.12em] text-red-800">What that means over a year</p>
+              <p className="mt-2 font-mono text-3xl font-black">{money.format(rent.value * 12)}</p>
+              <p className="mt-1 text-xs leading-5 text-stone-600">Twelve months of the surveyed average, before utilities, insurance or moving costs.</p>
+            </div>
+
             <div className="mt-7 grid grid-cols-2 gap-5 border-y border-stone-200 py-5">
               {rentGrowth ? <div><p className="text-xs font-bold text-stone-500">Existing-structure growth</p><p className="mt-2 font-mono text-2xl font-black">{rentGrowth.display}</p><div className="mt-2"><Direction point={rentGrowth} /></div></div> : null}
               {vacancy ? <div><p className="text-xs font-bold text-stone-500">Rental vacancy</p><p className="mt-2 font-mono text-2xl font-black">{vacancy.display}</p><div className="mt-2"><Direction point={vacancy} positiveWhenUp /></div></div> : null}
@@ -83,13 +94,29 @@ export function HousingMarketBoard({ releases }: { releases: NormalizedRelease[]
           <div className="px-4 py-8 sm:px-8 lg:px-10 lg:py-10">
             <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.14em] text-stone-500">Province rent ranking</p><h3 className="mt-2 text-2xl font-black">Same survey, one glance</h3></div><p className="text-xs font-bold text-stone-500">Higher bar = higher average rent</p></div>
             <div className="mt-7 grid gap-3 sm:grid-cols-2 sm:gap-x-7">
-              {provinceRents.map((point, index) => (
-                <div key={point.label}>
-                  <div className="mb-1.5 flex items-center gap-3"><span className="w-5 font-mono text-xs font-black text-red-700">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 flex-1 truncate text-sm font-black">{point.label}</span><span className="font-mono text-sm font-black">{point.display}</span></div>
-                  <div className="ml-8 h-2 overflow-hidden rounded-full bg-stone-200"><div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-red-500" style={{ width: `${Math.max(8, Math.abs(point.value) / maxProvinceRent * 100)}%` }} /></div>
-                </div>
-              ))}
+              {provinceRents.map((point, index) => {
+                const province = provinceByName.get(point.label);
+                const content = <><div className="mb-1.5 flex items-center gap-3"><span className="w-5 font-mono text-xs font-black text-red-700">{String(index + 1).padStart(2, "0")}</span><span className="min-w-0 flex-1 truncate text-sm font-black">{point.label}</span><span className="font-mono text-sm font-black">{point.display}</span></div><div className="ml-8 h-2 overflow-hidden rounded-full bg-stone-200"><div className="h-full rounded-full bg-gradient-to-r from-amber-400 to-red-500" style={{ width: `${Math.max(8, Math.abs(point.value) / maxProvinceRent * 100)}%` }} /></div></>;
+                return province ? (
+                  <Link key={point.label} href={`/province/${province.slug}/housing`} className="block rounded-md py-1 transition hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-red-700">
+                    {content}
+                  </Link>
+                ) : (
+                  <div key={point.label} className="py-1">
+                    {content}
+                  </div>
+                );
+              })}
             </div>
+
+            {metroRents.length ? (
+              <div className="mt-8 border-t border-stone-200 pt-6">
+                <div className="flex flex-wrap items-end justify-between gap-3"><h3 className="text-xl font-black">Most expensive major rental markets</h3><p className="text-xs font-bold text-stone-500">Average two-bedroom rent</p></div>
+                <div className="mt-4 grid gap-px overflow-hidden rounded-md bg-stone-200 sm:grid-cols-2 lg:grid-cols-3">
+                  {metroRents.map((point, index) => <div key={point.label} className="bg-stone-50 p-3"><div className="flex items-center justify-between gap-2"><span className="font-mono text-xs font-black text-red-700">#{index + 1}</span><span className="font-mono text-sm font-black">{point.display}</span></div><p className="mt-2 text-sm font-black leading-5">{point.label}</p></div>)}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

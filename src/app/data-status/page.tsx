@@ -34,7 +34,7 @@ export default async function DataStatusPage() {
             {
               label: "Scheduled refresh",
               value: health.scheduler === "configured" ? "Configured" : "Not configured",
-              note: "Weekday release checks run after the major morning release window.",
+              note: "Two weekday checks straddle 11:00 a.m. Eastern so daylight-saving changes do not move the release window out of view.",
               icon: Radio,
             },
             {
