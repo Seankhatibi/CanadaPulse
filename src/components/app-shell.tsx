@@ -6,7 +6,7 @@ import { MobileNav } from "@/components/mobile-nav";
 
 const navItems = [
   { href: "/", label: "Latest" },
-  { href: "/releases", label: "Archive" },
+  { href: "/releases", label: "Data feed" },
   { href: "/canada", label: "Economy" },
   { href: "/housing", label: "Housing" },
   { href: "/population", label: "Population" },

@@ -21,9 +21,8 @@ export async function getSystemHealth() {
   const databaseConfigured = Boolean(process.env.DATABASE_URL);
   const archiveActive = Boolean(database?.archive.active);
 
-  if (!databaseConfigured) warnings.push("Durable release history is not connected; current official sources are fetched live.");
-  else if (database?.archive.stale) warnings.push("The release archive has not completed a successful refresh in more than 96 hours.");
-  else if (!archiveActive) warnings.push("The database is connected, but the release archive has not completed a successful refresh.");
+  if (databaseConfigured && database?.archive.stale) warnings.push("The release archive has not completed a successful refresh in more than 96 hours.");
+  else if (databaseConfigured && !archiveActive) warnings.push("The database is connected, but the release archive has not completed a successful refresh.");
   if (!process.env.CRON_SECRET) warnings.push("Scheduled source checks are unavailable in this environment.");
   const housingAge = (Date.now() - validDate(hub.housingWatch.releaseDate)) / 86_400_000;
   if (housingAge > 120) warnings.push(`Quarterly housing construction release is ${Math.round(housingAge)} days old.`);

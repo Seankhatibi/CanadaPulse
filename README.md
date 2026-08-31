@@ -23,27 +23,7 @@ npm install
 npm run dev
 ```
 
-The live-source product works without a database by fetching official publishers at request time.
-
-## Production Database
-
-Set `DATABASE_URL` to a Postgres connection, then run:
-
-```bash
-npm run db:migrate:deploy
-npm run db:bootstrap:production
-npm run db:verify:production
-```
-
-The production bootstrap creates source metadata and imports official release events. It does not load the historical demo dataset.
-
-The old fallback seed is restricted to isolated development databases:
-
-```bash
-npm run db:seed:fallback
-```
-
-Never run the fallback seed against production.
+The production product is intentionally stateless. It fetches official publishers at request time, uses short-lived Vercel caching for performance, and does not require or retain a historical database.
 
 ## Scheduled Refresh
 
@@ -54,13 +34,12 @@ The refresh performs:
 1. Statistics Canada Daily detection and table extraction.
 2. Multi-source release normalization and promotion scoring.
 3. CIHI health-expenditure source refresh.
-4. Release-event and refresh-run persistence when Postgres is configured.
+4. Source-cache invalidation so new official releases become visible promptly.
 
 ## Verification
 
 ```bash
 npm run audit:public-data
-npm run audit:persistence
 npm run lint
 npm run build
 npx prisma validate
@@ -71,7 +50,7 @@ npx prisma validate
 ## Important Routes
 
 - `/` latest promoted release and official debate board
-- `/releases` searchable official release archive
+- `/releases` searchable live official release feed
 - `/pulse-release/[source]/[slug]` structured research brief
 - `/compare` like-for-like province comparison
 - `/province/[province]` verified province evidence

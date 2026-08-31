@@ -89,7 +89,7 @@ export default async function WeeklyPulsePage() {
         <section>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div><p className="text-xs font-black uppercase tracking-[0.14em] text-red-700">Release ledger</p><h2 className="mt-2 text-3xl font-black text-stone-950">The week&apos;s official evidence</h2></div>
-            <Link href="/releases" className="inline-flex items-center gap-2 text-sm font-black text-red-700">Search the archive <ArrowRight className="size-4" aria-hidden="true" /></Link>
+            <Link href="/releases" className="inline-flex items-center gap-2 text-sm font-black text-red-700">Search the release feed <ArrowRight className="size-4" aria-hidden="true" /></Link>
           </div>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             {weekly.releases.map((release) => {

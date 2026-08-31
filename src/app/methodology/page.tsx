@@ -29,7 +29,7 @@ export default async function MethodologyPage() {
             <Clock3 className="size-6 text-red-300" aria-hidden="true" />
             <h2 className="mt-4 text-3xl font-black">Refresh policy</h2>
             <p className="mt-4 text-sm leading-7 text-stone-300">Weekday checks run at 11:00 a.m. and 1:00 p.m. Toronto time. Source-specific caching is shorter for daily releases and longer for annual reports. The current scheduler is <strong className="text-white">{health.scheduler}</strong>.</p>
-            <p className="mt-3 text-sm leading-7 text-stone-300">When durable database history is unavailable, sources are fetched at request time and that limitation appears on the public freshness page.</p>
+            <p className="mt-3 text-sm leading-7 text-stone-300">Canada Pulse runs statelessly: official values are fetched at request time and refreshed through Vercel&apos;s short-lived cache. Release data is not retained in a historical database.</p>
           </div>
           <div className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-7">
             <h2 className="text-2xl font-black text-stone-950">Evidence labels</h2>

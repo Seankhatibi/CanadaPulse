@@ -62,7 +62,6 @@ export async function GET(request: Request) {
   const coreSourcesReady = statcanDaily.status === "fulfilled" && multiSourceReleaseHub.status === "fulfilled";
   const ok = coreSourcesReady && (!databaseConfigured || persistenceReady);
   const warnings = [
-    ...(!databaseConfigured ? ["Durable release history is not configured; official sources were checked and caches refreshed in live-fetch mode."] : []),
     ...(databaseConfigured && !persistenceReady ? ["The source checks ran, but durable release persistence did not complete."] : []),
     ...(cihi.status === "rejected" ? [`CIHI refresh failed: ${errorMessage(cihi.reason)}`] : []),
   ];
@@ -71,7 +70,7 @@ export async function GET(request: Request) {
     ok,
     startedAt,
     finishedAt: new Date().toISOString(),
-    mode: persistenceReady ? "source-refresh-and-durable-archive" : "source-refresh-live-fetch",
+    mode: persistenceReady ? "source-refresh-and-durable-archive" : "source-refresh-and-cache",
     archive: {
       configured: databaseConfigured,
       persisted: persistenceReady,

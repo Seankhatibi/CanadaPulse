@@ -45,7 +45,7 @@ export async function refreshStatCanDailyReleaseFacts(): Promise<StatCanRefreshR
     metadata: {
       adapter: "StatCanAdapter",
       mode: "daily-release-feed",
-      changeDetection: "database-upsert",
+      changeDetection: "release-date-and-source-period",
       topRelease: entries[0]?.title ?? null,
     },
   };

@@ -16,7 +16,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams?: Pr
     <AppShell variant="light">
       <div className="space-y-8">
         <section className="border-b border-stone-300 pb-8">
-          <div className="flex flex-wrap gap-2 text-xs font-black uppercase tracking-[0.13em]"><span className="rounded-md bg-red-700 px-2.5 py-1 text-white">Release archive</span><span className="rounded-md bg-emerald-50 px-2.5 py-1 text-emerald-800">{archive.length} official items</span></div>
+          <div className="flex flex-wrap gap-2 text-xs font-black uppercase tracking-[0.13em]"><span className="rounded-md bg-red-700 px-2.5 py-1 text-white">Live release feed</span><span className="rounded-md bg-emerald-50 px-2.5 py-1 text-emerald-800">{archive.length} official items</span></div>
           <h1 className="mt-5 max-w-5xl text-4xl font-black text-stone-950 sm:text-6xl">Search the data behind Canada&apos;s latest economic story</h1>
           <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-600">Browse structured Canada Pulse briefs and the wider Statistics Canada Daily feed. Evidence status shows which releases already have parsed values.</p>
         </section>
@@ -41,7 +41,7 @@ export default async function ReleasesPage({ searchParams }: { searchParams?: Pr
           </div>
         </section>
 
-        <section className="flex gap-3 rounded-xl border border-stone-200 bg-white p-5"><Database className="mt-0.5 size-5 shrink-0 text-red-700" aria-hidden="true" /><div><h2 className="font-black text-stone-950">Archive coverage</h2><p className="mt-2 text-sm leading-6 text-stone-600">The archive combines normalized multi-source briefs with the recent Statistics Canada Daily feed. Older releases are being added as source-backed history expands.</p></div></section>
+        <section className="flex gap-3 rounded-xl border border-stone-200 bg-white p-5"><Database className="mt-0.5 size-5 shrink-0 text-red-700" aria-hidden="true" /><div><h2 className="font-black text-stone-950">Feed coverage</h2><p className="mt-2 text-sm leading-6 text-stone-600">This live feed combines normalized multi-source briefs with the recent Statistics Canada Daily feed. It reflects what official publishers currently expose and is not a permanent historical archive.</p></div></section>
       </div>
     </AppShell>
   );

@@ -7,7 +7,7 @@ import { provinces } from "@/lib/province-directory";
 
 const navItems = [
   { href: "/", label: "Latest releases" },
-  { href: "/releases", label: "Release archive" },
+  { href: "/releases", label: "Live release feed" },
   { href: "/canada", label: "Canadian economy" },
   { href: "/housing", label: "Housing and affordability" },
   { href: "/population", label: "Population" },

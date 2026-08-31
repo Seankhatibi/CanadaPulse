@@ -18,7 +18,7 @@ export default async function DataStatusPage() {
           </div>
           <h1 className="mt-5 max-w-4xl text-4xl font-black text-stone-950 sm:text-6xl">Data trust and freshness</h1>
           <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-600">
-            Canada Pulse shows where each release came from, when it was published, how many structured metrics were loaded, and whether durable history is active.
+            Canada Pulse shows where each release came from, when it was published, and how many structured metrics were loaded from the official source.
           </p>
           <Link href="/methodology" className="mt-5 inline-flex items-center gap-2 text-sm font-black text-red-700 hover:text-red-900">Read the evidence methodology <ArrowRight className="size-4" aria-hidden="true" /></Link>
         </section>
@@ -38,13 +38,13 @@ export default async function DataStatusPage() {
               icon: Radio,
             },
             {
-              label: "Historical archive",
-              value: health.persistence === "database" ? "Archive active" : health.persistence === "degraded" ? "Needs attention" : "Live source mode",
+              label: "Storage model",
+              value: health.persistence === "database" ? "Database active" : health.persistence === "degraded" ? "Needs attention" : "Stateless live",
               note: health.persistence === "database"
                 ? `${health.archive?.releaseEvents ?? 0} releases stored; last successful refresh ${health.archive?.latestSuccessfulRefresh ? new Date(health.archive.latestSuccessfulRefresh).toLocaleString("en-CA") : "unavailable"}.`
                 : health.persistence === "degraded"
                   ? "The database is connected, but a successful archive refresh has not been verified."
-                  : "Current official values load live while durable archive setup is pending.",
+                  : "Official values are fetched and transformed live. Canada Pulse does not retain a historical database.",
               icon: Database,
             },
           ].map((item) => {

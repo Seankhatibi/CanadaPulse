@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     source: dbValues && dbValues.length > 0 ? "database" : values.length ? "official-release-hub" : "none",
     values,
     note: values.length
-      ? "Values are sourced from official database rows or normalized official releases."
+      ? "Values are sourced from normalized official releases."
       : "No source-backed values are currently available for this geography and category; Canada Pulse does not substitute modeled data.",
   });
 }
