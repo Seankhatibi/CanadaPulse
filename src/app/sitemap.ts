@@ -17,7 +17,6 @@ const coreRoutes: Array<{ path: string; frequency: MetadataRoute.Sitemap[number]
   { path: "/trade", frequency: "monthly", priority: 0.8 },
   { path: "/energy", frequency: "monthly", priority: 0.8 },
   { path: "/health", frequency: "monthly", priority: 0.75 },
-  { path: "/quality-of-life", frequency: "monthly", priority: 0.7 },
   { path: "/data-status", frequency: "daily", priority: 0.65 },
   { path: "/methodology", frequency: "monthly", priority: 0.55 },
 ];

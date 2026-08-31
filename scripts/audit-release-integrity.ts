@@ -3,7 +3,7 @@ import { fetchCmhcRentalSnapshot } from "../src/lib/cmhc-rental";
 import { fetchBankOfCanadaReportReleases } from "../src/lib/bank-of-canada-reports";
 import { fetchFinanceCanadaFiscalSnapshot } from "../src/lib/finance-canada-fiscal";
 import { fetchIrccImmigrationSnapshot } from "../src/lib/ircc-immigration";
-import { buildReleaseExplainer, fetchStatCanDailyEntryFromUrl } from "../src/lib/statcan-daily";
+import { buildReleaseExplainer, fetchStatCanDailyEntries, fetchStatCanDailyEntryFromUrl, getEntriesForReleaseDate, getLatestDailyReleaseDate } from "../src/lib/statcan-daily";
 import { fetchStatCanReleaseData, formatWdsValue } from "../src/lib/statcan-release-data";
 import { fetchStatCanCpiSnapshot } from "../src/lib/statcan-cpi";
 import { normalizeStatCanDailyRelease } from "../src/lib/release-hub";
@@ -48,6 +48,14 @@ function assertRecentReleaseDate(date: string, maximumAgeDays: number, label: st
 }
 
 async function main() {
+  const dailyEntries = await fetchStatCanDailyEntries();
+  const latestDailyDate = getLatestDailyReleaseDate(dailyEntries);
+  assert(latestDailyDate, "Statistics Canada Daily monitor returned no release date.");
+  assertRecentReleaseDate(latestDailyDate, 6, "Statistics Canada Daily feed");
+  const latestDailyEntries = getEntriesForReleaseDate(dailyEntries, latestDailyDate);
+  assert(latestDailyEntries.length > 0, "Statistics Canada Daily monitor found no releases for its latest date.");
+  assert(latestDailyEntries.every((entry) => entry.title && entry.href), "Statistics Canada Daily monitor returned an incomplete latest release.");
+
   assert(formatWdsValue("Electric Power Selling Price Index", 142.2) === "142.2", "A price index was formatted as currency.");
   assert(formatWdsValue("Job vacancies", 177_340) === "177,340", "A job-vacancy count was formatted as a percentage.");
   assert(formatWdsValue("Seasonally adjusted at annual rates, chained (2017) dollars", 2_369_309, 6) === "$2.37T", "GDP dollars were mistaken for a percentage or lost trillion scaling.");

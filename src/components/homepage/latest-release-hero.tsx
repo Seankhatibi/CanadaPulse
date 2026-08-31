@@ -21,7 +21,7 @@ export function LatestReleaseHero({ release }: { release: NormalizedRelease }) {
         <div className="px-4 py-7 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
           <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-[0.13em]">
             <span className="inline-flex items-center gap-2 bg-red-700 px-2.5 py-1.5 text-white">
-              <Radio className="size-3.5" aria-hidden="true" /> Latest data drop
+              <Radio className="size-3.5" aria-hidden="true" /> Latest major data drop
             </span>
             <span className="bg-white px-2.5 py-1.5 text-stone-700">{release.publisher}</span>
             <span className="text-stone-500">{formatReleaseDate(release.releaseDate)}</span>

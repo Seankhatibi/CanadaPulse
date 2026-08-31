@@ -1324,7 +1324,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
 const getCachedMultiSourceReleaseHub = unstable_cache(
   buildMultiSourceReleaseHub,
   ["canada-pulse-release-hub-v9"],
-  { revalidate: 30 * 60, tags: ["canada-pulse-release-hub"] },
+  { revalidate: 10 * 60, tags: ["canada-pulse-release-hub"] },
 );
 
 const lastVerifiedReleaseById = new Map<string, NormalizedRelease>();
