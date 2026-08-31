@@ -1,72 +1,92 @@
 import Link from "next/link";
-import { ArrowDown, ArrowRight, ArrowUp, ExternalLink, Minus } from "lucide-react";
-import type { NormalizedRelease } from "@/lib/release-hub";
-import { buildReleaseIntelligence } from "@/lib/release-intelligence";
+import { ArrowDown, ArrowRight, ArrowUp, ExternalLink, Minus, Radio } from "lucide-react";
+import { ShareStatButton } from "@/components/share-stat-button";
 import { formatReferencePeriod, formatReleaseDate } from "@/lib/release-format";
+import type { NormalizedRelease } from "@/lib/release-hub";
+import { buildReleaseStory } from "@/lib/release-story";
+
+function tone(meaning: "positive" | "negative" | "mixed") {
+  if (meaning === "positive") return { text: "text-emerald-800", bar: "bg-emerald-600", soft: "bg-emerald-100" };
+  if (meaning === "negative") return { text: "text-red-800", bar: "bg-red-600", soft: "bg-red-100" };
+  return { text: "text-amber-900", bar: "bg-amber-500", soft: "bg-amber-100" };
+}
 
 export function LatestReleaseHero({ release }: { release: NormalizedRelease }) {
-  const intelligence = buildReleaseIntelligence(release);
-  const metrics = intelligence.metrics.slice(0, 4);
-  const showSummary = release.plainEnglishSummary.trim().toLowerCase() !== intelligence.verdict.trim().toLowerCase();
+  const story = buildReleaseStory(release);
+  const max = Math.max(...story.points.map((point) => Math.abs(point.value)), 1);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-2xl shadow-stone-300/40">
-      <div className="grid lg:grid-cols-[1.18fr_0.82fr]">
-        <div className="p-5 sm:p-8 lg:p-10">
-          <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-[0.14em]">
-            <span className="rounded-md bg-red-700 px-2.5 py-1 text-white">Latest major release</span>
-            <span className="rounded-md bg-stone-100 px-2.5 py-1 text-stone-700">{release.publisher}</span>
+    <section className="-mx-3 overflow-hidden border-y border-red-200 bg-[#fff8ef] text-stone-950 sm:-mx-6" aria-labelledby="latest-data-drop">
+      <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
+        <div className="px-4 py-7 sm:px-8 sm:py-10 lg:px-10 lg:py-12">
+          <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-[0.13em]">
+            <span className="inline-flex items-center gap-2 bg-red-700 px-2.5 py-1.5 text-white">
+              <Radio className="size-3.5" aria-hidden="true" /> Latest data drop
+            </span>
+            <span className="bg-white px-2.5 py-1.5 text-stone-700">{release.publisher}</span>
             <span className="text-stone-500">{formatReleaseDate(release.releaseDate)}</span>
           </div>
-          <h2 className="mt-6 max-w-4xl text-4xl font-black leading-tight text-stone-950 sm:text-6xl">{release.title}</h2>
-          <p className="mt-5 max-w-3xl text-xl font-bold leading-8 text-stone-800">{intelligence.verdict}</p>
-          {showSummary ? <p className="mt-4 max-w-3xl text-base leading-7 text-stone-600">{release.plainEnglishSummary}</p> : null}
 
-          <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {metrics.map((metric) => {
-              const Icon = metric.direction === "up" ? ArrowUp : metric.direction === "down" ? ArrowDown : Minus;
-              const tone = metric.meaning === "positive" ? "text-emerald-700" : metric.meaning === "negative" ? "text-red-700" : "text-amber-700";
+          <p className="mt-7 max-w-2xl text-xs font-black uppercase tracking-[0.16em] text-red-800">What changed in Canada</p>
+          <h1 id="latest-data-drop" className="mt-2 max-w-4xl text-4xl font-black leading-[1.04] sm:text-5xl lg:text-6xl">{story.headline}</h1>
+          <p className="mt-5 max-w-3xl text-base font-medium leading-7 text-stone-700 sm:text-lg">{story.summary}</p>
+
+          <div className="mt-7 flex flex-wrap items-end gap-x-8 gap-y-3 border-y border-stone-300 py-5">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.13em] text-stone-500">{story.mainLabel}</p>
+              <p className="mt-1 font-mono text-5xl font-black sm:text-6xl">{story.mainMetric}</p>
+            </div>
+            <div className="pb-1">
+              <p className="text-xs font-black uppercase tracking-[0.13em] text-stone-500">Movement</p>
+              <p className={`mt-2 font-mono text-xl font-black ${tone(story.mainMeaning).text}`}>{story.mainChange ?? "Latest official value"}</p>
+            </div>
+            <div className="pb-1">
+              <p className="text-xs font-black uppercase tracking-[0.13em] text-stone-500">Reference period</p>
+              <p className="mt-2 text-sm font-black">{formatReferencePeriod(release.referencePeriod)}</p>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Link href={release.href} className="inline-flex h-11 items-center justify-center gap-2 bg-stone-950 px-4 text-sm font-black text-white transition hover:bg-red-800">
+              See every number <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+            <ShareStatButton text={release.socialSummary} variant="light" />
+            <a href={release.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex h-11 items-center justify-center gap-2 border border-stone-300 bg-white px-4 text-sm font-black text-stone-700 hover:border-red-400 hover:text-red-800">
+              Official release <ExternalLink className="size-4" aria-hidden="true" />
+            </a>
+          </div>
+        </div>
+
+        <aside className="bg-[#102c36] px-4 py-7 text-white sm:px-8 sm:py-10 lg:px-9 lg:py-12" aria-label="Release movement chart">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">What moved underneath</p>
+          <h2 className="mt-2 text-2xl font-black sm:text-3xl">The release, crunched</h2>
+          <div className="mt-7 grid gap-5">
+            {story.points.slice(0, 5).map((point, index) => {
+              const Direction = point.direction === "up" ? ArrowUp : point.direction === "down" ? ArrowDown : Minus;
+              const colours = tone(point.meaning);
+              const width = Math.max(8, Math.min(100, Math.abs(point.value) / max * 100));
               return (
-                <div key={`${metric.label}-${metric.display}`} className="rounded-xl border border-stone-200 bg-stone-50 p-4">
-                  <div className="flex min-h-8 items-start justify-between gap-2">
-                    <p className="text-[11px] font-black uppercase leading-4 tracking-[0.08em] text-stone-500">{metric.label}</p>
-                    <Icon className={`size-4 ${tone}`} aria-hidden="true" />
+                <div key={`${point.label}-${point.display}-${index}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <span className={`mt-0.5 inline-flex size-6 shrink-0 items-center justify-center ${colours.soft} ${colours.text}`}><Direction className="size-3.5" aria-hidden="true" /></span>
+                      <p className="text-sm font-black leading-5 text-white">{point.label}</p>
+                    </div>
+                    <p className="shrink-0 font-mono text-sm font-black text-white">{point.display}</p>
                   </div>
-                  <p className="mt-3 font-mono text-3xl font-black text-stone-950">{metric.display}</p>
-                  <p className={`mt-2 font-mono text-xs font-black ${tone}`}>{metric.changeDisplay ?? "Latest value"}</p>
+                  <div className="mt-2 ml-8 h-2 overflow-hidden bg-white/10"><div className={`h-full ${colours.bar}`} style={{ width: `${width}%` }} /></div>
                 </div>
               );
             })}
           </div>
 
-          <div className="mt-7 flex flex-col gap-2 sm:flex-row">
-            <Link href={release.href} className="inline-flex items-center justify-center gap-2 rounded-md bg-stone-950 px-4 py-3 text-sm font-black text-white hover:bg-red-800">
-              Open full research brief
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </Link>
-            <a href={release.sourceUrl} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-md border border-stone-300 bg-white px-4 py-3 text-sm font-black text-stone-700 hover:border-red-300">
-              Official source
-              <ExternalLink className="size-4" aria-hidden="true" />
-            </a>
+          <div className="mt-9 border-t border-white/15 pt-5">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-200">Canada Pulse read</p>
+            <div className="mt-3 grid gap-3">
+              {story.read.map((item, index) => <p key={item} className="flex gap-3 text-sm leading-6 text-slate-200"><span className="shrink-0 whitespace-nowrap font-mono text-xs font-black text-red-300">0{index + 1}</span>{item}</p>)}
+            </div>
           </div>
-        </div>
-
-        <aside className="bg-stone-950 p-5 text-white sm:p-8 lg:p-10">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-red-300">Research read</p>
-          <h2 className="mt-3 text-2xl font-black">What matters underneath the headline</h2>
-          <div className="mt-6 space-y-3">
-            {(intelligence.takeaways.length ? intelligence.takeaways : release.headlineFacts).slice(0, 4).map((takeaway, index) => (
-              <div key={takeaway} className="flex gap-3 border-t border-white/10 pt-3">
-                <span className="font-mono text-xs font-black text-red-300">0{index + 1}</span>
-                <p className="text-sm leading-6 text-stone-300">{takeaway}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-8 rounded-lg border border-white/10 bg-white/5 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.13em] text-stone-400">Reference period</p>
-            <p className="mt-2 text-sm font-bold text-white">{formatReferencePeriod(release.referencePeriod)}</p>
-            <p className="mt-2 text-xs leading-5 text-stone-400">{intelligence.evidenceLevel}. Values stay attached to the official source trail.</p>
-          </div>
+          <p className="mt-7 text-[11px] leading-5 text-slate-400">Official values only. Colours describe direction and household pressure; they do not imply causation.</p>
         </aside>
       </div>
     </section>

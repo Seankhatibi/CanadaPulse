@@ -58,6 +58,7 @@ export async function GET(request: Request) {
   const statcanSummary = refreshSummary(statcanDaily);
   const multiSourceSummary = refreshSummary(multiSourceReleaseHub);
   const coreSourcesReady = statcanDaily.status === "fulfilled" && multiSourceReleaseHub.status === "fulfilled";
+  const ok = coreSourcesReady;
   const databaseConfigured = Boolean(process.env.DATABASE_URL);
   const persistenceReady = databaseConfigured && statcanSummary.persisted && multiSourceSummary.persisted;
   const warnings = [
@@ -67,7 +68,7 @@ export async function GET(request: Request) {
   ];
 
   return Response.json({
-    ok: coreSourcesReady,
+    ok,
     startedAt,
     finishedAt: new Date().toISOString(),
     mode: persistenceReady ? "source-refresh-and-durable-archive" : "source-refresh-live-fetch",
@@ -90,5 +91,5 @@ export async function GET(request: Request) {
       energy: "CER/NRCan source linked in Release Hub",
       pbo: "PBO reports source linked in Release Hub",
     },
-  }, { status: coreSourcesReady ? 200 : 503 });
+  }, { status: ok ? 200 : 503 });
 }

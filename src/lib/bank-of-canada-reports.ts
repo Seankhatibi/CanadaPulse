@@ -167,6 +167,26 @@ function extractLatestReport(html: string, family: BocReportFamily): BocReportLi
 function extractPercentSignals(text: string) {
   const matches = [...text.matchAll(/([+-]?\d+(?:\.\d+)?)\s*%/g)].slice(0, 6);
 
+  const labelFor = (sentence: string, index: number) => {
+    if (/inflation expectation/i.test(sentence)) return "Inflation expectations";
+    if (/inflation|consumer price|\bcpi\b/i.test(sentence)) return "Inflation";
+    if (/gross domestic product|\bgdp\b|economic growth|output/i.test(sentence)) return "Economic growth";
+    if (/unemployment/i.test(sentence)) return "Unemployment";
+    if (/employment|labour market/i.test(sentence)) return "Labour market";
+    if (/policy rate|interest rate|overnight rate/i.test(sentence)) return "Interest rate";
+    if (/wage|salary|compensation/i.test(sentence)) return "Wages";
+    if (/mortgage|household debt|credit/i.test(sentence)) return "Household finance";
+    return `Reported percentage ${index + 1}`;
+  };
+
+  const directionFor = (sentence: string, raw: string) => {
+    if (raw.startsWith("+")) return "up" as const;
+    if (raw.startsWith("-")) return "down" as const;
+    if (/rose|risen|increased|accelerated|higher|grew|growth of/i.test(sentence)) return "up" as const;
+    if (/fell|fallen|declined|decreased|eased|slowed|lower|contracted/i.test(sentence)) return "down" as const;
+    return "neutral" as const;
+  };
+
   return matches.map((match, index) => {
     const value = Number(match[1]);
     const sentence =
@@ -176,10 +196,10 @@ function extractPercentSignals(text: string) {
         ?.trim() || `${match[0]} mentioned in the report.`;
 
     return {
-      label: index === 0 ? "Main percentage signal" : `Percentage signal ${index + 1}`,
+      label: labelFor(sentence, index),
       value,
       display: `${match[1].startsWith("+") ? "+" : ""}${value}%`,
-      direction: match[1].startsWith("+") ? "up" : match[1].startsWith("-") ? "down" : "neutral",
+      direction: directionFor(sentence, match[1]),
       plainEnglish: sentence,
     } satisfies ReleaseChartPayload["points"][number];
   });

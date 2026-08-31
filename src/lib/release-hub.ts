@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { fetchStatCanReleaseData } from "@/lib/statcan-release-data";
+import { fetchStatCanReleaseData, type StatCanReleaseData } from "@/lib/statcan-release-data";
 import { fetchStatCanCpiSnapshot, type CpiChange } from "@/lib/statcan-cpi";
 import { fetchCmhcHousingConstructionData } from "@/lib/cmhc-housing";
 import { fetchCmhcRentalSnapshot } from "@/lib/cmhc-rental";
@@ -154,6 +154,99 @@ function formatProvinceDelta(label: string, value: number) {
   return absolute.toFixed(1);
 }
 
+function numericDisplayValue(value: string) {
+  const parsed = Number(value.replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function buildStatCanMovementCharts(releaseData: StatCanReleaseData | null, releaseTitle: string): ReleaseChartPayload[] {
+  if (!releaseData) return [];
+
+  const seen = new Set<string>();
+  return releaseData.tables.flatMap((table) => {
+    if (/by province/i.test(table.title)) return [];
+    const national = table.rows.filter((row) => !row.group || row.group === "Canada");
+    const candidates = national.length >= 2 ? national : table.rows;
+    const points = candidates
+      .filter((row) => row.latest !== null && row.change !== null)
+      .filter((row) => {
+        const key = row.label.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 8)
+      .map((row) => {
+        const change = row.change as number;
+        const direction = Math.abs(change) < 0.05 ? "neutral" as const : change > 0 ? "up" as const : "down" as const;
+        return {
+          label: row.label,
+          value: row.latest as number,
+          display: row.display ?? row.latest?.toLocaleString("en-CA") ?? "Not available",
+          direction,
+          plainEnglish: `${row.label} is ${row.display ?? row.latest?.toLocaleString("en-CA")}; ${row.changeDisplay ?? "changed"} over ${row.changePeriod}.`,
+          previous: row.previous,
+          previousDisplay: row.previousDisplay,
+          change,
+          changeDisplay: row.changeDisplay,
+          period: table.latestPeriod,
+          changePeriod: row.changePeriod,
+          provenance: "official" as const,
+        };
+      });
+
+    if (points.length < 2) return [];
+    return [{
+      title: table.title && table.title !== "Release table" ? table.title : `${releaseTitle}: what moved`,
+      kind: "bar" as const,
+      points,
+    }];
+  }).slice(0, 3);
+}
+
+export function buildStatCanBaseCharts(
+  releaseData: StatCanReleaseData | null,
+  releaseTitle: string,
+  signals = releaseData?.signals ?? [],
+): ReleaseChartPayload[] {
+  const metricStrip: ReleaseChartPayload[] = signals.length ? [{
+    title: releaseData?.signals.length ? "Official table breakdown" : "Official release summary",
+    kind: "metric-strip",
+    points: signals.slice(0, 8).map((signal) => ({
+      label: signal.label,
+      value: signal.value,
+      display: signal.display,
+      direction: signal.direction,
+      plainEnglish: signal.explanation,
+      previous: signal.previous,
+      previousDisplay: signal.previousDisplay,
+      change: signal.change,
+      changeDisplay: signal.changeDisplay,
+      period: signal.period,
+      changePeriod: signal.changePeriod,
+      provenance: "official",
+    })),
+  }] : [];
+
+  return [...metricStrip, ...buildStatCanMovementCharts(releaseData, releaseTitle)];
+}
+
+function buildProvinceChart(provinceBreakdown: NormalizedRelease["provinceBreakdown"]): ReleaseChartPayload[] {
+  if (provinceBreakdown.length < 4) return [];
+  return [{
+    title: "Province-by-province comparison",
+    kind: "province-rank",
+    points: provinceBreakdown.map((province) => ({
+      label: province.province,
+      value: numericDisplayValue(province.value),
+      display: province.value,
+      direction: /^up\b/i.test(province.note) ? "up" : /^down\b/i.test(province.note) ? "down" : "neutral",
+      plainEnglish: province.note,
+      provenance: "official",
+    })),
+  }];
+}
+
 function classifyStatCanAreas(entry: StatCanDailyEntry): ReleaseArea[] {
   const text = `${entry.title} ${entry.summary}`.toLowerCase();
   const areas = new Set<ReleaseArea>();
@@ -242,27 +335,6 @@ export async function normalizeStatCanDailyRelease(entry: StatCanDailyEntry, pro
   const releaseSignals = tableSignals.length ? [...supplementalSummarySignals, ...tableSignals] : summarySignals;
   const areas = classifyStatCanAreas(entry);
   const slug = slugify(entry.title);
-  const chartPayloads: ReleaseChartPayload[] = releaseSignals.length
-    ? [
-        {
-          title: releaseData?.signals.length ? "Official table breakdown" : "Official release summary",
-          kind: "metric-strip",
-          points: releaseSignals.slice(0, 8).map((signal) => ({
-            label: signal.label,
-            value: signal.value,
-            display: signal.display,
-            direction: signal.direction,
-            plainEnglish: signal.explanation,
-            previous: signal.previous,
-            previousDisplay: signal.previousDisplay,
-            change: signal.change,
-            changeDisplay: signal.changeDisplay,
-            period: signal.period,
-            changePeriod: signal.changePeriod,
-          })),
-        },
-      ]
-    : [];
   const provinceTable = releaseData?.tables.find((table) => /by province/i.test(table.title));
   const provinceRows = provinceTable?.rows.filter((row) => row.group && row.group !== "Canada" && row.latest !== null) ?? [];
   const provincePreviousPeriod = provinceTable?.previousPeriod ?? "the previous period";
@@ -280,6 +352,10 @@ export async function normalizeStatCanDailyRelease(entry: StatCanDailyEntry, pro
         : `${row.change > 0 ? "up" : row.change < 0 ? "down" : "unchanged"} ${formatProvinceDelta(row.label, row.change)} from ${provincePreviousPeriod}.`,
       score: Math.min(100, Math.round(Math.abs(row.change ?? 0) * 10 + 25)),
     }));
+  const chartPayloads: ReleaseChartPayload[] = [
+    ...buildStatCanBaseCharts(releaseData, entry.title, releaseSignals),
+    ...buildProvinceChart(provinceBreakdown),
+  ];
   const isSameDayRelease = entry.published.slice(0, 10) === canadaDate();
   const baseScore = scoreRelease(areas, `${entry.title} ${entry.summary}`);
   const importanceScore = Math.min(100, baseScore + (isSameDayRelease ? 28 : 0));
@@ -1247,7 +1323,7 @@ async function buildMultiSourceReleaseHub(): Promise<ReleaseHubPayload> {
 
 const getCachedMultiSourceReleaseHub = unstable_cache(
   buildMultiSourceReleaseHub,
-  ["canada-pulse-release-hub-v7"],
+  ["canada-pulse-release-hub-v9"],
   { revalidate: 30 * 60, tags: ["canada-pulse-release-hub"] },
 );
 

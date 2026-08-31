@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { buildReleaseIntelligence, type MetricMeaning } from "@/lib/release-intelligence";
 import { formatReferencePeriod, formatReleaseDate } from "@/lib/release-format";
 import { findHubRelease } from "@/lib/release-hub";
+import { buildReleaseStory } from "@/lib/release-story";
 
 export const runtime = "nodejs";
 export const revalidate = 3600;
@@ -53,15 +54,16 @@ async function getReleaseState(request: Request): Promise<ReleaseCardState | nul
     );
     if (!release) return null;
     const intelligence = buildReleaseIntelligence(release);
+    const story = buildReleaseStory(release);
     const metrics = intelligence.metrics.map(toCardMetric);
 
     return {
-      title: release.title,
+      title: story.headline,
       topic: release.affectedAreas[0] ?? "economy",
       publisher: release.publisher,
       released: formatReleaseDate(release.releaseDate),
       period: formatReferencePeriod(release.referencePeriod),
-      verdict: intelligence.verdict,
+      verdict: story.verdict,
       primary: metrics[0] ?? null,
       supporting: metrics.slice(1, 5),
       evidence: intelligence.evidenceLevel,

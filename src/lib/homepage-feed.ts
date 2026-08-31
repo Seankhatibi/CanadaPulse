@@ -39,7 +39,7 @@ export type HomepageFeed = {
 
 function pointMeaning(label: string, direction?: "up" | "down" | "neutral") {
   if (!direction || direction === "neutral") return "mixed" as const;
-  const negativeWhenRising = /unemployment|inflation|price|rent|mortgage|debt|cost|deficit|pressure|risk|gap/i.test(label);
+  const negativeWhenRising = /unemployment|inflation|consumer price|home price|rent|mortgage|debt|cost|deficit|pressure|risk|gap/i.test(label);
   const positiveWhenRising = /employment|participation|wage|productivity|starts|completions|exports|investment|income|access/i.test(label);
   if (negativeWhenRising) return direction === "up" ? "bad" as const : "good" as const;
   if (positiveWhenRising) return direction === "up" ? "good" as const : "bad" as const;
@@ -102,7 +102,12 @@ export function buildHomepageFeed({ releaseHub }: { releaseHub: ReleaseHubPayloa
     { topic: "Population", headline: "Which official population datasets changed?", tone: "cyan" as const, release: findRelease(releases, (item) => item.source === "open-government-ircc") },
     { topic: "Prices", headline: "What is getting more expensive fastest?", tone: "amber" as const, release: findRelease(releases, (item) => item.releaseType === "statcan-cpi-watch") },
     { topic: "Trade", headline: "Are Canadian exports strengthening or weakening?", tone: "blue" as const, release: findRelease(releases, (item) => /international merchandise trade|merchandise trade/i.test(item.title)) },
-    { topic: "Energy", headline: "What changed in Canada's energy system?", tone: "green" as const, release: findRelease(releases, (item) => item.source === "cer-nrcan") },
+    {
+      topic: "Energy",
+      headline: "What changed in Canada's energy system?",
+      tone: "green" as const,
+      release: findRelease(releases, (item) => item.source === "cer-nrcan" && item.chartPayloads.some((chart) => chart.points.some((point) => /production|generation|electricity|price|export|emission|capacity/i.test(point.label)))),
+    },
     { topic: "Government money", headline: "How much is Ottawa collecting, spending and borrowing?", tone: "blue" as const, release: findRelease(releases, (item) => item.source === "finance-canada") },
   ];
 

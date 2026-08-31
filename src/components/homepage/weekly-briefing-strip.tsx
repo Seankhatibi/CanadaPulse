@@ -13,19 +13,19 @@ export function WeeklyBriefingStrip({ weekly }: { weekly: WeeklyBrief }) {
             <Clock3 className="size-4" aria-hidden="true" />
             {weekly.publishMode === "friday-weekly-summary" ? "Friday briefing" : "Rolling seven-day briefing"}
           </div>
-          <h2 className="mt-3 text-4xl font-black leading-tight text-stone-950">Canada in 60 Seconds</h2>
-          <p className="mt-3 text-sm leading-6 text-stone-600">{weekly.releaseCount} official releases tracked across {weekly.liveSourceCount} live source families.</p>
+          <h2 className="mt-3 text-4xl font-black leading-tight text-stone-950 dark:text-white">Canada in 60 Seconds</h2>
+          <p className="mt-3 text-sm leading-6 text-stone-600 dark:text-stone-300">{weekly.releaseCount} official releases tracked across {weekly.liveSourceCount} live source families.</p>
           <Link href="/weekly-pulse" className="mt-5 inline-flex items-center gap-2 text-sm font-black text-red-700 hover:text-red-900">
             Open the full briefing
             <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
         </div>
         <div className="border-l-4 border-red-700 pl-5 sm:pl-7">
-          <h3 className="text-2xl font-black leading-snug text-stone-950">{weekly.headline}</h3>
-          <p className="mt-3 line-clamp-3 text-sm leading-6 text-stone-600">{weekly.summary}</p>
+          <h3 className="text-2xl font-black leading-snug text-stone-950 dark:text-white">{weekly.headline}</h3>
+          <p className="mt-3 line-clamp-3 text-sm leading-6 text-stone-600 dark:text-stone-300">{weekly.summary}</p>
           <div className="mt-5 grid gap-2 sm:grid-cols-2">
             {weekly.highlights.slice(0, 4).map((highlight, index) => (
-              <p key={highlight} className="text-sm leading-6 text-stone-700"><span className="mr-2 font-mono text-xs font-black text-red-700">{String(index + 1).padStart(2, "0")}</span>{highlight}</p>
+              <p key={highlight} className="text-sm leading-6 text-stone-700 dark:text-stone-300"><span className="mr-2 font-mono text-xs font-black text-red-700 dark:text-red-300">{String(index + 1).padStart(2, "0")}</span>{highlight}</p>
             ))}
           </div>
         </div>

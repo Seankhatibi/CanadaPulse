@@ -10,7 +10,7 @@ const areaConfig = {
     description: "Jobs, inflation, rates, growth, trade and household pressure, translated from official releases into comparable facts.",
     areas: ["labour", "inflation", "rates", "trade", "fiscal", "economy", "gdp", "productivity"],
     questions: [
-      ["What changed in the latest jobs report?", "/pulse-release/statcan/labour-force-survey-june-2026"],
+      ["What changed in the latest jobs report?", "/canada"],
       ["How are rates reaching households?", "/pulse-release/bank-of-canada/bank-of-canada-rate-watch"],
       ["Which province offers the stronger outcome?", "/compare"],
     ],
@@ -33,7 +33,7 @@ const areaConfig = {
     areas: ["population", "immigration", "housing", "labour"],
     questions: [
       ["What official immigration datasets changed?", "/pulse-release/open-government-ircc/ircc-open-data-population-pressure"],
-      ["Is labour demand absorbing growth?", "/pulse-release/statcan/labour-force-survey-june-2026"],
+      ["Is labour demand absorbing growth?", "/canada"],
       ["How does housing supply compare?", "/housing"],
     ],
   },
@@ -43,7 +43,7 @@ const areaConfig = {
     description: "The latest labour, housing, inflation and rate evidence most relevant to younger workers, renters and first-time buyers.",
     areas: ["labour", "housing", "inflation", "rates"],
     questions: [
-      ["Are young workers gaining ground?", "/pulse-release/statcan/labour-force-survey-june-2026"],
+      ["Are young workers gaining ground?", "/canada"],
       ["Where does a salary go further?", "/compare"],
       ["Where does your tax money go?", "/tax-dollar"],
     ],
@@ -56,7 +56,7 @@ const areaConfig = {
     questions: [
       ["What changed in the federal books?", "/pulse-release/finance-canada/finance-canada-fiscal-monitor"],
       ["What does your income generate in tax?", "/tax-dollar"],
-      ["What is the Bank of Canada seeing in financial stability?", "/pulse-release/bank-of-canada/financial-stability-report-2026"],
+      ["What is the Bank of Canada seeing in financial stability?", "/releases?q=financial+stability"],
     ],
   },
   trade: {
@@ -65,7 +65,7 @@ const areaConfig = {
     description: "Official trade, business-outlook and energy-export releases organized around the industries and provinces most exposed to each shift.",
     areas: ["trade", "energy"],
     questions: [
-      ["What are businesses expecting next?", "/pulse-release/bank-of-canada/business-outlook-survey-second-quarter-of-2026"],
+      ["What are businesses expecting next?", "/releases?q=business+outlook"],
       ["What changed in Canadian energy exports?", "/energy"],
       ["Compare provincial economic outcomes", "/compare"],
     ],
@@ -76,8 +76,8 @@ const areaConfig = {
     description: "CER, NRCan, StatCan and Bank of Canada evidence on energy production, exports, prices and the pressure transmitted to households.",
     areas: ["energy", "trade", "inflation"],
     questions: [
-      ["What changed in pipeline utilization?", "/pulse-release/cer-nrcan/canada-energy-regulator-nrcan-market-snapshot-oil-pipeline-throughputs-remained-high-in-20"],
-      ["How is energy affecting inflation expectations?", "/pulse-release/bank-of-canada/canadian-survey-of-consumer-expectations-second-quarter-of-2026"],
+      ["What changed in pipeline utilization?", "/releases?q=pipeline"],
+      ["How is energy affecting inflation expectations?", "/releases?q=consumer+expectations"],
       ["What is the wider trade impact?", "/trade"],
     ],
   },

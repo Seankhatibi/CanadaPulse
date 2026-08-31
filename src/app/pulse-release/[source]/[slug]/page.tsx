@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache } from "react";
 import {
   ArrowDown,
   ArrowLeft,
@@ -21,15 +20,15 @@ import { findHubRelease } from "@/lib/release-hub";
 import { buildReleaseIntelligence, type ResearchMetric } from "@/lib/release-intelligence";
 import { formatReferencePeriod, formatReleaseDate } from "@/lib/release-format";
 import { getProvinceByName } from "@/lib/province-directory";
+import { buildReleaseStory } from "@/lib/release-story";
 
 export const dynamic = "force-dynamic";
 
 type ReleaseParams = Promise<{ source: string; slug: string }>;
 type ReleaseSearchParams = Promise<{ date?: string | string[]; url?: string | string[] }>;
 
-const getReleasePageData = cache((source: string, slug: string, releaseDate?: string, sourceUrl?: string) =>
-  findHubRelease(source, slug, releaseDate, sourceUrl),
-);
+const getReleasePageData = (source: string, slug: string, releaseDate?: string, sourceUrl?: string) =>
+  findHubRelease(source, slug, releaseDate, sourceUrl);
 
 function firstParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
@@ -63,6 +62,7 @@ export async function generateMetadata({
   if (!release) return { title: "Official release unavailable", robots: { index: false, follow: false } };
 
   const intelligence = buildReleaseIntelligence(release);
+  const story = buildReleaseStory(release);
   const primary = intelligence.metrics[0];
   const description = compactDescription(primary
     ? `${intelligence.verdict} ${primary.plainEnglish}`
@@ -77,11 +77,11 @@ export async function generateMetadata({
   const image = `/api/og/release?${imageQuery.toString()}`;
 
   return {
-    title: release.title,
+    title: story.headline,
     description,
     alternates: { canonical },
     openGraph: {
-      title: release.title,
+      title: story.headline,
       description,
       url: canonical,
       siteName: "Canada Pulse",
@@ -90,7 +90,7 @@ export async function generateMetadata({
       publishedTime: release.releaseDate,
       images: [{ url: image, width: 1200, height: 630, alt: `${release.title} data breakdown` }],
     },
-    twitter: { card: "summary_large_image", title: release.title, description, images: [image] },
+    twitter: { card: "summary_large_image", title: story.headline, description, images: [image] },
   };
 }
 
@@ -239,7 +239,7 @@ export default async function PulseReleasePage({
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {hasMetrics ? (
-              intelligence.metrics.map((metric) => <MetricCard key={`${metric.label}-${metric.display}`} metric={metric} />)
+              intelligence.metrics.slice(0, 6).map((metric) => <MetricCard key={`${metric.label}-${metric.display}`} metric={metric} />)
             ) : (
               <p className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
                 {isNarrativeReport
@@ -249,6 +249,8 @@ export default async function PulseReleasePage({
             )}
           </div>
         </section>
+
+        <ReleaseVisualBreakdowns charts={release.chartPayloads} />
 
         <section className={`grid gap-5 ${hasMetrics ? "lg:grid-cols-[1.05fr_0.95fr]" : ""}`}>
           <div className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
@@ -270,23 +272,21 @@ export default async function PulseReleasePage({
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
               <h2 className="text-lg font-black text-emerald-950">Improving signals</h2>
               <div className="mt-3 space-y-2">
-                {intelligence.positive.length ? intelligence.positive.map((metric) => (
-                  <p key={metric.label} className="text-sm text-emerald-900">{metric.label}: <strong>{metric.display}</strong></p>
+                {intelligence.positive.length ? intelligence.positive.map((metric, index) => (
+                  <p key={`${metric.label}-${index}`} className="text-sm text-emerald-900">{metric.label}: <strong>{metric.display}</strong></p>
                 )) : <p className="text-sm text-emerald-900">No clearly improving metric was identified.</p>}
               </div>
             </div>
             <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
               <h2 className="text-lg font-black text-red-950">Pressure signals</h2>
               <div className="mt-3 space-y-2">
-                {intelligence.negative.length ? intelligence.negative.map((metric) => (
-                  <p key={metric.label} className="text-sm text-red-900">{metric.label}: <strong>{metric.display}</strong></p>
+                {intelligence.negative.length ? intelligence.negative.map((metric, index) => (
+                  <p key={`${metric.label}-${index}`} className="text-sm text-red-900">{metric.label}: <strong>{metric.display}</strong></p>
                 )) : <p className="text-sm text-red-900">No clearly worsening metric was identified.</p>}
               </div>
             </div>
           </div> : null}
         </section>
-
-        <ReleaseVisualBreakdowns charts={release.chartPayloads} />
 
         {intelligence.provinceRank.length ? (
           <section className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">

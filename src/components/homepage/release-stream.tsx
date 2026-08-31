@@ -18,25 +18,25 @@ export function ReleaseStream({ releases }: { releases: NormalizedRelease[] }) {
       .map((release) => [release.id, release]),
   ).values()]
     .sort((a, b) => timestamp(b) - timestamp(a) || editorialRank(b) - editorialRank(a) || b.importanceScore - a.importanceScore)
-    .slice(0, 8);
+    .slice(0, 6);
 
   return (
-    <section className="py-8">
+    <section className="border-y border-stone-300 py-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-red-700">Release stream</p>
-          <h2 className="mt-1 text-3xl font-black text-stone-950">The latest official data Canada Pulse is tracking</h2>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-red-700">More data drops</p>
+          <h2 className="mt-1 text-3xl font-black text-stone-950 dark:text-white">New official releases, as they land</h2>
         </div>
         <Link href="/data-status" className="inline-flex items-center gap-2 text-sm font-black text-red-700 hover:text-red-900">
           Check source freshness
           <ArrowRight className="size-4" aria-hidden="true" />
         </Link>
       </div>
-      <div className="mt-5 grid gap-3 md:grid-cols-2">
+      <div className="mt-5 grid border-t border-stone-300 md:grid-cols-2">
         {recent.map((release) => {
           const metricCount = countStructuredMetrics(release);
           return (
-          <Link key={release.id} href={release.href} className="group rounded-xl border border-stone-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-red-300 hover:shadow-lg">
+          <Link key={release.id} href={release.href} className="group border-b border-stone-300 bg-white/55 p-4 transition hover:bg-white md:odd:border-r">
             <div className="flex items-center justify-between gap-3">
               <span className="rounded-md bg-stone-100 px-2 py-1 text-xs font-black uppercase tracking-[0.12em] text-stone-700">{release.publisher}</span>
               <span className="inline-flex items-center gap-1.5 text-xs text-stone-500">
@@ -44,9 +44,9 @@ export function ReleaseStream({ releases }: { releases: NormalizedRelease[] }) {
                 {release.releaseDate}
               </span>
             </div>
-            <h3 className="mt-4 text-xl font-black leading-snug text-stone-950 group-hover:text-red-800">{release.title}</h3>
-            <p className="mt-3 line-clamp-2 text-sm leading-6 text-stone-600">{release.plainEnglishSummary}</p>
-            <div className="mt-4 flex items-center justify-between gap-3 border-t border-stone-100 pt-3">
+            <h3 className="mt-3 text-lg font-black leading-snug text-stone-950 group-hover:text-red-800">{release.title}</h3>
+            <p className="mt-2 line-clamp-1 text-sm leading-6 text-stone-600">{release.plainEnglishSummary}</p>
+            <div className="mt-3 flex items-center justify-between gap-3">
               <span className="text-xs font-bold text-stone-500">{metricCount ? `${metricCount} official metrics` : "Official report summary"}</span>
               <ArrowRight className="size-4 text-red-700 transition group-hover:translate-x-0.5" aria-hidden="true" />
             </div>

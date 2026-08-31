@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { cache } from "react";
 import { AppShell } from "@/components/app-shell";
 import { DebateBoard } from "@/components/homepage/debate-board";
 import { LatestReleaseHero } from "@/components/homepage/latest-release-hero";
@@ -19,7 +18,7 @@ type HomeSearchParams = Promise<{ province?: string | string[]; topic?: string |
 
 const DEFAULT_INCOME = 60_000;
 
-const getHomepageData = cache(async () => {
+async function getHomepageData() {
   const releaseHub = await getMultiSourceReleaseHub();
   return {
     releaseHub,
@@ -27,7 +26,7 @@ const getHomepageData = cache(async () => {
     weekly: buildLiveWeeklyPulseSummary(releaseHub),
     provinceExplorer: buildProvinceExplorerData(releaseHub),
   };
-});
+}
 
 function firstParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
@@ -63,8 +62,8 @@ export async function generateMetadata({ searchParams }: { searchParams: HomeSea
   const genericImage = "/api/og/province";
 
   if (!requestedProvince || !requestedTopic || !provinces.some((province) => province.slug === requestedProvince)) {
-    const title = "Can you build a life in your province?";
-    const description = "Compare jobs, rent, inflation, housing supply and newcomer flows across Canada using current official data.";
+    const title = "What changed in Canada's economy today?";
+    const description = "The latest official Canadian data, crunched into visual release briefs, youth affordability signals and province comparisons.";
     return {
       title,
       description,
@@ -124,17 +123,19 @@ export default async function Home({ searchParams }: { searchParams: HomeSearchP
 
   return (
     <AppShell variant="light">
+      {releaseHub.promotedRelease ? (
+        <div className="pb-6 sm:pb-10">
+          <LatestReleaseHero release={releaseHub.promotedRelease} />
+        </div>
+      ) : null}
       <ProvinceExplorer
         data={provinceExplorer}
         initialCategory={state.category as ProvinceExplorerCategoryId | undefined}
         initialProvince={state.province}
         initialIncome={income}
+        secondaryHeading
+        compact
       />
-      {releaseHub.promotedRelease ? (
-        <div className="py-6 sm:py-10">
-          <LatestReleaseHero release={releaseHub.promotedRelease} />
-        </div>
-      ) : null}
       <DebateBoard items={feed.debateItems} />
       <InteractiveLaunchpad />
       <ReleaseStream releases={releaseHub.todayQueue} />

@@ -58,12 +58,14 @@ export function ProvinceExplorer({
   initialProvince,
   initialIncome = 60_000,
   secondaryHeading = false,
+  compact = false,
 }: {
   data: ProvinceExplorerData;
   initialCategory?: ProvinceExplorerCategoryId;
   initialProvince?: string;
   initialIncome?: number;
   secondaryHeading?: boolean;
+  compact?: boolean;
 }) {
   const startingCategory = data.categories.find((item) => item.id === initialCategory) ?? data.categories[0];
   const startingProvince = (startingCategory?.values.some((value) => value.slug === initialProvince)
@@ -122,9 +124,7 @@ export function ProvinceExplorer({
           Official province rows | checked {checkedAt(data.generatedAt)} ET
         </div>
         <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-red-300">Your Canada right now</p>
-        {secondaryHeading
-          ? <h2 className="mt-2 text-4xl font-black leading-tight sm:text-5xl lg:text-5xl">Can you build a life in your province?</h2>
-          : <h1 className="mt-2 text-4xl font-black leading-tight sm:text-5xl lg:text-5xl">Can you build a life in your province?</h1>}
+        <h2 className="mt-2 text-4xl font-black leading-tight sm:text-5xl lg:text-5xl">Can you build a life in your province?</h2>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Work, rent, prices, new homes and population, compared with the same official yardstick across Canada.</p>
 
         <div className="mt-6 grid grid-cols-2 gap-2" aria-label="Map data category">
@@ -214,16 +214,17 @@ export function ProvinceExplorer({
   }
 
   return (
-    <section className="-mx-3 overflow-hidden bg-[#071315] text-white sm:-mx-6" aria-label="Province explorer" data-selected-province={selectedValue.slug} data-selected-topic={category.id} data-income={income}>
+    <section className="-mx-3 overflow-hidden bg-[#071315] text-white sm:-mx-6" aria-label="Province explorer" data-selected-province={selectedValue.slug} data-selected-topic={category.id} data-income={income} data-compact={compact || undefined}>
+      {!secondaryHeading ? <h1 className="sr-only">Can you build a life in your province?</h1> : null}
       <div className="lg:grid lg:grid-cols-[0.72fr_1.28fr]">
-        <div className="hidden min-h-[760px] border-r border-white/10 lg:block">
+        <div className={`hidden border-r border-white/10 lg:block ${compact ? "min-h-[640px]" : "min-h-[760px]"}`}>
           {renderHeader()}
           {renderDetails("explorer-province-desktop")}
         </div>
 
         <div>
           <div className="border-b border-white/10 lg:hidden">{renderHeader()}</div>
-          <div className="relative h-[430px] sm:h-[560px] lg:h-[760px]">
+          <div className={`relative ${compact ? "h-[390px] sm:h-[500px] lg:h-[640px]" : "h-[430px] sm:h-[560px] lg:h-[760px]"}`}>
             <Canada3DMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} onHover={setHoveredSlug} />
             <div className="pointer-events-none absolute left-4 top-4 bg-[#071315]/88 px-3 py-2 backdrop-blur-sm sm:left-6 sm:top-6">
               <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">{visible.province}</p>
@@ -247,7 +248,7 @@ export function ProvinceExplorer({
               key={item.id}
               type="button"
               onClick={() => setCategoryId(item.id)}
-              className={`flex min-h-28 items-start justify-between gap-3 border-b border-white/10 px-4 py-5 text-left transition hover:bg-white/5 sm:px-6 lg:border-b-0 lg:border-r ${item.id === category.id ? "bg-white/10" : ""}`}
+              className={`flex items-start justify-between gap-3 border-b border-white/10 px-4 text-left transition hover:bg-white/5 sm:px-6 lg:border-b-0 lg:border-r ${compact ? "min-h-24 py-4" : "min-h-28 py-5"} ${item.id === category.id ? "bg-white/10" : ""}`}
             >
               <span>
                 <span className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.1em] text-slate-400"><Icon className="size-3.5" aria-hidden="true" />{item.label}</span>
@@ -260,7 +261,7 @@ export function ProvinceExplorer({
       </div>
 
       {rentSignal ? (
-        <div className="border-t border-white/10 bg-[#0b1b1e] px-4 py-7 sm:px-8 sm:py-9 lg:px-10" aria-label={`${selectedValue.province} rent burden calculator`}>
+        <div className={`border-t border-white/10 bg-[#0b1b1e] px-4 sm:px-8 lg:px-10 ${compact ? "py-6 sm:py-7" : "py-7 sm:py-9"}`} aria-label={`${selectedValue.province} rent burden calculator`}>
           <div className="grid gap-7 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
             <div>
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-amber-300">

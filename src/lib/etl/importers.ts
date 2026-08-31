@@ -2,7 +2,7 @@ import { getPrisma } from "@/lib/prisma";
 import { shouldReplacePersistedRelease } from "@/lib/release-persistence-policy";
 import { refreshStatCanDailyReleaseFacts } from "@/lib/etl/statcan-adapter";
 import { fetchStatCanReleaseData } from "@/lib/statcan-release-data";
-import { countStructuredMetrics, getMultiSourceReleaseHub, type NormalizedRelease } from "@/lib/release-hub";
+import { buildStatCanBaseCharts, countStructuredMetrics, getMultiSourceReleaseHub, type NormalizedRelease } from "@/lib/release-hub";
 import { getLatestDailyReleaseDate, rankDailyEntries } from "@/lib/statcan-daily";
 
 function releaseSlug(value: string) {
@@ -209,6 +209,7 @@ export async function persistStatCanDailyReleaseEvents() {
         const score = getReleaseScore(entry);
         const affectedAreas = inferReleaseAreas(`${entry.title} ${entry.summary}`);
         const releaseData = entriesToEnrich.has(entry.href) ? await fetchStatCanReleaseData(entry).catch(() => null) : null;
+        const chartPayloads = buildStatCanBaseCharts(releaseData, entry.title);
         const facts = {
           source: "statcan",
           publisher: "Statistics Canada",
@@ -223,6 +224,7 @@ export async function persistStatCanDailyReleaseEvents() {
           tableLinks: releaseData?.tableLinks ?? [],
           wdsDownloads: releaseData?.wdsDownloads ?? [],
           signals: releaseData?.signals ?? [],
+          chartPayloads,
           tables: releaseData?.tables.map((table) => ({
             title: table.title,
             sourceTableIds: table.sourceTableIds,
@@ -242,7 +244,7 @@ export async function persistStatCanDailyReleaseEvents() {
             releaseType: "official-daily-release",
             geographyLevel: "mixed",
             status: releaseData?.sourceStatus === "table_data_loaded" ? "live" : "summary_only",
-            metricCount: releaseData?.signals.length ?? 0,
+            metricCount: chartPayloads.reduce((total, chart) => total + chart.points.length, 0),
             title: entry.title,
             referencePeriod: releaseData?.tables[0]?.latestPeriod ?? entry.published,
             affectedIndicators: affectedAreas,

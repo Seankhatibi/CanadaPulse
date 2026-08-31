@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Crown } from "lucide-react";
 import { provinces, provinceSymbols } from "@/lib/province-directory";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ProvinceSelect } from "@/components/province-select";
 import { MobileNav } from "@/components/mobile-nav";
 
@@ -61,7 +60,6 @@ export function AppShell({
           </nav>
 
           <ProvinceSelect />
-          <ThemeToggle />
           <MobileNav variant={variant} />
         </div>
       </header>

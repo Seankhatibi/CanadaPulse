@@ -1,5 +1,6 @@
 import { fetchCmhcHousingConstructionData } from "../src/lib/cmhc-housing";
 import { fetchCmhcRentalSnapshot } from "../src/lib/cmhc-rental";
+import { fetchBankOfCanadaReportReleases } from "../src/lib/bank-of-canada-reports";
 import { fetchFinanceCanadaFiscalSnapshot } from "../src/lib/finance-canada-fiscal";
 import { fetchIrccImmigrationSnapshot } from "../src/lib/ircc-immigration";
 import { buildReleaseExplainer, fetchStatCanDailyEntryFromUrl } from "../src/lib/statcan-daily";
@@ -161,6 +162,11 @@ async function main() {
   assert(rental.metros.some((item) => item.geography.includes("Toronto")), "CMHC Toronto metro row is missing.");
   assert(rental.metros.some((item) => item.geography.includes("Vancouver")), "CMHC Vancouver metro row is missing.");
 
+  const bankReports = await fetchBankOfCanadaReportReleases();
+  assert(bankReports.length >= 6, `Bank of Canada report monitor discovered too few report families: ${bankReports.length}`);
+  assert(bankReports.some((report) => report.releaseType === "bank-of-canada-mpr"), "Bank of Canada Monetary Policy Report monitor is missing.");
+  assert(bankReports.every((report) => report.status === "live" && report.sourceLinks.length >= 2), "Bank of Canada reports lost live status or source trails.");
+
   const immigration = await fetchIrccImmigrationSnapshot();
   const permanentResidents = immigration.metrics.find((item) => item.key === "permanentResidents");
   const tfwp = immigration.metrics.find((item) => item.key === "tfwp");
@@ -170,7 +176,7 @@ async function main() {
   assert(asylum && asylum.value > 1_000, `IRCC asylum total failed integrity range: ${asylum?.value}`);
   assert(permanentResidents.provinceValues.some((item) => item.province === "Ontario"), "IRCC Ontario province row is missing.");
 
-  console.log("Official release integrity audit passed: major and unpromoted StatCan releases, CPI, Finance Canada, CMHC construction/rental and IRCC values and units are correctly identified.");
+  console.log("Official release integrity audit passed: StatCan releases, CPI, CMHC, Bank of Canada reports, Finance Canada and IRCC values, units and source trails are correctly identified.");
 }
 
 main().catch((error) => {

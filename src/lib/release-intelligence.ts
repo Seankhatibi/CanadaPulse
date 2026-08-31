@@ -12,6 +12,9 @@ const positiveWhenRising = /employment|participation|wage|compensation|productiv
 
 export function getMetricMeaning(point: ReleaseChartPayload["points"][number], releaseTitle = ""): MetricMeaning {
   if (point.direction === "neutral") return "mixed";
+  const gdpValueMetric = /gross domestic product|\bgdp\b/i.test(releaseTitle)
+    && /gross domestic product|market prices|output|exports|investment|compensation/i.test(point.label);
+  if (gdpValueMetric) return point.direction === "up" ? "positive" : "negative";
   const cpiPressureMetric = /consumer price|inflation/i.test(releaseTitle)
     && /all-items|food|shelter|rent|gasoline|energy/i.test(point.label);
   if (cpiPressureMetric) return point.direction === "up" ? "negative" : "positive";
@@ -24,7 +27,15 @@ function uniqueMetrics(release: NormalizedRelease) {
   const metrics = release.chartPayloads
     .filter((chart) => chart.kind !== "qualitative")
     .flatMap((chart) => chart.points);
-  return [...new Map(metrics.map((metric) => [`${metric.label}-${metric.display}`, metric])).values()];
+  const unique = new Map<string, (typeof metrics)[number]>();
+  for (const metric of metrics) {
+    const key = metric.label.trim().toLowerCase();
+    const existing = unique.get(key);
+    const existingLooksLikeChangeOnly = existing?.changeDisplay && existing.display === existing.changeDisplay;
+    const candidateHasCurrentValue = !metric.changeDisplay || metric.display !== metric.changeDisplay;
+    if (!existing || (existingLooksLikeChangeOnly && candidateHasCurrentValue)) unique.set(key, metric);
+  }
+  return [...unique.values()];
 }
 
 function metricPriority(release: NormalizedRelease, label: string) {
@@ -73,18 +84,30 @@ function releaseVerdict(release: NormalizedRelease, metrics: ResearchMetric[]) {
 }
 
 export function buildReleaseIntelligence(release: NormalizedRelease) {
-  const metrics: ResearchMetric[] = uniqueMetrics(release)
+  const allMetrics: ResearchMetric[] = uniqueMetrics(release)
     .sort((a, b) => metricPriority(release, a.label) - metricPriority(release, b.label))
-    .slice(0, 12)
     .map((metric) => ({
       ...metric,
       meaning: getMetricMeaning(metric, release.title),
     }));
+  const metrics = allMetrics.slice(0, 12);
   const positive = metrics.filter((metric) => metric.meaning === "positive");
   const negative = metrics.filter((metric) => metric.meaning === "negative");
   const mixed = metrics.filter((metric) => metric.meaning === "mixed");
   const provinceRank = rankComparableProvinceValues(release.provinceBreakdown);
-  const takeaways = metrics
+  const primaryMovementChart = release.chartPayloads.find((chart) => chart.kind === "bar" && chart.points.some((point) => point.changeDisplay));
+  const biggestMover = [...(primaryMovementChart?.points ?? [])]
+    .filter((metric) => metric.change !== null && metric.change !== undefined && metric.changeDisplay)
+    .sort((a, b) => Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0))[0];
+  const provinceHigh = provinceRank[0];
+  const provinceLow = provinceRank.at(-1);
+  const standouts = [
+    biggestMover ? `Largest loaded movement: ${biggestMover.label} ${biggestMover.changeDisplay}; latest value ${biggestMover.display}.` : null,
+    provinceHigh && provinceLow && provinceHigh.province !== provinceLow.province
+      ? `Province range: ${provinceHigh.province} is ${provinceHigh.value}, versus ${provinceLow.province} at ${provinceLow.value}.`
+      : null,
+  ].filter((value): value is string => Boolean(value));
+  const metricTakeaways = metrics
     .filter((metric) => metric.changeDisplay || metric.plainEnglish)
     .slice(0, 5)
     .map((metric) =>
@@ -100,7 +123,8 @@ export function buildReleaseIntelligence(release: NormalizedRelease) {
     negative,
     mixed,
     provinceRank,
-    takeaways: [...new Set(takeaways)],
+    standouts,
+    takeaways: [...new Set([...standouts, ...metricTakeaways])].slice(0, 5),
     evidenceLevel:
       release.status === "live" && hasStructuredMetrics(release)
         ? "Official values loaded"

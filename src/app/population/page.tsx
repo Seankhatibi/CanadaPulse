@@ -45,7 +45,7 @@ export default async function PopulationPage({ searchParams }: { searchParams: P
         <section className="mx-auto max-w-3xl py-16">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-red-700">Official source unavailable</p>
           <h1 className="mt-3 text-4xl font-black text-stone-950 sm:text-5xl">Population data is temporarily unavailable.</h1>
-          <p className="mt-4 text-lg leading-8 text-stone-600">Canada Pulse will not substitute seeded estimates for the current IRCC files. Check source status or try again shortly.</p>
+          <p className="mt-4 text-lg leading-8 text-stone-600">Canada Pulse will not display unverified values when the current IRCC files are unavailable. Check source freshness or try again shortly.</p>
           <Link href="/data-status" className="mt-6 inline-flex items-center gap-2 rounded-md bg-stone-950 px-4 py-3 text-sm font-black text-white">Check source status <ArrowRight className="size-4" aria-hidden="true" /></Link>
         </section>
       </AppShell>

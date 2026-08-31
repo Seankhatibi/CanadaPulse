@@ -16,6 +16,7 @@ export type StatCanReleaseTable = {
     latest: number | null;
     previous: number | null;
     change: number | null;
+    changeDisplay?: string;
     changePeriod: string;
     unit?: string;
     changeUnit?: string;
@@ -422,6 +423,7 @@ async function fetchWdsTableSnapshot(productId: string): Promise<StatCanReleaseT
       latest: row.latest,
       previous: row.previous,
       change: row.change,
+      changeDisplay: formatTableChange(row.label, row.change),
       changePeriod: row.changePeriod,
       display: row.display,
       previousDisplay: row.previousDisplay,
@@ -505,6 +507,7 @@ function parseReleaseTable(csv: string, csvUrl: string, htmlUrl: string): StatCa
       latest: row.latest,
       previous: row.previous,
       change: row.change,
+      changeDisplay: formatTableChange(row.label, row.change, row.changeUnit),
       changePeriod: row.changePeriod,
       unit: row.unit,
       changeUnit: row.changeUnit,
@@ -553,7 +556,7 @@ function signalsFromTables(tables: StatCanReleaseTable[], releaseTitle: string):
     const value = row.latest ?? 0;
     const change = row.change;
     const display = row.display ?? formatSignalDisplay(row.label, value);
-    const changeDisplay = formatTableChange(row.label, change, row.changeUnit);
+    const changeDisplay = row.changeDisplay ?? formatTableChange(row.label, change, row.changeUnit);
 
     return {
       label: row.label,
