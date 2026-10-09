@@ -15,3 +15,5 @@ Verification: all 10 curated Statistics Canada series loaded in the source check
 Remaining coverage: direct imports of service wait times, detailed childcare costs, new-lease asking rents, municipal policy and program eligibility are not yet available. Publisher links and explicit coverage notices are provided. The policy tracker covers federal bills; it does not claim to verify implementation or outcomes. The interface is designed for the 2027 audience while retaining actual observation dates.
 
 Final refinements: surface actual youth cohorts directly on Today; prioritize employment, inflation and rent before less actionable industry totals; improve light-card contrast when the shell uses dark mode; provide 44px navigation targets.
+
+Map-first update: homepage opens in 3D with visible province badges; actual youth unemployment, youth wages and young-adult primary care are available alongside rent, vacancy, inflation and broader economic layers. Each cohort layer requires the same observation period across provinces. Missing values stay grey. Extrusion depth is decorative and fixed; colour has a layer-specific legend. List and 2D alternatives remain available.

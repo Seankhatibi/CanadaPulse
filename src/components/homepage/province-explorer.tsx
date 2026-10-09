@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, BriefcaseBusiness, Building2, CircleDollarSign, DoorOpen, Home, Minus, WalletCards, Users } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, BriefcaseBusiness, Building2, CircleDollarSign, DoorOpen, Home, Minus, WalletCards, Users, HeartPulse } from "lucide-react";
 import { ShareStatButton } from "@/components/share-stat-button";
 import { CanadaFlatMap } from "@/components/homepage/canada-flat-map";
 import type { ProvinceExplorerCategoryId, ProvinceExplorerData } from "@/lib/province-explorer-data";
@@ -15,6 +15,9 @@ const Canada3DMap = dynamic(() => import("@/components/homepage/canada-3d-map").
 
 const icons = {
   jobs: BriefcaseBusiness,
+  "youth-jobs": BriefcaseBusiness,
+  "youth-wages": WalletCards,
+  "primary-care": HeartPulse,
   rent: Home,
   vacancy: DoorOpen,
   prices: CircleDollarSign,
@@ -24,6 +27,8 @@ const icons = {
 
 const youthSignalLabels: Partial<Record<ProvinceExplorerCategoryId, string>> = {
   jobs: "Job pressure",
+  "youth-jobs": "Youth job entry",
+  "youth-wages": "Youth hourly pay",
   rent: "Rent pressure",
   vacancy: "Rental choice",
   prices: "Price pressure",
@@ -34,7 +39,7 @@ function categoryMeaning(categoryId: ProvinceExplorerCategoryId, highMeaning: "p
   if (categoryId === "vacancy") return { low: "Tighter market", high: "More choice" };
   if (highMeaning === "pressure") return { low: "Less pressure", high: "More pressure" };
   if (highMeaning === "positive") return { low: "Fewer", high: "More" };
-  return { low: "Lower flow", high: "Higher flow" };
+  return { low: "Lower value", high: "Higher value" };
 }
 
 function checkedAt(value: string) {
@@ -60,6 +65,8 @@ export function ProvinceExplorer({
   initialIncome = 60_000,
   secondaryHeading = false,
   compact = false,
+  hero = false,
+  initialView = "list",
 }: {
   data: ProvinceExplorerData;
   initialCategory?: ProvinceExplorerCategoryId;
@@ -67,6 +74,8 @@ export function ProvinceExplorer({
   initialIncome?: number;
   secondaryHeading?: boolean;
   compact?: boolean;
+  hero?: boolean;
+  initialView?: "list" | "2d" | "3d";
 }) {
   const startingCategory = data.categories.find((item) => item.id === initialCategory) ?? data.categories[0];
   const startingProvince = (startingCategory?.values.some((value) => value.slug === initialProvince)
@@ -76,7 +85,7 @@ export function ProvinceExplorer({
   const [provinceSlug, setProvinceSlug] = useState(startingProvince);
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
   const [income, setIncome] = useState(initialIncome);
-  const [mapMode, setMapMode] = useState<"list" | "2d" | "3d">("list");
+  const [mapMode, setMapMode] = useState<"list" | "2d" | "3d">(initialView);
   const category = data.categories.find((item) => item.id === categoryId) ?? data.categories[0];
 
   const selected = useMemo(() => {
@@ -99,6 +108,7 @@ export function ProvinceExplorer({
 
   if (!category || !selected || !visible) return null;
 
+  const Heading = hero ? "h1" : "h2";
   const selectedValue = selected;
   const DirectionIcon = selectedValue.direction === "up" ? ArrowUp : selectedValue.direction === "down" ? ArrowDown : Minus;
   const legend = categoryMeaning(category.id, category.highMeaning);
@@ -126,10 +136,10 @@ export function ProvinceExplorer({
           Official province rows | checked {checkedAt(data.generatedAt)} ET
         </div>
         <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-red-300">Your Canada right now</p>
-        <h2 className="mt-2 text-4xl font-black leading-tight sm:text-5xl lg:text-5xl">Can you build a life in your province?</h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Work, rent, prices, new homes and population, compared with the same official yardstick across Canada.</p>
+        <Heading className={`mt-2 font-black leading-tight ${hero ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl"}`}>{hero ? "Your life, mapped across Canada." : "Can you build a life in your province?"}</Heading>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Choose a layer. Tap a province. See what jobs, pay, rent and services mean for daily life. Each layer uses its own measure and observation period.</p>
 
-        <div className="mt-6 grid grid-cols-2 gap-2" aria-label="Map data category">
+        <div className={`mt-6 grid gap-2 ${hero ? "grid-cols-3" : "grid-cols-2"}`} aria-label="Map data category">
           {data.categories.map((item) => {
             const Icon = icons[item.id];
             const active = item.id === category.id;
@@ -139,7 +149,7 @@ export function ProvinceExplorer({
                 type="button"
                 onClick={() => setCategoryId(item.id)}
                 aria-pressed={active}
-                className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-md border px-2.5 text-xs font-black transition sm:text-sm ${active ? "border-white bg-white text-stone-950" : "border-white/15 bg-white/5 text-slate-300 hover:border-white/40 hover:bg-white/10"}`}
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border px-2.5 text-xs font-black transition sm:text-sm ${active ? "border-white bg-white text-stone-950" : "border-white/15 bg-white/5 text-slate-300 hover:border-white/40 hover:bg-white/10"}`}
               >
                 <Icon className="size-4" aria-hidden="true" />
                 {item.label}
@@ -179,7 +189,7 @@ export function ProvinceExplorer({
           </div>
         </div>
 
-        {youthSignals.length > 0 ? (
+        {youthSignals.length > 0 && !hero ? (
           <div className="mt-5" aria-label={`${selectedValue.province} household context`}>
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-red-300">Household context</p>
@@ -199,12 +209,13 @@ export function ProvinceExplorer({
           </div>
         ) : null}
 
-        <p className="mt-4 text-sm leading-6 text-slate-300">{category.context}</p>
+        {hero ? <details className="mt-4 text-sm"><summary className="cursor-pointer font-bold text-cyan-300">What this measures & why it matters</summary><p className="mt-2 leading-6 text-slate-300">{category.context}</p></details> : <p className="mt-4 text-sm leading-6 text-slate-300">{category.context}</p>}
         <p className="mt-3 text-[11px] font-semibold text-slate-500">{category.source} | {category.period}</p>
+        {category.sourceUrl ? <a href={category.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-cyan-300">Official table & cohort definition ↗</a> : null}
 
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
           <Link href={selectedValue.href} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-md bg-red-600 px-4 text-sm font-black text-white hover:bg-red-500">
-            Explore {selectedValue.abbr}
+            Explore {category.cohort ? "this evidence" : selectedValue.abbr}
             <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
           <ShareStatButton
@@ -217,7 +228,7 @@ export function ProvinceExplorer({
 
   return (
     <section className="-mx-3 overflow-hidden bg-[#071315] text-white sm:-mx-6" aria-label="Province explorer" data-selected-province={selectedValue.slug} data-selected-topic={category.id} data-income={income} data-compact={compact || undefined}>
-      {!secondaryHeading ? <h1 className="sr-only">Can you build a life in your province?</h1> : null}
+      {!secondaryHeading && !hero ? <h1 className="sr-only">Can you build a life in your province?</h1> : null}
       <div className="lg:grid lg:grid-cols-[0.72fr_1.28fr]">
         <div className={`hidden border-r border-white/10 lg:block ${compact ? "min-h-[640px]" : "min-h-[760px]"}`}>
           {renderHeader()}
@@ -225,13 +236,14 @@ export function ProvinceExplorer({
         </div>
 
         <div>
-          <div className="border-b border-white/10 lg:hidden">{renderHeader()}{renderDetails("explorer-province-mobile")}</div>
+          <div className="border-b border-white/10 lg:hidden">{renderHeader()}<div className="flex items-center justify-between gap-3 px-4 pb-4"><span className="font-bold">{selectedValue.province}</span><span className="font-mono text-2xl font-bold">{selectedValue.display}</span></div></div>
           <div className="flex flex-wrap gap-2 p-4" aria-label="Choose explorer view">{(["list", "2d", "3d"] as const).map((mode) => <button key={mode} type="button" aria-pressed={mapMode === mode} onClick={() => setMapMode(mode)} className={`min-h-11 rounded-lg border px-4 text-sm font-bold ${mapMode === mode ? "bg-white text-stone-950" : "border-white/25 text-white"}`}>{mode === "list" ? "Ranked list" : mode === "2d" ? "2D map" : "3D map"}</button>)}</div>
-          <div className={`relative ${mapMode === "list" ? "max-h-[560px] overflow-auto" : "h-[360px] sm:h-[480px]"}`}>
+          <div className={`relative ${mapMode === "list" ? "max-h-[560px] overflow-auto" : "h-[420px] sm:h-[600px]"}`}>
             {mapMode === "list" ? <div className="grid gap-2 p-4">{category.values.map((value) => <button key={value.slug} onClick={() => setProvinceSlug(value.slug)} aria-pressed={value.slug === selectedValue.slug} className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border p-3 text-left ${value.slug === selectedValue.slug ? "border-teal-200 bg-white/15" : "border-white/15"}`}><span className="text-sm">#{value.rank} {value.province}</span><span className="font-mono font-bold">{value.display}</span></button>)}<p className="text-xs leading-6 text-slate-400">Ranks describe the highest values, not an overall quality-of-life grade. Raw home and newcomer counts are not adjusted for population.</p></div> : mapMode === "2d" ? <CanadaFlatMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} /> : <Canada3DMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} onHover={setHoveredSlug} onUnavailable={() => setMapMode("2d")} /> }
             {mapMode !== "list" ? <><div className="pointer-events-none absolute left-4 top-4 bg-[#071315]/88 px-3 py-2 backdrop-blur-sm sm:left-6 sm:top-6">
               <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">{visible.province}</p>
               <p className="mt-1 font-mono text-2xl font-black">{visible.display}</p>
+              <p className="mt-1 text-[10px] text-slate-300">{category.cohort ?? "General population / survey coverage"} · {category.period}</p>
             </div>
             <div className="pointer-events-none absolute inset-x-4 bottom-4 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.08em] text-slate-400 sm:inset-x-6 sm:bottom-6">
               <span>{legend.low}</span>
@@ -239,7 +251,8 @@ export function ProvinceExplorer({
               <span>{legend.high}</span>
             </div></> : null}
           </div>
-
+          <p className="px-4 pb-4 text-[11px] leading-5 text-slate-400">Colour compares values within this layer. Province height is decorative. Grey means no comparable observation. Smaller provinces are labelled when selected.</p>
+          <div className="lg:hidden">{renderDetails("explorer-province-mobile")}</div>
         </div>
       </div>
 

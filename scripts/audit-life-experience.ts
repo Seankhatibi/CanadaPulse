@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { comparableScale, barWidth } from "../src/lib/chart-integrity";
 import { calculateBudget } from "../src/lib/budget";
+import { buildLifeMapCategories } from "../src/lib/province-explorer-data";
+import type { LifeSeries } from "../src/lib/life-series";
 import { normalizeBill } from "../src/lib/policy-data";
 
 const point = { display: "10%", value: 10, unit: "%", comparisonKey: "unemployment-15-24", period: "2026-09" };
@@ -23,3 +25,17 @@ assert.equal(bill?.url, "https://www.parl.ca/legisinfo/en/bill/45-1/c-1");
 assert.equal(normalizeBill({ Id: 2 }), null);
 assert.ok(!bill || !("implemented" in bill));
 console.log("Life-experience audit passed: compatible scales, zero values, shared rent, missing income and legislative dates.");
+
+const mapDataset: LifeSeries = { id: "youth-jobs", title: "Youth unemployment", topic: "work", unit: "%", cohort: "15–24 years", sourceUrl: "https://www150.statcan.gc.ca/", cadence: "Monthly", implication: "Job-entry context.", limitation: "Survey estimate.", status: "loaded", checkedAt: "2026-10-09", rows: [
+  { geography: "Canada", points: [{ period: "2026-09-01", value: 13 }] },
+  ...["Ontario", "Alberta", "British Columbia", "Manitoba"].map((geography, index) => ({ geography, points: [{ period: "2026-09-01", value: index * 2 }] })),
+  { geography: "Quebec", points: [{ period: "2026-08-01", value: 50 }] },
+] };
+const mapLayer = buildLifeMapCategories([mapDataset])[0];
+assert.equal(mapLayer.values.length, 4);
+assert.ok(!mapLayer.values.some((value) => value.province === "Quebec"));
+assert.equal(mapLayer.values.find((value) => value.province === "Ontario")?.value, 0);
+assert.equal(mapLayer.cohort, "15–24 years");
+assert.equal(mapLayer.period, "September 2026");
+assert.deepEqual(buildLifeMapCategories([{ ...mapDataset, status: "unavailable" }]), []);
+console.log("Map audit passed: shared periods, actual cohorts, zero values and missing-source handling.");

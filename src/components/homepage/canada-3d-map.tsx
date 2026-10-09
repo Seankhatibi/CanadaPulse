@@ -10,7 +10,7 @@ type CanadaMapCategory = {
   label: string;
   lowColor: string;
   highColor: string;
-  values: Array<{ slug: string; abbr: string; intensity: number }>;
+  values: Array<{ slug: string; abbr: string; intensity: number; display: string }>;
 };
 
 export function Canada3DMap({
@@ -75,6 +75,8 @@ export function Canada3DMap({
     const highColor = new THREE.Color(category.highColor);
     const valueByProvince = new Map(category.values.map((value) => [value.slug, value]));
     const meshes: ProvinceMesh[] = [];
+    const labelAnchors = new Map<string, { area: number; center: THREE.Vector3 }>();
+    const labels: THREE.Sprite[] = [];
     const loader = new SVGLoader();
 
     for (const location of canadaMap.locations) {
@@ -88,13 +90,19 @@ export function Canada3DMap({
       for (const path of parsed.paths) {
         for (const shape of path.toShapes()) {
           const geometry = new THREE.ExtrudeGeometry(shape, {
-            depth: value ? 8 + value.intensity * 30 : 5,
+            depth: 16,
             bevelEnabled: true,
             bevelSegments: 2,
             bevelSize: 0.65,
             bevelThickness: 1.2,
           });
           geometry.translate(-396.5, -516, 0);
+          geometry.computeBoundingBox();
+          if (provinceSlug && geometry.boundingBox) {
+            const size = geometry.boundingBox.getSize(new THREE.Vector3());
+            const area = size.x * size.y;
+            if (area > (labelAnchors.get(provinceSlug)?.area ?? 0)) labelAnchors.set(provinceSlug, { area, center: geometry.boundingBox.getCenter(new THREE.Vector3()) });
+          }
           const material = new THREE.MeshStandardMaterial({
             color: fill,
             emissive: new THREE.Color(0x000000),
@@ -119,6 +127,33 @@ export function Canada3DMap({
     }
 
     mapGroup.scale.set(0.88, -0.88, 0.88);
+    for (const value of category.values) {
+      const anchor = labelAnchors.get(value.slug);
+      if (!anchor) continue;
+      const labelCanvas = document.createElement("canvas");
+      labelCanvas.width = 320;
+      labelCanvas.height = 128;
+      const context = labelCanvas.getContext("2d");
+      if (!context) continue;
+      context.fillStyle = "rgba(5, 20, 24, 0.90)";
+      context.fillRect(0, 0, 320, 128);
+      context.textAlign = "center";
+      context.fillStyle = "#b8f6ed";
+      context.font = "bold 30px system-ui";
+      context.fillText(value.abbr, 160, 42);
+      context.fillStyle = "#ffffff";
+      context.font = "bold 40px system-ui";
+      context.fillText(value.display, 160, 98);
+      const texture = new THREE.CanvasTexture(labelCanvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, depthWrite: false }));
+      sprite.scale.set(105, 42, 1);
+      sprite.userData.provinceSlug = value.slug;
+      sprite.userData.alwaysVisible = !["NB", "NS", "PE"].includes(value.abbr);
+      sprite.renderOrder = 2;
+      scene.add(sprite);
+      labels.push(sprite);
+    }
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
     let hoveredSlug: string | null = null;
@@ -126,7 +161,7 @@ export function Canada3DMap({
     let pointerY = 0;
     let frame = 0;
 
-    function updatePointer(event: PointerEvent) {
+    function updatePointer(event: PointerEvent | MouseEvent) {
       const rect = canvas.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -150,7 +185,8 @@ export function Canada3DMap({
       onHoverRef.current(null);
     }
 
-    function handleClick() {
+    function handleClick(event: MouseEvent) {
+      updatePointer(event);
       if (hoveredSlug) onSelectRef.current(hoveredSlug);
     }
 
@@ -184,6 +220,13 @@ export function Canada3DMap({
         mesh.material.emissive.setHex(selected ? 0x5f161d : hovered ? 0x075966 : 0x000000);
         mesh.material.emissiveIntensity += (targetIntensity - mesh.material.emissiveIntensity) * 0.14;
       }
+      mapGroup.updateMatrixWorld(true);
+      for (const label of labels) {
+        const slug = label.userData.provinceSlug as string;
+        label.visible = label.userData.alwaysVisible || slug === selectedProvinceRef.current || slug === hoveredSlug;
+        const anchor = labelAnchors.get(slug)!;
+        label.position.copy(anchor.center).setZ(55).applyMatrix4(mapGroup.matrixWorld);
+      }
       renderer.render(scene, camera);
       frame = window.requestAnimationFrame(animate);
     }
@@ -203,6 +246,10 @@ export function Canada3DMap({
         }
       }
       renderer.dispose();
+      for (const label of labels) {
+        label.material.map?.dispose();
+        label.material.dispose();
+      }
     };
   }, [category]);
 

@@ -10,6 +10,9 @@ const money = new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD
 
 const categoryIcons = {
   jobs: BriefcaseBusiness,
+  "youth-jobs": BriefcaseBusiness,
+  "youth-wages": WalletCards,
+  "primary-care": DoorOpen,
   rent: Home,
   vacancy: DoorOpen,
   prices: CircleDollarSign,

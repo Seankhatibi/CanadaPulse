@@ -1,8 +1,9 @@
 import { provinces } from "@/lib/province-directory";
 import { parseComparableProvinceValue, rankComparableProvinceValues } from "@/lib/province-values";
 import type { NormalizedRelease, ReleaseHubPayload } from "@/lib/release-hub";
+import type { LifeSeries } from "@/lib/life-series";
 
-export type ProvinceExplorerCategoryId = "jobs" | "rent" | "vacancy" | "prices" | "homes" | "newcomers";
+export type ProvinceExplorerCategoryId = "jobs" | "rent" | "vacancy" | "prices" | "homes" | "newcomers" | "youth-jobs" | "youth-wages" | "primary-care";
 
 export type ProvinceExplorerValue = {
   province: string;
@@ -27,6 +28,8 @@ export type ProvinceExplorerCategory = {
   period: string;
   releaseDate: string;
   releaseHref: string;
+  sourceUrl?: string;
+  cohort?: string;
   highMeaning: "pressure" | "positive" | "neutral";
   lowColor: string;
   highColor: string;
@@ -174,7 +177,7 @@ function buildCategory(definition: CategoryDefinition, release: NormalizedReleas
   };
 }
 
-export function buildProvinceExplorerData(releaseHub: ReleaseHubPayload): ProvinceExplorerData {
+export function buildProvinceExplorerData(releaseHub: ReleaseHubPayload, series: LifeSeries[] = []): ProvinceExplorerData {
   const liveReleases = releaseHub.todayQueue.filter((release) => release.status === "live");
   const categories = definitions.flatMap((definition) => {
     const release = liveReleases.find(definition.find);
@@ -186,6 +189,43 @@ export function buildProvinceExplorerData(releaseHub: ReleaseHubPayload): Provin
   return {
     generatedAt: releaseHub.generatedAt,
     defaultProvince: categories.some((category) => category.values.some((value) => value.slug === "ontario")) ? "ontario" : categories[0]?.values[0]?.slug ?? "ontario",
-    categories,
+    categories: [...buildLifeMapCategories(series), ...categories],
   };
+}
+
+export function buildLifeMapCategories(series: LifeSeries[]): ProvinceExplorerCategory[] {
+  const layers = [
+    { id: "youth-jobs" as const, label: "Youth jobs", question: "Where is entering work harder?", highMeaning: "pressure" as const, lowColor: "#22d3ee", highColor: "#fb7185", href: "/work" },
+    { id: "youth-wages" as const, label: "Youth pay", question: "What do young employees earn per hour?", highMeaning: "neutral" as const, lowColor: "#38bdf8", highColor: "#a78bfa", href: "/work" },
+    { id: "primary-care" as const, label: "Care access", question: "Do young adults have a regular healthcare provider?", highMeaning: "positive" as const, lowColor: "#f59e0b", highColor: "#2dd4bf", href: "/quality-of-life" },
+  ];
+  return layers.flatMap((layer) => {
+    const dataset = series.find((item) => item.id === layer.id && item.status === "loaded");
+    const national = dataset?.rows.find((row) => /^Canada/.test(row.geography));
+    const period = national?.points.at(-1)?.period;
+    if (!dataset || !period) return [];
+    const rows = dataset.rows.flatMap((row) => {
+      const province = provinces.find((item) => item.name === row.geography);
+      const point = row.points.find((item) => item.period === period);
+      if (!province || !point || !Number.isFinite(point.value)) return [];
+      return [{ province, value: point.value }];
+    }).sort((a, b) => b.value - a.value);
+    if (rows.length < 4) return [];
+    const minimum = Math.min(...rows.map((row) => row.value));
+    const maximum = Math.max(...rows.map((row) => row.value));
+    const range = maximum - minimum;
+    return [{
+      ...layer, context: `${dataset.title} · ${dataset.cohort}. ${dataset.implication} ${dataset.limitation}`,
+      source: "Statistics Canada", sourceUrl: dataset.sourceUrl, cohort: dataset.cohort,
+      period: new Intl.DateTimeFormat("en-CA", { month: dataset.cadence === "Monthly" ? "long" : undefined, year: "numeric", timeZone: "UTC" }).format(new Date(period)),
+      releaseDate: "", releaseHref: layer.href,
+      values: rows.map((row) => ({
+        province: row.province.name, slug: row.province.slug, abbr: row.province.abbr, value: row.value,
+        display: dataset.unit === "$/hour" ? `$${row.value.toFixed(2)}/hr` : `${row.value.toFixed(1)}%`,
+        note: `${dataset.cohort}. Same observation period across provinces; highest-to-lowest rank is not a personal outcome.`,
+        rank: 1 + rows.filter((other) => other.value > row.value).length, rankOutOf: rows.length,
+        intensity: range > 0 ? (row.value - minimum) / range : .5, direction: "neutral" as const, href: layer.href,
+      })),
+    }];
+  });
 }

@@ -26,7 +26,7 @@ async function getHomepageData() {
     lifeSeries,
     feed: buildHomepageFeed({ releaseHub }),
     weekly: buildLiveWeeklyPulseSummary(releaseHub),
-    provinceExplorer: buildProvinceExplorerData(releaseHub),
+    provinceExplorer: buildProvinceExplorerData(releaseHub, lifeSeries),
   };
 }
 
@@ -125,6 +125,15 @@ export default async function Home({ searchParams }: { searchParams: HomeSearchP
 
   return (
     <AppShell variant="light">
+      <ProvinceExplorer
+        data={provinceExplorer}
+        initialCategory={state.category as ProvinceExplorerCategoryId | undefined}
+        initialProvince={state.province}
+        initialIncome={income}
+        hero
+        initialView="3d"
+        compact
+      />
       <DailyLifeDashboard series={lifeSeries} releases={releaseHub.todayQueue} initialProvince={state.province} />
       <LifeTopicGrid />
       <details className="my-6 rounded-2xl border border-stone-200 bg-white p-4"><summary className="cursor-pointer font-bold text-teal-800">Explore the latest major release</summary>
@@ -134,14 +143,7 @@ export default async function Home({ searchParams }: { searchParams: HomeSearchP
         </div>
       ) : null}
       </details>
-      <ProvinceExplorer
-        data={provinceExplorer}
-        initialCategory={state.category as ProvinceExplorerCategoryId | undefined}
-        initialProvince={state.province}
-        initialIncome={income}
-        secondaryHeading
-        compact
-      />
+
       <DebateBoard items={feed.debateItems} />
 
       <ReleaseStream releases={releaseHub.todayQueue} />
