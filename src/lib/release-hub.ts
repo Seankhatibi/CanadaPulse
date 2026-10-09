@@ -63,6 +63,7 @@ export type NormalizedRelease = {
   href: string;
   releaseType: string;
   releaseDate: string;
+  publishedAt?: string;
   referencePeriod: string;
   geographyLevel: "federal" | "province" | "city" | "mixed";
   affectedAreas: ReleaseArea[];
@@ -370,6 +371,7 @@ export async function normalizeStatCanDailyRelease(entry: StatCanDailyEntry, pro
     href: promotedHref ?? sourceHref("statcan", slug),
     releaseType: "official-daily-release",
     releaseDate: entry.published.slice(0, 10),
+    publishedAt: entry.published,
     referencePeriod: releaseData?.tables[0]?.latestPeriod ?? entry.published,
     geographyLevel: "mixed",
     affectedAreas: areas,

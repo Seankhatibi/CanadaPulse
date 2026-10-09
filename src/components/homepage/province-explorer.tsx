@@ -92,6 +92,7 @@ export function ProvinceExplorer({
   const [income, setIncome] = useState(initialIncome);
   const [mapMode, setMapMode] = useState<"list" | "2d" | "3d">(initialView);
   const category = data.categories.find((item) => item.id === (hero && !manualTopic ? data.defaultCategory : categoryId)) ?? data.categories[0];
+  const viewMode = category?.national && mapMode === "list" ? "3d" : mapMode;
   const availableLayers = data.categories.filter((item) => lens === "latest" ? item.id.startsWith("release:") || item.id.startsWith("bill:") : mapTheme(item) === lens);
 
   const selected = useMemo(() => {
@@ -134,6 +135,8 @@ export function ProvinceExplorer({
     const value = item.values.find((candidate) => candidate.slug === selected.slug);
     return value ? [{ category: item, value }] : [];
   });
+  const overviewIds = ["youth-jobs", "youth-wages", "rent", "primary-care", "poverty", "newcomers"];
+  const overviewValues = hero ? overviewIds.flatMap((id) => selectedProvinceValues.filter(({ category: item }) => item.id === id)) : selectedProvinceValues;
   const youthSignals = selectedProvinceValues.filter(({ category: item }) => youthSignalLabels[item.id]);
   const rentSignal = selectedProvinceValues.find(({ category: item }) => item.id === "rent");
   const monthlyIncome = income / 12;
@@ -154,19 +157,21 @@ export function ProvinceExplorer({
   }
   function calendar(value: string) { return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(value)) : value; }
 
+  function periodLabel(value: string) { if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value; if (category.cadence === "Annual") return value.slice(0, 4); if (["Monthly", "Quarterly"].includes(category.cadence ?? "")) return new Intl.DateTimeFormat("en-CA", { month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(value)); return calendar(value); }
+
   function renderHeader() {
     return (
-      <div className="px-4 py-6 sm:px-8 lg:px-9 lg:py-8">
+      <div className="px-4 py-4 sm:px-8 lg:px-9">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
           <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" aria-hidden="true" />
           Official evidence | checked {checkedAt(data.generatedAt)} ET
         </div>
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-red-300">Your Canada right now</p>
+        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-red-300">Your Canada right now</p>
         <Heading className={`mt-2 font-black leading-tight ${hero ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl"}`}>{hero ? "Your life, mapped across Canada." : "Can you build a life in your province?"}</Heading>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">The newest verified release first. Explore the economy, government and society—and what they mean for your life.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-300">The newest verified release first. Explore the economy, government and society—and what they mean for your life.</p>
 
         {hero ? <>
-          <div className="mt-5 flex flex-wrap gap-2" aria-label="Explore Canada by topic">
+          <div className="mt-4 flex flex-wrap gap-2" aria-label="Explore Canada by topic">
             <button onClick={() => chooseLens("latest")} aria-pressed={lens === "latest"} className={`flex min-h-11 gap-4 items-center justify-between rounded-xl border px-3 text-left text-sm font-bold ${lens === "latest" ? "border-cyan-200 bg-cyan-200 text-slate-950" : "border-white/20 bg-white/5"}`}><span>✦ Latest update</span><span className="text-[10px] uppercase tracking-wider">{!manualTopic ? "Following new releases" : "Browse releases"}</span></button>
             {mapThemes.map((theme) => <button key={theme.id} onClick={() => chooseLens(theme.id)} aria-pressed={lens === theme.id} disabled={!data.categories.some((item) => mapTheme(item) === theme.id)} className={`min-h-11 rounded-xl border px-3 text-left text-sm font-bold transition disabled:opacity-35 ${lens === theme.id ? "border-cyan-200 bg-white/15 text-cyan-100" : "border-white/15 bg-white/5 hover:bg-white/10"}`}>{theme.label}</button>)}
           </div>
@@ -182,7 +187,7 @@ export function ProvinceExplorer({
           <select id={id} value={category.id} onChange={(event) => chooseCategory(event.target.value as ProvinceExplorerCategoryId)} className="mt-2 min-h-12 w-full rounded-lg border border-white/20 bg-[#112c30] px-3 text-sm font-bold text-white">
             {availableLayers.map((item) => <option key={item.id} value={item.id}>{item.releaseDate ? `${calendar(item.releaseDate)} · ` : ""}{item.label}</option>)}
           </select>
-          {lens === "latest" ? <p className="mt-2 text-[11px] leading-5 text-slate-400">Newest publication date first; same-day data releases use editorial relevance. Selecting a release pins that view. “Latest update” resumes following new releases.</p> : null}
+          {lens === "latest" ? <p className="mt-2 text-[11px] leading-5 text-slate-400">Newest publication date first; source-supplied times order timed releases, then same-day relevance. Selecting a release pins that view. “Latest update” resumes following new releases.</p> : null}
     </div>;
   }
 
@@ -210,7 +215,7 @@ export function ProvinceExplorer({
             <p className={`font-mono font-black ${category.national && category.national.kind !== "metric" ? "text-2xl" : "text-4xl sm:text-5xl"}`}>{selectedValue.display}</p>
             {!category.national ? <p className="pb-1 font-mono text-sm font-black text-slate-300">#{selectedValue.rank} of {selectedValue.rankOutOf}</p> : null}
           </div>
-          {selectedValue.changeDisplay ? <p className="mt-3 text-sm font-bold text-cyan-200">{selectedValue.changeDisplay}{selectedValue.changePeriod ? ` vs ${calendar(selectedValue.changePeriod)}` : " · see source comparison"}</p> : null}
+          {selectedValue.changeDisplay ? <p className="mt-3 text-sm font-bold text-cyan-200">{selectedValue.changeDisplay}{selectedValue.changePeriod ? ` vs ${periodLabel(selectedValue.changePeriod)}` : " · see source comparison"}</p> : null}
           <p className="mt-3 text-xs text-slate-400">Observation: {category.period}{category.cohort ? ` · ${category.cohort}` : ""}</p>
           <div className="mt-3 flex items-start gap-2 text-sm leading-6 text-slate-300">
             <DirectionIcon className="mt-1 size-4 shrink-0 text-cyan-300" aria-hidden="true" />
@@ -267,12 +272,13 @@ export function ProvinceExplorer({
 
         <div>
           <div className="border-b border-white/10 lg:hidden">{hero ? renderLayerPicker("map-layer-mobile") : renderHeader()}<div className="flex items-center justify-between gap-3 px-4 pb-4"><span className="font-bold">{selectedValue.province}</span><span className="font-mono text-2xl font-bold">{selectedValue.display}</span></div></div>
-          <div className="flex flex-wrap gap-2 p-4" aria-label="Choose explorer view">{(category.national ? ["2d", "3d"] as const : ["list", "2d", "3d"] as const).map((mode) => <button key={mode} type="button" aria-pressed={mapMode === mode} onClick={() => setMapMode(mode)} className={`min-h-11 rounded-lg border px-4 text-sm font-bold ${mapMode === mode ? "bg-white text-stone-950" : "border-white/25 text-white"}`}>{mode === "list" ? "Ranked list" : mode === "2d" ? "2D map" : "3D map"}</button>)}</div>
-          <div className={`relative ${mapMode === "list" ? "max-h-[560px] overflow-auto" : "h-[420px] sm:h-[600px]"}`}>
-            {mapMode === "list" && !category.national ? <div className="grid gap-2 p-4">{category.values.map((value) => <button key={value.slug} onClick={() => setProvinceSlug(value.slug)} aria-pressed={value.slug === selectedValue.slug} className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border p-3 text-left ${value.slug === selectedValue.slug ? "border-teal-200 bg-white/15" : "border-white/15"}`}><span className="text-sm">#{value.rank} {value.province}</span><span className="font-mono font-bold">{value.display}</span></button>)}<p className="text-xs leading-6 text-slate-400">Ranks describe the highest values, not an overall quality-of-life grade. Raw home and newcomer counts are not adjusted for population.</p></div> : mapMode === "2d" ? <CanadaFlatMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} /> : <Canada3DMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} onHover={setHoveredSlug} /> }
-            {mapMode !== "list" ? <><div className="pointer-events-none absolute left-4 top-4 bg-[#071315]/88 px-3 py-2 backdrop-blur-sm sm:left-6 sm:top-6">
+          <div className="flex flex-wrap gap-2 p-4" aria-label="Choose explorer view">{(category.national ? ["2d", "3d"] as const : ["list", "2d", "3d"] as const).map((mode) => <button key={mode} type="button" aria-pressed={viewMode === mode} onClick={() => setMapMode(mode)} className={`min-h-11 rounded-lg border px-4 text-sm font-bold ${viewMode === mode ? "bg-white text-stone-950" : "border-white/25 text-white"}`}>{mode === "list" ? "Ranked list" : mode === "2d" ? "2D map" : "3D map"}</button>)}</div>
+          <div className={`relative ${viewMode === "list" ? "max-h-[560px] overflow-auto" : "h-[420px] sm:h-[600px]"}`}>
+            {viewMode === "list" && !category.national ? <div className="grid gap-2 p-4">{category.values.map((value) => <button key={value.slug} onClick={() => setProvinceSlug(value.slug)} aria-pressed={value.slug === selectedValue.slug} className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border p-3 text-left ${value.slug === selectedValue.slug ? "border-teal-200 bg-white/15" : "border-white/15"}`}><span className="text-sm">#{value.rank} {value.province}</span><span className="font-mono font-bold">{value.display}</span></button>)}<p className="text-xs leading-6 text-slate-400">Ranks describe the highest values, not an overall quality-of-life grade. Raw home and newcomer counts are not adjusted for population.</p></div> : viewMode === "2d" ? <CanadaFlatMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} /> : <Canada3DMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} onHover={setHoveredSlug} /> }
+            {viewMode !== "list" ? <><div className="pointer-events-none absolute left-4 top-4 bg-[#071315]/88 px-3 py-2 backdrop-blur-sm sm:left-6 sm:top-6">
               <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">{category.national ? "Canada-level evidence" : visible.province}</p>
               <p className="mt-1 font-mono text-2xl font-black">{visible.display}</p>
+              {category.national?.kind === "legislation" ? <p className="mt-2 max-w-64 text-xs leading-5 text-cyan-100">{category.national.note}</p> : null}
               <p className="mt-1 text-[10px] text-slate-300">{category.national ? category.national.label : category.cohort ?? "General population / survey coverage"} · {category.period}</p>
             </div>
             {!category.national ? <div className="pointer-events-none absolute inset-x-4 bottom-4 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.08em] text-slate-400 sm:inset-x-6 sm:bottom-6">
@@ -289,7 +295,7 @@ export function ProvinceExplorer({
 
       {category.national?.metrics?.length ? <div className="grid gap-px border-t border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4" aria-label="More evidence from this release">{category.national.metrics.map((metric) => <div key={metric.label} className="bg-[#0b1b1e] p-5"><p className="text-xs font-bold text-slate-400">{metric.label}</p><p className="mt-2 font-mono text-2xl font-bold">{metric.display}</p>{metric.changeDisplay ? <p className="mt-2 text-xs text-cyan-200">{metric.changeDisplay}</p> : null}</div>)}</div> : null}
       <div className="grid border-t border-white/10 sm:grid-cols-2 lg:grid-cols-6">
-        {selectedProvinceValues.slice(0, hero ? 6 : selectedProvinceValues.length).map(({ category: item, value }) => {
+        {overviewValues.map(({ category: item, value }) => {
           const Icon = icons[item.id] ?? CircleDollarSign;
           return (
             <button
@@ -300,7 +306,7 @@ export function ProvinceExplorer({
             >
               <span>
                 <span className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.1em] text-slate-400"><Icon className="size-3.5" aria-hidden="true" />{item.label}</span>
-                <span className="mt-3 block font-mono text-2xl font-black text-white">{value.display}</span>
+                <span className="mt-3 block font-mono text-2xl font-black text-white">{value.display}</span><span className="mt-2 block text-[10px] text-slate-400">{item.period}</span>
               </span>
               <span className="font-mono text-xs font-black text-cyan-300">#{value.rank}</span>
             </button>

@@ -56,6 +56,7 @@ assert.equal(gdpLayer.theme, "economy");
 assert.ok(gdpLayer.whyItMatters?.includes("GDP per person"));
 assert.equal(newestVerifiedReleases([{ ...newerGdp, archiveFallback: true }, releaseFixture])[0].id, releaseFixture.id);
 assert.equal(newestVerifiedReleases([{ ...newerGdp, status: "error" }, releaseFixture])[0].id, releaseFixture.id);
+assert.equal(newestVerifiedReleases([{ ...releaseFixture, releaseDate: "2026-10-09", publishedAt: "2026-10-09T08:30:00-04:00" }, { ...newerGdp, publishedAt: "2026-10-09T10:00:00-04:00" }])[0].id, newerGdp.id, "A genuinely later same-day GDP timestamp wins");
 assert.equal(stateMap.categories.find((category) => category.id === "bill:1")?.national?.kind, "legislation");
 assert.ok(stateMap.categories.find((category) => category.id === "bill:1")?.context.includes("implementation still need separate evidence"));
 const withPrior = { ...mapDataset, rows: mapDataset.rows.map((row) => ({ ...row, points: [{ period: "2026-08-01", value: 1 }, ...row.points] })) };

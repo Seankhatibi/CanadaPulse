@@ -4,7 +4,7 @@ The homepage map is a cross-topic explorer. It combines the existing release hub
 
 ## Opening view and refresh
 
-`buildStateOfCanadaMap` chooses the newest verified numeric release by **publication date**. A newer GDP release overrides an older, higher-priority jobs release. Same-day ties use editorial importance, then youth relevance, then a stable ID; source records currently supply day-level publication dates, so the app does not claim intraday ordering. Archived fallback releases and errored sources cannot win the opening view.
+`buildStateOfCanadaMap` chooses the newest verified numeric release by **publication date**. A newer GDP release overrides an older, higher-priority jobs release. For the same date, releases with source-supplied, timezone-qualified publication timestamps appear first in timestamp order. Untimed records follow using editorial importance, youth relevance and a stable ID. The app does not invent a publication time for sources supplying only dates. Archived fallback releases and errored sources cannot win the opening view.
 
 The clean homepage URL follows this default. Selecting a layer pins it through `topic`; choosing “Latest update” removes that pin. Server refreshes re-derive the automatic selection from the new payload. The visible homepage requests refresh every ten minutes and checks again when returning from a hidden tab after ten minutes. This uses the existing release hub's ten-minute cache and source cadences; it does not claim instant delivery. Existing authenticated morning refresh jobs continue to expire caches. Observation periods and publication dates remain separate.
 

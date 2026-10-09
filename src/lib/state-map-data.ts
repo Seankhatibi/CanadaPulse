@@ -17,8 +17,12 @@ function releaseTheme(release: NormalizedRelease): MapTheme {
 }
 
 export function newestVerifiedReleases(releases: NormalizedRelease[]): NormalizedRelease[] {
+  const suppliedTime = (release: NormalizedRelease) => {
+    const value = release.publishedAt;
+    return value && value.startsWith(`${release.releaseDate}T`) && /(?:Z|[+-]\d{2}:?\d{2})$/.test(value) && Number.isFinite(Date.parse(value)) ? Date.parse(value) : 0;
+  };
   return releases.filter((release) => release.status === "live" && !release.archiveFallback && hasStructuredMetrics(release) && /^\d{4}-\d{2}-\d{2}$/.test(release.releaseDate))
-    .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate) || b.importanceScore - a.importanceScore || b.youthImpactScore - a.youthImpactScore || a.id.localeCompare(b.id));
+    .sort((a, b) => b.releaseDate.localeCompare(a.releaseDate) || suppliedTime(b) - suppliedTime(a) || b.importanceScore - a.importanceScore || b.youthImpactScore - a.youthImpactScore || a.id.localeCompare(b.id));
 }
 
 export function buildStateOfCanadaMap(hub: ReleaseHubPayload, series: LifeSeries[], policy: PolicyFeed): ProvinceExplorerData {
