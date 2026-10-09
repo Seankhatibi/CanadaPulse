@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getLifeSeries } from "@/lib/life-series";
 import { DailyLifeDashboard, LifeTopicGrid } from "@/components/daily-life-dashboard";
 import { AppShell } from "@/components/app-shell";
 import { DebateBoard } from "@/components/homepage/debate-board";
@@ -19,9 +20,10 @@ type HomeSearchParams = Promise<{ province?: string | string[]; topic?: string |
 const DEFAULT_INCOME = 60_000;
 
 async function getHomepageData() {
-  const releaseHub = await getMultiSourceReleaseHub();
+  const [releaseHub, lifeSeries] = await Promise.all([getMultiSourceReleaseHub(), getLifeSeries()]);
   return {
     releaseHub,
+    lifeSeries,
     feed: buildHomepageFeed({ releaseHub }),
     weekly: buildLiveWeeklyPulseSummary(releaseHub),
     provinceExplorer: buildProvinceExplorerData(releaseHub),
@@ -117,13 +119,13 @@ export async function generateMetadata({ searchParams }: { searchParams: HomeSea
 
 export default async function Home({ searchParams }: { searchParams: HomeSearchParams }) {
   const query = await searchParams;
-  const { releaseHub, feed, weekly, provinceExplorer } = await getHomepageData();
+  const { releaseHub, feed, weekly, provinceExplorer, lifeSeries } = await getHomepageData();
   const state = resolveExplorerState(provinceExplorer, query);
   const income = parseIncome(firstParam(query.income));
 
   return (
     <AppShell variant="light">
-      <DailyLifeDashboard releases={releaseHub.todayQueue} initialProvince={state.province} />
+      <DailyLifeDashboard series={lifeSeries} releases={releaseHub.todayQueue} initialProvince={state.province} />
       <LifeTopicGrid />
       <details className="my-6 rounded-2xl border border-stone-200 bg-white p-4"><summary className="cursor-pointer font-bold text-teal-800">Explore the latest major release</summary>
       {releaseHub.promotedRelease ? (
