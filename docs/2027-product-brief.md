@@ -17,3 +17,5 @@ Remaining coverage: direct imports of service wait times, detailed childcare cos
 Final refinements: surface actual youth cohorts directly on Today; prioritize employment, inflation and rent before less actionable industry totals; improve light-card contrast when the shell uses dark mode; provide 44px navigation targets.
 
 Map-first update: homepage opens in 3D with visible province badges; actual youth unemployment, youth wages and young-adult primary care are available alongside rent, vacancy, inflation and broader economic layers. Each cohort layer requires the same observation period across provinces. Missing values stay grey. Extrusion depth is decorative and fixed; colour has a layer-specific legend. List and 2D alternatives remain available.
+
+Compatibility: WebGL rendering uses a raised, labelled vector fallback when a browser cannot create a graphics context. The fallback retains province selection, colour interpolation and keyboard access.

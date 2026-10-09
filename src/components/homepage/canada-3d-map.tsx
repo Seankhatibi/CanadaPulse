@@ -1,32 +1,26 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CanadaFlatMap } from "@/components/homepage/canada-flat-map";
+import type { CanadaMapCategory } from "@/components/homepage/canada-flat-map";
 import canadaMap from "@svg-maps/canada";
 import * as THREE from "three";
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
 
 type ProvinceMesh = THREE.Mesh<THREE.ExtrudeGeometry, THREE.MeshStandardMaterial>;
-type CanadaMapCategory = {
-  label: string;
-  lowColor: string;
-  highColor: string;
-  values: Array<{ slug: string; abbr: string; intensity: number; display: string }>;
-};
 
 export function Canada3DMap({
   category,
   selectedProvince,
   onSelect,
   onHover,
-  onUnavailable,
 }: {
   category: CanadaMapCategory;
   selectedProvince: string;
   onSelect: (provinceSlug: string) => void;
   onHover: (provinceSlug: string | null) => void;
-  onUnavailable?: () => void;
 }) {
-  const unavailableRef = useRef(onUnavailable);
+  const [vectorFallback, setVectorFallback] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const onSelectRef = useRef(onSelect);
   const onHoverRef = useRef(onHover);
@@ -48,7 +42,7 @@ export function Canada3DMap({
 
     const scene = new THREE.Scene();
     let renderer: THREE.WebGLRenderer;
-    try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true }); } catch { unavailableRef.current?.(); return; }
+    try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true }); } catch { const fallbackFrame = window.requestAnimationFrame(() => setVectorFallback(true)); return () => window.cancelAnimationFrame(fallbackFrame); }
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -252,6 +246,8 @@ export function Canada3DMap({
       }
     };
   }, [category]);
+
+  if (vectorFallback) return <CanadaFlatMap category={category} selectedProvince={selectedProvince} onSelect={onSelect} raised />;
 
   return (
     <canvas
