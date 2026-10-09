@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CanadaFlatMap } from "@/components/homepage/canada-flat-map";
 import type { CanadaMapCategory } from "@/components/homepage/canada-flat-map";
-import canadaMap from "@svg-maps/canada";
+import canadaMap from "@/lib/canada-boundaries.json";
 import * as THREE from "three";
 import { SVGLoader } from "three/examples/jsm/loaders/SVGLoader.js";
 
@@ -49,7 +49,7 @@ export function Canada3DMap({
     renderer.setClearColor(0x000000, 0);
 
     const camera = new THREE.OrthographicCamera(-500, 500, 590, -590, 0.1, 3000);
-    camera.position.set(0, -410, 1180);
+    camera.position.set(0, -240, 1180);
     camera.lookAt(0, 0, 0);
 
     scene.add(new THREE.HemisphereLight(0xdff9ff, 0x071014, 2.2));
@@ -90,7 +90,7 @@ export function Canada3DMap({
             bevelSize: 0.65,
             bevelThickness: 1.2,
           });
-          geometry.translate(-396.5, -516, 0);
+          geometry.translate(-canadaMap.width / 2, -canadaMap.height / 2, 0);
           geometry.computeBoundingBox();
           if (provinceSlug && geometry.boundingBox) {
             const size = geometry.boundingBox.getSize(new THREE.Vector3());
@@ -188,7 +188,7 @@ export function Canada3DMap({
       const { width, height } = canvas.getBoundingClientRect();
       renderer.setSize(Math.max(width, 1), Math.max(height, 1), false);
       const aspect = width / Math.max(height, 1);
-      const viewHeight = width < 640 ? 1180 : 1080;
+      const viewHeight = Math.max(canadaMap.height, canadaMap.width / Math.max(aspect, 0.1)) * 1.12;
       camera.left = -(viewHeight * aspect) / 2;
       camera.right = (viewHeight * aspect) / 2;
       camera.top = viewHeight / 2;

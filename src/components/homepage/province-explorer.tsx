@@ -151,8 +151,8 @@ export function ProvinceExplorer({
                 aria-pressed={active}
                 className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border px-2.5 text-xs font-black transition sm:text-sm ${active ? "border-white bg-white text-stone-950" : "border-white/15 bg-white/5 text-slate-300 hover:border-white/40 hover:bg-white/10"}`}
               >
-                <Icon className="size-4" aria-hidden="true" />
-                {item.label}
+                <Icon className="size-4 shrink-0" aria-hidden="true" />
+                <span>{item.label}</span>
               </button>
             );
           })}
@@ -251,7 +251,8 @@ export function ProvinceExplorer({
               <span>{legend.high}</span>
             </div></> : null}
           </div>
-          <p className="px-4 pb-4 text-[11px] leading-5 text-slate-400">Colour compares values within this layer. Raised edges are decorative; 3D uses a vector fallback when WebGL is unavailable. Grey means no comparable observation. Smaller provinces are labelled when selected.</p>
+          <p className="px-4 pb-4 text-[11px] leading-5 text-slate-400">Colour compares values within this layer. Raised edges are decorative. Grey means no comparable observation. Smaller provinces are labelled when selected.</p>
+          <p className="px-4 pb-4 text-[11px] leading-5 text-slate-400">Geography: <a className="underline underline-offset-2 hover:text-white" href="https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer/0" target="_blank" rel="noreferrer">Statistics Canada’s official province and territory boundaries</a> · Lambert projection · coastlines generalized for display. 3D uses a raised vector fallback when WebGL is unavailable.</p>
           <div className="lg:hidden">{renderDetails("explorer-province-mobile")}</div>
         </div>
       </div>
