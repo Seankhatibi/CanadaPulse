@@ -34,8 +34,8 @@ export default async function HealthPage() {
         <section className="grid gap-5 lg:grid-cols-[1fr_0.8fr]">
           <div className="rounded-2xl bg-stone-950 p-5 text-white sm:p-7">
             <HeartPulse className="size-6 text-red-300" aria-hidden="true" />
-            <h2 className="mt-4 text-3xl font-black">The question spending alone cannot answer</h2>
-            <p className="mt-4 text-base leading-7 text-stone-300">Canada Pulse will add wait times, primary-care access, avoidable hospitalizations and chronic-disease surveillance only as their CIHI or PHAC tables are imported. Unsupported disease-cost estimates and province scores are not shown as facts.</p>
+            <h2 className="mt-4 text-3xl font-black">The question spending alone cannot answer</h2><Link href="/quality-of-life" className="mt-4 inline-flex min-h-11 items-center font-bold text-teal-200">Explore health access & wellbeing →</Link>
+            <p className="mt-4 text-base leading-7 text-stone-300">Explore young adults’ regular-provider access and mental wellbeing in My community. Procedure wait times are linked to CIHI; they are not inferred from these spending totals.</p>
             <a href={health.sourceUrl} target="_blank" rel="noreferrer" className="mt-6 inline-flex items-center gap-2 rounded-md bg-white px-4 py-3 text-sm font-black text-stone-950">Open CIHI source <ExternalLink className="size-4" aria-hidden="true" /></a>
           </div>
           <div className="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">

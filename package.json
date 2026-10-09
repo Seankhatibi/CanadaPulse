@@ -19,7 +19,8 @@
     "db:verify:production": "tsx scripts/verify-production-db.ts",
     "audit:persistence": "node scripts/audit-persistence-readiness.mjs",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "audit:life-experience": "node --import tsx scripts/audit-life-experience.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

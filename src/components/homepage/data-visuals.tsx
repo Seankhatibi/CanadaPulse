@@ -1,3 +1,4 @@
+import { comparableScale, barWidth } from "@/lib/chart-integrity";
 import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
 import type { HomepageVisualPoint } from "@/lib/homepage-feed";
 
@@ -42,13 +43,14 @@ export function DirectionBarChart({
   maxItems?: number;
 }) {
   const visible = points.slice(0, maxItems);
+  const safeScale = comparableScale(visible);
   const max = Math.max(...visible.map((point) => Math.abs(point.value)), 1);
 
   return (
     <div className="grid gap-3">
       {visible.map((point) => {
         const classes = meaningClasses(point);
-        const width = Math.max(14, Math.min(100, (Math.abs(point.value) / max) * 100));
+        const width = barWidth(point.value, max);
 
         return (
           <div key={`${point.label}-${point.display}`} className="min-w-0">
@@ -61,9 +63,10 @@ export function DirectionBarChart({
               </div>
               <span className={`shrink-0 font-mono text-sm font-black ${classes.text}`}>{point.display}</span>
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-stone-200">
+            {safeScale ? <div className="h-3 overflow-hidden rounded-full bg-stone-200">
               <div className={`h-full rounded-full bg-gradient-to-r ${classes.gradient}`} style={{ width: `${width}%` }} />
             </div>
+            : null}
             {point.note ? <p className="mt-1 line-clamp-2 text-xs leading-5 text-stone-600">{point.note}</p> : null}
           </div>
         );
@@ -74,7 +77,10 @@ export function DirectionBarChart({
 
 export function SplitImpactChart({ points }: { points: HomepageVisualPoint[] }) {
   const visible = points.slice(0, 6);
+  const safeScale = comparableScale(visible);
   const max = Math.max(...visible.map((point) => Math.abs(point.value)), 1);
+
+  if (!safeScale) return <DirectionBarChart points={visible} maxItems={6} />;
 
   return (
     <div className="rounded-lg border border-stone-200 bg-white p-4">
@@ -86,13 +92,13 @@ export function SplitImpactChart({ points }: { points: HomepageVisualPoint[] }) 
       <div className="grid gap-2">
         {visible.map((point) => {
           const isBad = point.meaning === "bad";
-          const width = `${Math.max(28, (Math.abs(point.value) / max) * 100)}%`;
+          const width = `${barWidth(point.value, max)}%`;
 
           return (
             <div key={`${point.label}-${point.display}`} className="grid grid-cols-[minmax(0,1fr)_56px_minmax(0,1fr)] items-center gap-2">
               <div className="min-w-0">
                 {isBad ? (
-                  <div className="ml-auto rounded-l-full bg-gradient-to-l from-red-500 to-red-700 px-3 py-2 text-right text-xs font-black text-white" style={{ width }}>
+                  <div className="ml-auto rounded-l-full bg-gradient-to-l from-red-500 to-red-700 px-3 py-2 text-right text-xs font-black text-white" style={{ width: safeScale ? width : "100%" }}>
                     {point.label}
                   </div>
                 ) : null}
@@ -102,7 +108,7 @@ export function SplitImpactChart({ points }: { points: HomepageVisualPoint[] }) 
               </div>
               <div className="min-w-0">
                 {!isBad ? (
-                  <div className="rounded-r-full bg-gradient-to-r from-emerald-500 to-lime-400 px-3 py-2 text-xs font-black text-stone-950" style={{ width }}>
+                  <div className="rounded-r-full bg-gradient-to-r from-emerald-500 to-lime-400 px-3 py-2 text-xs font-black text-stone-950" style={{ width: safeScale ? width : "100%" }}>
                     {point.label}
                   </div>
                 ) : null}
@@ -117,13 +123,14 @@ export function SplitImpactChart({ points }: { points: HomepageVisualPoint[] }) 
 
 export function ProvinceRankChart({ points, maxItems = 6 }: { points: HomepageVisualPoint[]; maxItems?: number }) {
   const visible = points.slice(0, maxItems);
+  const safeScale = comparableScale(visible);
   const max = Math.max(...visible.map((point) => Math.abs(point.value)), 1);
 
   return (
     <div className="grid gap-2">
       {visible.map((point, index) => {
         const classes = meaningClasses(point);
-        const width = Math.max(14, Math.min(100, (Math.abs(point.value) / max) * 100));
+        const width = barWidth(point.value, max);
 
         return (
           <div key={`${point.label}-${point.display}`} className="rounded-md border border-stone-200 bg-white p-3">
@@ -134,9 +141,10 @@ export function ProvinceRankChart({ points, maxItems = 6 }: { points: HomepageVi
               </span>
               <span className={`shrink-0 font-mono text-sm font-black ${classes.text}`}>{point.display}</span>
             </div>
-            <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-stone-200">
+            {safeScale ? <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-stone-200">
               <div className={`h-full rounded-full ${classes.bg}`} style={{ width: `${width}%` }} />
             </div>
+            : null}
             {point.note ? <p className="mt-1 truncate text-xs text-stone-500">{point.note}</p> : null}
           </div>
         );

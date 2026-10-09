@@ -37,20 +37,23 @@ export async function fetchCihiHealthSnapshot() {
     total: numberAfter(text, /reach \$([\d,.]+) billion/i),
     perPerson: numberAfter(text, /or \$([\d,]+) per Canadian/i),
     gdpShare: numberAfter(text, /represent ([\d.]+)% of Canada(?:'|’)s gross domestic product/i),
-    totalGrowth: numberAfter(text, /expected to grow by ([\d.]+)% in 2025/i),
+    totalGrowth: numberAfter(text, /expected to grow by ([\d.]+)% in 20\d{2}/i),
     hospitalGrowth: numberAfter(text, /Hospital spending is projected to grow by ([\d.]+)%/i),
     physicianGrowth: numberAfter(text, /physician services is forecast to grow by ([\d.]+)%/i),
     realPerCapitaGrowth: numberAfter(text, /real per capita health expenditure in the public sector is expected to rebound to ([\d.-]+)%/i),
   };
   if (Object.values(parsed).some((value) => value === null)) status = "fallback";
-  const period = parsed.period ?? lastVerified.period;
-  const total = parsed.total ?? lastVerified.total;
-  const perPerson = parsed.perPerson ?? lastVerified.perPerson;
-  const gdpShare = parsed.gdpShare ?? lastVerified.gdpShare;
-  const totalGrowth = parsed.totalGrowth ?? lastVerified.totalGrowth;
-  const hospitalGrowth = parsed.hospitalGrowth ?? lastVerified.hospitalGrowth;
-  const physicianGrowth = parsed.physicianGrowth ?? lastVerified.physicianGrowth;
-  const realPerCapitaGrowth = parsed.realPerCapitaGrowth ?? lastVerified.realPerCapitaGrowth;
+  // A snapshot is atomic: never attach a new year to values from an older year.
+  const complete = Object.values(parsed).every((value) => value !== null);
+  const snapshot = complete ? parsed : lastVerified;
+  const period = snapshot.period!;
+  const total = snapshot.total!;
+  const perPerson = snapshot.perPerson!;
+  const gdpShare = snapshot.gdpShare!;
+  const totalGrowth = snapshot.totalGrowth!;
+  const hospitalGrowth = snapshot.hospitalGrowth!;
+  const physicianGrowth = snapshot.physicianGrowth!;
+  const realPerCapitaGrowth = snapshot.realPerCapitaGrowth!;
 
   return {
     source: "Canadian Institute for Health Information",

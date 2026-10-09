@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, BriefcaseBusiness, Building2, CircleDollarSign, DoorOpen, Home, Minus, WalletCards, Users } from "lucide-react";
 import { ShareStatButton } from "@/components/share-stat-button";
+import { CanadaFlatMap } from "@/components/homepage/canada-flat-map";
 import type { ProvinceExplorerCategoryId, ProvinceExplorerData } from "@/lib/province-explorer-data";
 
 const Canada3DMap = dynamic(() => import("@/components/homepage/canada-3d-map").then((module) => module.Canada3DMap), {
@@ -75,6 +76,7 @@ export function ProvinceExplorer({
   const [provinceSlug, setProvinceSlug] = useState(startingProvince);
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
   const [income, setIncome] = useState(initialIncome);
+  const [mapMode, setMapMode] = useState<"list" | "2d" | "3d">("list");
   const category = data.categories.find((item) => item.id === categoryId) ?? data.categories[0];
 
   const selected = useMemo(() => {
@@ -91,7 +93,7 @@ export function ProvinceExplorer({
     const url = new URL(window.location.href);
     url.searchParams.set("province", selected.slug);
     url.searchParams.set("topic", category.id);
-    url.searchParams.set("income", String(income));
+    url.searchParams.delete("income");
     window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
   }, [category, income, selected]);
 
@@ -112,7 +114,7 @@ export function ProvinceExplorer({
   const incomeAfterRent = monthlyIncome - monthlyRent;
   const salaryAtThirtyPercent = monthlyRent > 0 ? (monthlyRent * 12) / 0.3 : 0;
   const burdenWidth = Math.min(rentBurden, 60) / 60 * 100;
-  const rentShareUrl = `/?province=${encodeURIComponent(selectedValue.slug)}&topic=rent&income=${income}`;
+  const rentShareUrl = `/?province=${encodeURIComponent(selectedValue.slug)}&topic=rent`;
   const compareProvince = selectedValue.slug === "alberta" ? "ontario" : "alberta";
   const compareUrl = `/compare?left=${encodeURIComponent(selectedValue.slug)}&right=${compareProvince}&income=${income}`;
 
@@ -178,10 +180,10 @@ export function ProvinceExplorer({
         </div>
 
         {youthSignals.length > 0 ? (
-          <div className="mt-5" aria-label={`${selectedValue.province} youth reality check`}>
+          <div className="mt-5" aria-label={`${selectedValue.province} household context`}>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-red-300">Youth reality check</p>
-              <p className="font-mono text-[11px] font-black text-slate-500">Ranked nationally</p>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-red-300">Household context</p>
+              <p className="font-mono text-[11px] font-black text-slate-500">Highest to lowest value</p>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
               {youthSignals.map(({ category: item, value }) => (
@@ -223,10 +225,11 @@ export function ProvinceExplorer({
         </div>
 
         <div>
-          <div className="border-b border-white/10 lg:hidden">{renderHeader()}</div>
-          <div className={`relative ${compact ? "h-[390px] sm:h-[500px] lg:h-[640px]" : "h-[430px] sm:h-[560px] lg:h-[760px]"}`}>
-            <Canada3DMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} onHover={setHoveredSlug} />
-            <div className="pointer-events-none absolute left-4 top-4 bg-[#071315]/88 px-3 py-2 backdrop-blur-sm sm:left-6 sm:top-6">
+          <div className="border-b border-white/10 lg:hidden">{renderHeader()}{renderDetails("explorer-province-mobile")}</div>
+          <div className="flex flex-wrap gap-2 p-4" aria-label="Choose explorer view">{(["list", "2d", "3d"] as const).map((mode) => <button key={mode} type="button" aria-pressed={mapMode === mode} onClick={() => setMapMode(mode)} className={`min-h-11 rounded-lg border px-4 text-sm font-bold ${mapMode === mode ? "bg-white text-stone-950" : "border-white/25 text-white"}`}>{mode === "list" ? "Ranked list" : mode === "2d" ? "2D map" : "3D map"}</button>)}</div>
+          <div className={`relative ${mapMode === "list" ? "max-h-[560px] overflow-auto" : "h-[360px] sm:h-[480px]"}`}>
+            {mapMode === "list" ? <div className="grid gap-2 p-4">{category.values.map((value) => <button key={value.slug} onClick={() => setProvinceSlug(value.slug)} aria-pressed={value.slug === selectedValue.slug} className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border p-3 text-left ${value.slug === selectedValue.slug ? "border-teal-200 bg-white/15" : "border-white/15"}`}><span className="text-sm">#{value.rank} {value.province}</span><span className="font-mono font-bold">{value.display}</span></button>)}<p className="text-xs leading-6 text-slate-400">Ranks describe the highest values, not an overall quality-of-life grade. Raw home and newcomer counts are not adjusted for population.</p></div> : mapMode === "2d" ? <CanadaFlatMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} /> : <Canada3DMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} onHover={setHoveredSlug} onUnavailable={() => setMapMode("2d")} /> }
+            {mapMode !== "list" ? <><div className="pointer-events-none absolute left-4 top-4 bg-[#071315]/88 px-3 py-2 backdrop-blur-sm sm:left-6 sm:top-6">
               <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">{visible.province}</p>
               <p className="mt-1 font-mono text-2xl font-black">{visible.display}</p>
             </div>
@@ -234,9 +237,9 @@ export function ProvinceExplorer({
               <span>{legend.low}</span>
               <span className="h-1.5 flex-1 rounded-full" style={{ background: `linear-gradient(90deg, ${category.lowColor}, ${category.highColor})` }} />
               <span>{legend.high}</span>
-            </div>
+            </div></> : null}
           </div>
-          <div className="lg:hidden">{renderDetails("explorer-province-mobile")}</div>
+
         </div>
       </div>
 

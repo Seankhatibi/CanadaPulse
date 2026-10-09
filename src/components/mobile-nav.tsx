@@ -6,20 +6,16 @@ import { useState } from "react";
 import { provinces } from "@/lib/province-directory";
 
 const navItems = [
-  { href: "/", label: "Latest releases" },
-  { href: "/releases", label: "Live release feed" },
-  { href: "/canada", label: "Canadian economy" },
-  { href: "/housing", label: "Housing and affordability" },
-  { href: "/population", label: "Population" },
-  { href: "/compare", label: "Compare provinces" },
-  { href: "/tax-dollar", label: "Tax estimator (beta)" },
-  { href: "/weekly-pulse", label: "Weekly Pulse" },
-  { href: "/data-status", label: "Sources and freshness" },
-  { href: "/youth", label: "Youth Future" },
-  { href: "/government", label: "Government" },
-  { href: "/trade", label: "Trade" },
-  { href: "/energy", label: "Energy" },
-  { href: "/health", label: "Health" },
+  { href: "/", label: "Today" },
+  { href: "/money", label: "My money" },
+  { href: "/my-life", label: "My home & budget" },
+  { href: "/work", label: "My work & education" },
+  { href: "/quality-of-life", label: "My community" },
+  { href: "/policy", label: "My government" },
+  { href: "/future", label: "Canada’s future" },
+  { href: "/compare", label: "Compare places" },
+  { href: "/releases", label: "Official release feed" },
+  { href: "/datasets", label: "Sources & coverage" },
 ];
 
 export function MobileNav({ variant = "light" }: { variant?: "light" | "dark" }) {

@@ -1,3 +1,4 @@
+import { comparableScale } from "@/lib/chart-integrity";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 import type { ReleaseChartPayload } from "@/lib/release-hub";
 
@@ -40,6 +41,7 @@ function BreakdownChart({ chart }: { chart: ReleaseChartPayload }) {
   }
 
   const isMovementChart = chart.kind === "bar" && chart.points.some((point) => point.change !== null && point.change !== undefined);
+  const safeScale = chart.kind === "province-rank" && comparableScale(chart.points.map((point) => ({ ...point, unit: point.display.includes("%") ? "%" : point.display.includes("$") ? "$" : "count", comparisonKey: chart.title })));
   const max = Math.max(...chart.points.map((point) => Math.abs(isMovementChart ? (point.change ?? point.value) : point.value)), 1);
 
   return (
@@ -53,7 +55,7 @@ function BreakdownChart({ chart }: { chart: ReleaseChartPayload }) {
           const signal = signalFor(chart.title, point.label, point.direction);
           const Icon = signal.Icon;
           const chartValue = isMovementChart ? (point.change ?? point.value) : point.value;
-          const width = Math.max(3, (Math.abs(chartValue) / max) * (isMovementChart ? 50 : 100));
+          const width = (Math.abs(chartValue) / max) * (isMovementChart ? 50 : 100);
 
           return (
             <div key={`${chart.title}-${point.label}-${index}`} className="grid gap-2 sm:grid-cols-[minmax(150px,0.65fr)_minmax(220px,1.35fr)] sm:items-center sm:gap-5">
@@ -63,7 +65,7 @@ function BreakdownChart({ chart }: { chart: ReleaseChartPayload }) {
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  {isMovementChart ? (
+                  {safeScale && isMovementChart ? (
                     <div className="relative grid h-3 min-w-0 flex-1 grid-cols-2 overflow-hidden rounded-full bg-stone-200" aria-hidden="true">
                       <div className="relative border-r border-white">
                         {point.direction === "down" ? <div className={`absolute inset-y-0 right-0 rounded-l-full ${signal.bar}`} style={{ width: `${width * 2}%` }} /> : null}
@@ -72,11 +74,11 @@ function BreakdownChart({ chart }: { chart: ReleaseChartPayload }) {
                         {point.direction === "up" ? <div className={`absolute inset-y-0 left-0 rounded-r-full ${signal.bar}`} style={{ width: `${width * 2}%` }} /> : null}
                       </div>
                     </div>
-                  ) : (
+                  ) : safeScale ? (
                     <div className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-stone-200" aria-hidden="true">
                       <div className={`h-full rounded-full ${signal.bar}`} style={{ width: `${width}%` }} />
                     </div>
-                  )}
+                  ) : null}
                   <span className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full px-2 ${signal.className}`} title={signal.label}>
                     <Icon className="size-3.5" aria-hidden="true" />
                     {isMovementChart && point.changeDisplay ? <span className="font-mono text-[11px] font-black">{point.changeDisplay}</span> : <span className="sr-only">{signal.label}</span>}
@@ -106,7 +108,7 @@ export function ReleaseVisualBreakdowns({ charts }: { charts: ReleaseChartPayloa
         </h2>
         <p className="mt-2 text-sm leading-6 text-stone-600">
           {hasMeasuredCharts
-            ? "Arrow colours show whether the reported movement adds pressure or provides relief. Bar length compares the size of changes within each chart."
+            ? "Arrow colours show whether the reported movement adds pressure or provides relief. Bars are reserved for same-measure province comparisons. Unlike measures are shown as separate values."
             : "Canada Pulse identifies recurring topics in the report text without converting qualitative language into invented numerical scores."}
         </p>
       </div>

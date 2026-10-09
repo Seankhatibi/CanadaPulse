@@ -48,6 +48,7 @@ export type StatCanCpiSnapshot = {
     food: CpiChange;
   }>;
   components: CpiChange[];
+  priceHistory: Array<{ period: string; value: number }>;
   history: Array<{
     period: string;
     periodRaw: string;
@@ -203,6 +204,7 @@ export async function fetchStatCanCpiSnapshot(): Promise<StatCanCpiSnapshot> {
     canada: { allItems: canadaAllItems, food: canadaFood },
     provinces,
     components,
+    priceHistory: allItemsSeries.map((point) => ({ period: point.refPer, value: point.value })),
     history,
   };
 }

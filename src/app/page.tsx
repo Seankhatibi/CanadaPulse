@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import { DailyLifeDashboard, LifeTopicGrid } from "@/components/daily-life-dashboard";
 import { AppShell } from "@/components/app-shell";
 import { DebateBoard } from "@/components/homepage/debate-board";
 import { LatestReleaseHero } from "@/components/homepage/latest-release-hero";
-import { InteractiveLaunchpad } from "@/components/homepage/interactive-launchpad";
 import { ProvinceExplorer } from "@/components/homepage/province-explorer";
 import { ReleaseStream } from "@/components/homepage/release-stream";
 import { WeeklyBriefingStrip } from "@/components/homepage/weekly-briefing-strip";
@@ -123,11 +123,15 @@ export default async function Home({ searchParams }: { searchParams: HomeSearchP
 
   return (
     <AppShell variant="light">
+      <DailyLifeDashboard releases={releaseHub.todayQueue} initialProvince={state.province} />
+      <LifeTopicGrid />
+      <details className="my-6 rounded-2xl border border-stone-200 bg-white p-4"><summary className="cursor-pointer font-bold text-teal-800">Explore the latest major release</summary>
       {releaseHub.promotedRelease ? (
         <div className="pb-6 sm:pb-10">
           <LatestReleaseHero release={releaseHub.promotedRelease} />
         </div>
       ) : null}
+      </details>
       <ProvinceExplorer
         data={provinceExplorer}
         initialCategory={state.category as ProvinceExplorerCategoryId | undefined}
@@ -137,7 +141,7 @@ export default async function Home({ searchParams }: { searchParams: HomeSearchP
         compact
       />
       <DebateBoard items={feed.debateItems} />
-      <InteractiveLaunchpad />
+
       <ReleaseStream releases={releaseHub.todayQueue} />
       <WeeklyBriefingStrip weekly={weekly} />
     </AppShell>

@@ -3,14 +3,14 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Canada Pulse | Canadian Economic Intelligence",
+    default: "Canada Pulse | Canadian Data for Everyday Life",
     template: "%s | Canada Pulse",
   },
   description:
-    "Official Canadian economic releases translated into structured facts, visual research briefs, and province comparisons.",
+    "Understand how Canadian economic, political and social changes affect your money, home, work and community.",
   metadataBase: new URL("https://canadapulse.vercel.app"),
   openGraph: {
-    title: "Canada Pulse | Canadian Economic Intelligence",
+    title: "Canada Pulse | Canadian Data for Everyday Life",
     description: "Track the latest Canadian economic releases, housing data, labour markets, prices and provincial impacts.",
     url: "https://canadapulse.vercel.app",
     siteName: "Canada Pulse",
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Canada Pulse | Canadian Economic Intelligence",
+    title: "Canada Pulse | Canadian Data for Everyday Life",
     description: "Current official Canadian data, made understandable province by province.",
     images: ["/api/og/province"],
   },

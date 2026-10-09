@@ -89,15 +89,16 @@ function marketFromRow(row: Array<string | number | null>): CmhcRentalMarket | n
 
 function publishedDate(html: string) {
   const raw = html.match(/id="DatePublishedTag"[^>]*>([^<]+)</i)?.[1]?.trim();
-  if (!raw) return "2025-12-11";
+  if (!raw) throw new Error("CMHC release date could not be verified.");
   const parsed = new Date(`${raw} 12:00:00 UTC`);
-  return Number.isNaN(parsed.getTime()) ? "2025-12-11" : parsed.toISOString().slice(0, 10);
+  if (Number.isNaN(parsed.getTime())) throw new Error("Invalid CMHC release date.");
+  return parsed.toISOString().slice(0, 10);
 }
 
-function surveyPeriod(value: string | number | null | undefined, fallback: string) {
-  if (typeof value !== "string") return fallback;
+function surveyPeriod(value: string | number | null | undefined) {
+  if (typeof value !== "string" || !value.trim()) throw new Error("CMHC survey period missing.");
   const match = value.trim().match(/^([A-Za-z]{3})-(\d{2})$/);
-  if (!match) return value.trim() || fallback;
+  if (!match) { if (/20\d{2}/.test(value)) return value.trim(); throw new Error("CMHC survey period cannot be verified."); }
   const month = ({ Jan: "January", Apr: "April", Jul: "July", Oct: "October" } as Record<string, string>)[match[1]] ?? match[1];
   return `${month} 20${match[2]}`;
 }
@@ -131,8 +132,8 @@ export async function fetchCmhcRentalSnapshot(): Promise<CmhcRentalSnapshot> {
 
   return {
     releaseDate: publishedDate(html),
-    referencePeriod: surveyPeriod(currentHeader, "October 2025"),
-    previousPeriod: surveyPeriod(previousHeader, "October 2024"),
+    referencePeriod: surveyPeriod(currentHeader),
+    previousPeriod: surveyPeriod(previousHeader),
     sourceUrl,
     workbookUrl,
     canada,

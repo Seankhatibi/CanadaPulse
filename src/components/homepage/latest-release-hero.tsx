@@ -13,7 +13,7 @@ function tone(meaning: "positive" | "negative" | "mixed") {
 
 export function LatestReleaseHero({ release }: { release: NormalizedRelease }) {
   const story = buildReleaseStory(release);
-  const max = Math.max(...story.points.map((point) => Math.abs(point.value)), 1);
+
 
   return (
     <section className="-mx-3 overflow-hidden border-y border-red-200 bg-[#fff8ef] text-stone-950 sm:-mx-6" aria-labelledby="latest-data-drop">
@@ -64,7 +64,7 @@ export function LatestReleaseHero({ release }: { release: NormalizedRelease }) {
             {story.points.slice(0, 5).map((point, index) => {
               const Direction = point.direction === "up" ? ArrowUp : point.direction === "down" ? ArrowDown : Minus;
               const colours = tone(point.meaning);
-              const width = Math.max(8, Math.min(100, Math.abs(point.value) / max * 100));
+
               return (
                 <div key={`${point.label}-${point.display}-${index}`}>
                   <div className="flex items-start justify-between gap-3">
@@ -74,7 +74,7 @@ export function LatestReleaseHero({ release }: { release: NormalizedRelease }) {
                     </div>
                     <p className="shrink-0 font-mono text-sm font-black text-white">{point.display}</p>
                   </div>
-                  <div className="mt-2 ml-8 h-2 overflow-hidden bg-white/10"><div className={`h-full ${colours.bar}`} style={{ width: `${width}%` }} /></div>
+                  <p className="mt-2 ml-8 text-xs leading-5 text-slate-300">{point.note}</p>
                 </div>
               );
             })}

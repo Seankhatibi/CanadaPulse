@@ -27,13 +27,13 @@ The production product is intentionally stateless. It fetches official publisher
 
 ## Scheduled Refresh
 
-Vercel cron invokes `/api/cron/refresh-data` at 15:00 and 16:00 UTC on weekdays. The pair guarantees one check at 11:00 a.m. Toronto time through both daylight-saving and standard-time seasons, with a second check one hour before or after. Production requires `CRON_SECRET`; Vercel sends it as a bearer token automatically.
+Vercel cron invokes `/api/cron/refresh-data` at 13:00 and 14:00 UTC on weekdays. The pair guarantees one check at 9:00 a.m. Toronto time through both daylight-saving and standard-time seasons, with a second check one hour before or after. Production requires `CRON_SECRET`; Vercel sends it as a bearer token automatically.
 
 The refresh performs:
 
 1. Statistics Canada Daily detection and table extraction.
 2. Multi-source release normalization and promotion scoring.
-3. CIHI health-expenditure source refresh.
+3. CIHI health-expenditure, cohort-specific Statistics Canada time series and LEGISinfo bill-source refresh.
 4. Source-cache invalidation so new official releases become visible promptly.
 
 ## Verification

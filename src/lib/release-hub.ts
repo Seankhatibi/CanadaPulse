@@ -865,7 +865,7 @@ async function getCmhcRentalWatch(): Promise<NormalizedRelease> {
     ],
     sourceLinks: [
       { label: "CMHC Rental Market Survey data tables", url: data.sourceUrl },
-      { label: "Official 2025 workbook", url: data.workbookUrl },
+      { label: "Official rental survey workbook", url: data.workbookUrl },
     ],
     importanceScore: 98,
     youthImpactScore: 100,

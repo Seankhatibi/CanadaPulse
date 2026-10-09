@@ -6,6 +6,9 @@ export type HomepageVisualPoint = {
   value: number;
   display: string;
   rank?: number;
+  unit?: string;
+  period?: string;
+  comparisonKey?: string;
   note?: string;
   direction?: "up" | "down" | "neutral";
   meaning?: "good" | "bad" | "mixed";
@@ -73,6 +76,9 @@ function releaseToStory(release: NormalizedRelease, topic: string, headline: str
       value: province.comparableValue,
       display: province.value,
       rank: province.comparableRank,
+      unit: /%/.test(province.value) ? "%" : /\$/.test(province.value) ? "CAD" : "source-count",
+      period: release.referencePeriod,
+      comparisonKey: `${release.id}:province-main-metric`,
       note: province.note,
       direction: "neutral",
       meaning: "mixed",

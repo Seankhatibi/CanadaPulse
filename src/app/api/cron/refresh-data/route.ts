@@ -1,5 +1,7 @@
 import { persistMultiSourceReleaseEvents, persistStatCanDailyReleaseEvents } from "@/lib/etl/importers";
 import { fetchCihiHealthSnapshot } from "@/lib/cihi-health";
+import { getLifeSeries } from "@/lib/life-series";
+import { getPolicyFeed } from "@/lib/policy-data";
 import { revalidateTag } from "next/cache";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +42,8 @@ export async function GET(request: Request) {
 
   const startedAt = new Date().toISOString();
   [
+    "canada-pulse-life-series",
+    "canada-pulse-policy",
     "canada-pulse-release-hub",
     "canada-pulse-statcan",
     "canada-pulse-cmhc",
@@ -50,10 +54,12 @@ export async function GET(request: Request) {
     "canada-pulse-official-monitors",
     "canada-pulse-gaswizard",
   ].forEach((tag) => revalidateTag(tag, { expire: 0 }));
-  const [statcanDaily, multiSourceReleaseHub, cihi] = await Promise.allSettled([
+  const [statcanDaily, multiSourceReleaseHub, cihi, life, policy] = await Promise.allSettled([
     persistStatCanDailyReleaseEvents(),
     persistMultiSourceReleaseEvents(),
     fetchCihiHealthSnapshot(),
+    getLifeSeries(),
+    getPolicyFeed(),
   ]);
   const statcanSummary = refreshSummary(statcanDaily);
   const multiSourceSummary = refreshSummary(multiSourceReleaseHub);
@@ -77,6 +83,8 @@ export async function GET(request: Request) {
     },
     warnings,
     jobs: {
+      lifeSeries: life.status === "fulfilled" ? { loaded: life.value.filter((item) => item.status === "loaded").length, total: life.value.length } : { status: "failed" },
+      policy: policy.status === "fulfilled" ? { status: policy.value.status, bills: policy.value.bills.length } : { status: "failed" },
       statcanDaily: statcanSummary,
       multiSourceReleaseHub: multiSourceSummary,
       statcanWds: "live through Daily article tables, companion Tables pages and compact WDS metadata/series extraction",

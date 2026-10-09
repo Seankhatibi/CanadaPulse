@@ -143,9 +143,11 @@ async function main() {
   const vacanciesEntry = await fetchStatCanDailyEntryFromUrl("https://www150.statcan.gc.ca/n1/daily-quotidien/260616/dq260616b-eng.htm");
   assert(vacanciesEntry, "Job vacancies release was not fetched.");
   const vacancies = await fetchStatCanReleaseData(vacanciesEntry);
-  assert(vacancies.signals.find((signal) => signal.label === "Job vacancies")?.display === "506,730", "Job-vacancy count was formatted with the wrong unit.");
+  const vacancyCount = vacancies.signals.find((signal) => signal.label === "Job vacancies");
+  assert(vacancyCount && vacancyCount.value > 100_000 && vacancyCount.value < 2_000_000 && /^[\d,]+$/.test(vacancyCount.display) && Number(vacancyCount.display.replaceAll(",", "")) === vacancyCount.value, "Job-vacancy count must preserve its revised official count and unit.");
   assert(vacancies.signals.find((signal) => signal.label === "Job vacancy rate")?.display === "2.8%", "Job-vacancy rate lost its percent unit.");
 
+  console.log("StatCan release parsing, revisions and units verified.");
   const cpi = await fetchStatCanCpiSnapshot();
   assertRecentMonthPeriod(cpi.referencePeriod, 2, "StatCan CPI");
   assert(cpi.canada.allItems.yearOverYearPct > -5 && cpi.canada.allItems.yearOverYearPct < 20, `Headline CPI failed integrity range: ${cpi.canada.allItems.yearOverYearPct}`);
@@ -153,14 +155,17 @@ async function main() {
   assert(cpi.provinces.length === 10, `CPI should include 10 provinces, got ${cpi.provinces.length}`);
   assert(cpi.components.some((item) => item.product === "Rent" && Number.isFinite(item.yearOverYearPct)), "CPI rent component failed integrity check.");
 
+  console.log("CPI periods, values and coverage verified.");
   const finance = await fetchFinanceCanadaFiscalSnapshot();
   assert(/20\d{2}/.test(finance.referencePeriod), `Unexpected Fiscal Monitor period: ${finance.referencePeriod}`);
   assert(finance.metrics.some((item) => item.label === "Fiscal-year deficit" && /^\$[\d,.]+[BM]$/.test(item.display)), "Fiscal Monitor deficit failed integrity check.");
 
+  console.log("Finance Canada values and units verified.");
   const housing = await fetchCmhcHousingConstructionData();
   assert(/^Q[1-4] 20\d{2}$/.test(housing.latestPeriodLabel), `Unexpected CMHC quarter: ${housing.latestPeriodLabel}`);
   assertRecentReleaseDate(housing.releaseDate, 180, "CMHC housing construction");
 
+  console.log("CMHC construction periods and sources verified.");
   const rental = await fetchCmhcRentalSnapshot();
   assertRecentMonthPeriod(rental.referencePeriod, 18, "CMHC rental market");
   assertRecentReleaseDate(rental.releaseDate, 600, "CMHC rental market");
@@ -170,11 +175,13 @@ async function main() {
   assert(rental.metros.some((item) => item.geography.includes("Toronto")), "CMHC Toronto metro row is missing.");
   assert(rental.metros.some((item) => item.geography.includes("Vancouver")), "CMHC Vancouver metro row is missing.");
 
+  console.log("CMHC rental periods and geography rows verified.");
   const bankReports = await fetchBankOfCanadaReportReleases();
   assert(bankReports.length >= 6, `Bank of Canada report monitor discovered too few report families: ${bankReports.length}`);
   assert(bankReports.some((report) => report.releaseType === "bank-of-canada-mpr"), "Bank of Canada Monetary Policy Report monitor is missing.");
   assert(bankReports.every((report) => report.status === "live" && report.sourceLinks.length >= 2), "Bank of Canada reports lost live status or source trails.");
 
+  console.log("Bank of Canada source trails verified.");
   const immigration = await fetchIrccImmigrationSnapshot();
   const permanentResidents = immigration.metrics.find((item) => item.key === "permanentResidents");
   const tfwp = immigration.metrics.find((item) => item.key === "tfwp");

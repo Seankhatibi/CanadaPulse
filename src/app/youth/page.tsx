@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { LifeSeriesBoard } from "@/components/life-series-board";
+import { getLifeSeries } from "@/lib/life-series";
 import { AppShell } from "@/components/app-shell";
 import { ProvinceExplorer } from "@/components/homepage/province-explorer";
 import { YouthPressureBoard } from "@/components/youth-pressure-board";
@@ -27,7 +29,7 @@ function validIncome(value?: string) {
 
 export default async function YouthPage({ searchParams }: { searchParams: YouthSearchParams }) {
   const query = await searchParams;
-  const hub = await getMultiSourceReleaseHub();
+  const [hub, series] = await Promise.all([getMultiSourceReleaseHub(), getLifeSeries()]);
   const data = buildProvinceExplorerData(hub);
   const requestedCategory = firstParam(query.topic) as ProvinceExplorerCategoryId | undefined;
   const category = data.categories.find((item) => item.id === requestedCategory)
@@ -40,6 +42,8 @@ export default async function YouthPage({ searchParams }: { searchParams: YouthS
 
   return (
     <AppShell variant="light">
+      <LifeSeriesBoard series={series.filter((item) => item.topic === "work")} title="Young Canadians: jobs, pay and studying" />
+      <p className="mt-6 text-sm text-stone-600">The province explorer below adds general household context. Economy-wide jobs and prices are not youth-specific observations.</p>
       <ProvinceExplorer
         data={data}
         initialCategory={category?.id}

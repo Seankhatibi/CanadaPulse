@@ -5,13 +5,11 @@ import { ProvinceSelect } from "@/components/province-select";
 import { MobileNav } from "@/components/mobile-nav";
 
 const navItems = [
-  { href: "/", label: "Latest" },
-  { href: "/releases", label: "Data feed" },
-  { href: "/canada", label: "Economy" },
-  { href: "/housing", label: "Housing" },
-  { href: "/population", label: "Population" },
+  { href: "/", label: "Today" },
+  { href: "/#explore", label: "Explore" },
   { href: "/compare", label: "Compare" },
-  { href: "/data-status", label: "Sources" },
+  { href: "/my-life", label: "My life" },
+  { href: "/policy", label: "Government" },
 ];
 
 export function AppShell({
@@ -40,7 +38,7 @@ export function AppShell({
             <span className="min-w-0">
               <span className={`block truncate text-sm font-semibold tracking-normal sm:text-base ${isLight ? "text-stone-950 dark:text-white" : ""}`}>Canada Pulse</span>
               <span className={`hidden text-xs 2xl:block ${isLight ? "text-stone-500 dark:text-stone-400" : "text-stone-600 dark:text-stone-400"}`}>
-                Canadian economic intelligence
+                Canadian evidence for everyday life
               </span>
             </span>
           </Link>
@@ -64,13 +62,17 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl overflow-x-clip px-3 py-4 sm:px-6 sm:py-8">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:p-4 focus:text-black">Skip to content</a>
+      <main id="main-content" className="mx-auto w-full max-w-7xl overflow-x-clip px-3 py-4 sm:px-6 sm:py-8">
         {children}
       </main>
 
-      <footer className={`mx-auto flex w-full max-w-7xl flex-col gap-3 overflow-x-clip px-3 pb-8 text-xs sm:px-6 md:flex-row md:items-center md:justify-between ${isLight ? "text-stone-600 dark:text-stone-400" : "text-stone-500"}`}>
-        <span>Canada Pulse turns official Canadian data into timely research briefs, visual breakdowns and province comparisons.</span>
-        <span className="font-mono">Official sources | Structured facts | Transparent methodology</span>
+      <nav aria-label="Quick navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-stone-200 bg-white/95 pb-[env(safe-area-inset-bottom)] text-stone-800 backdrop-blur md:hidden">
+        {[{ href: "/", label: "Today" }, { href: "/#explore", label: "Explore" }, { href: "/compare", label: "Compare" }, { href: "/my-life", label: "My life" }].map((item) => <Link key={item.href} href={item.href} className="flex min-h-14 items-center justify-center text-xs font-bold hover:bg-teal-50">{item.label}</Link>)}
+      </nav>
+      <footer className={`mx-auto flex w-full max-w-7xl flex-col gap-3 overflow-x-clip px-3 pb-24 text-xs md:pb-8 sm:px-6 md:flex-row md:items-center md:justify-between ${isLight ? "text-stone-600 dark:text-stone-400" : "text-stone-500"}`}>
+        <span>Canada Pulse connects Canadian evidence to money, homes, work, community and government.</span>
+        <span className="flex flex-wrap gap-4"><Link href="/datasets">Dataset register</Link><Link href="/data-status">Source health</Link><Link href="/methodology">Methodology</Link></span>
       </footer>
     </div>
   );

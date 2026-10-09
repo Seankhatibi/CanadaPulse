@@ -1,3 +1,4 @@
+import { LifeContextPanel } from "@/components/life-context-panel";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -160,6 +161,7 @@ export default async function PulseReleasePage({
   return (
     <AppShell>
       <div className="space-y-6">
+        <LifeContextPanel release={release} />
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-bold text-stone-600 hover:text-red-700">
           <ArrowLeft className="size-4" aria-hidden="true" />
           Canada Pulse

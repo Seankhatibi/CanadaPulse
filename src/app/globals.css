@@ -126,3 +126,10 @@ html:not(.dark) .canada-light-shell main .cp-panel :is(.bg-red-600, .bg-red-700,
 html:not(.dark) .canada-light-shell main .cp-panel :is(.bg-red-600, .bg-red-700, .bg-sky-600, .bg-fuchsia-600, .bg-teal-600, .bg-emerald-600) * {
   color: inherit;
 }
+
+.cp-eyebrow { font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #0f766e; }
+.cp-card { border: 1px solid #e7e5e4; border-radius: 1rem; background: white; color: #1c1917; padding: 1.25rem; }
+.cp-select, .cp-input { min-height: 44px; border: 1px solid #d6d3d1; border-radius: .6rem; padding: .65rem .8rem; background: white; color: #1c1917; color-scheme: light; font-size: 1rem; }
+.cp-select option { background: white; color: #1c1917; }
+:focus-visible { outline: 3px solid #0d9488; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }

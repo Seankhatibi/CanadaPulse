@@ -18,12 +18,15 @@ export function Canada3DMap({
   selectedProvince,
   onSelect,
   onHover,
+  onUnavailable,
 }: {
   category: CanadaMapCategory;
   selectedProvince: string;
   onSelect: (provinceSlug: string) => void;
   onHover: (provinceSlug: string | null) => void;
+  onUnavailable?: () => void;
 }) {
+  const unavailableRef = useRef(onUnavailable);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const onSelectRef = useRef(onSelect);
   const onHoverRef = useRef(onHover);
@@ -44,7 +47,9 @@ export function Canada3DMap({
     const canvas: HTMLCanvasElement = canvasElement;
 
     const scene = new THREE.Scene();
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    let renderer: THREE.WebGLRenderer;
+    try { renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true }); } catch { unavailableRef.current?.(); return; }
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setClearColor(0x000000, 0);
@@ -169,8 +174,8 @@ export function Canada3DMap({
     resize();
 
     function animate() {
-      mapGroup.rotation.x += ((-0.08 + pointerY * 0.018) - mapGroup.rotation.x) * 0.045;
-      mapGroup.rotation.z += ((-0.025 - pointerX * 0.018) - mapGroup.rotation.z) * 0.045;
+      if (!reducedMotion) mapGroup.rotation.x += ((-0.08 + pointerY * 0.018) - mapGroup.rotation.x) * 0.045;
+      if (!reducedMotion) mapGroup.rotation.z += ((-0.025 - pointerX * 0.018) - mapGroup.rotation.z) * 0.045;
       for (const mesh of meshes) {
         const provinceSlug = mesh.userData.provinceSlug as string;
         const selected = provinceSlug === selectedProvinceRef.current;
