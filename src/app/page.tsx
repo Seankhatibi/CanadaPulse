@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { getLifeSeries } from "@/lib/life-series";
+import { getPolicyFeed } from "@/lib/policy-data";
+import { buildStateOfCanadaMap } from "@/lib/state-map-data";
 import { DailyLifeDashboard, LifeTopicGrid } from "@/components/daily-life-dashboard";
 import { AppShell } from "@/components/app-shell";
 import { DebateBoard } from "@/components/homepage/debate-board";
@@ -10,7 +12,7 @@ import { WeeklyBriefingStrip } from "@/components/homepage/weekly-briefing-strip
 import { buildHomepageFeed } from "@/lib/homepage-feed";
 import { buildLiveWeeklyPulseSummary } from "@/lib/live-weekly-pulse";
 import { provinces } from "@/lib/province-directory";
-import { buildProvinceExplorerData, type ProvinceExplorerCategoryId, type ProvinceExplorerData } from "@/lib/province-explorer-data";
+import { type ProvinceExplorerCategoryId, type ProvinceExplorerData } from "@/lib/province-explorer-data";
 import { getMultiSourceReleaseHub } from "@/lib/release-hub";
 
 export const dynamic = "force-dynamic";
@@ -20,13 +22,13 @@ type HomeSearchParams = Promise<{ province?: string | string[]; topic?: string |
 const DEFAULT_INCOME = 60_000;
 
 async function getHomepageData() {
-  const [releaseHub, lifeSeries] = await Promise.all([getMultiSourceReleaseHub(), getLifeSeries()]);
+  const [releaseHub, lifeSeries, policy] = await Promise.all([getMultiSourceReleaseHub(), getLifeSeries(), getPolicyFeed()]);
   return {
     releaseHub,
     lifeSeries,
     feed: buildHomepageFeed({ releaseHub }),
     weekly: buildLiveWeeklyPulseSummary(releaseHub),
-    provinceExplorer: buildProvinceExplorerData(releaseHub, lifeSeries),
+    provinceExplorer: buildStateOfCanadaMap(releaseHub, lifeSeries, policy),
   };
 }
 
@@ -42,7 +44,7 @@ function parseIncome(value?: string) {
 
 function resolveExplorerState(data: ProvinceExplorerData, query: Awaited<HomeSearchParams>) {
   const requestedCategory = firstParam(query.topic);
-  const category = data.categories.find((item) => item.id === requestedCategory) ?? data.categories[0];
+  const category = data.categories.find((item) => item.id === requestedCategory) ?? data.categories.find((item) => item.id === data.defaultCategory) ?? data.categories[0];
   const requestedProvince = firstParam(query.province);
   const province = category?.values.find((item) => item.slug === requestedProvince)
     ?? category?.values.find((item) => item.slug === data.defaultProvince)
@@ -64,8 +66,8 @@ export async function generateMetadata({ searchParams }: { searchParams: HomeSea
   const genericImage = "/api/og/province";
 
   if (!requestedProvince || !requestedTopic || !provinces.some((province) => province.slug === requestedProvince)) {
-    const title = "What changed in Canada's economy today?";
-    const description = "The latest official Canadian data, crunched into visual release briefs, youth affordability signals and province comparisons.";
+    const title = "Canada Pulse | Your Canada, mapped";
+    const description = "The newest verified Canadian release first. Explore the economy, government, society, housing and immigration through a realistic interactive Canada map and everyday explanations.";
     return {
       title,
       description,
@@ -127,7 +129,7 @@ export default async function Home({ searchParams }: { searchParams: HomeSearchP
     <AppShell variant="light">
       <ProvinceExplorer
         data={provinceExplorer}
-        initialCategory={state.category as ProvinceExplorerCategoryId | undefined}
+        initialCategory={provinceExplorer.categories.some((item) => item.id === firstParam(query.topic)) ? state.category as ProvinceExplorerCategoryId | undefined : undefined}
         initialProvince={state.province}
         initialIncome={income}
         hero

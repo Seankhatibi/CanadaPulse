@@ -5,6 +5,34 @@ export type LifeStage = typeof lifeStages[number];
 
 export function lifeContext(release: NormalizedRelease) {
   const text = `${release.title} ${release.releaseType}`.toLowerCase();
+  if (/gross domestic product|\bgdp\b/.test(text)) return {
+    title: "What this means for economic opportunity",
+    impact: "GDP measures production across the economy. Growth can support jobs and public revenue, but it does not tell you whether your pay is rising faster than your bills. Look at GDP per person, wages and household costs together.",
+    different: "A national total can hide differences across industries, provinces and age groups. Total GDP can rise while GDP per person falls.",
+    limitation: "Check whether the figure is in real or current dollars and whether a change is monthly, quarterly or annual. GDP alone does not prove a household is better off.",
+    action: "Explore growth and household context", href: "/canada", stages: ["Everyone", "Starting work"] as LifeStage[],
+  };
+  if (/immigra|refugee|population|ircc/.test(text)) return {
+    title: "What this means for a changing population",
+    impact: "Population and arrival data help explain changing demand for homes, work, education and services. Compare arrivals with the capacity and outcomes of those systems; a count alone does not explain a local shortage.",
+    different: "Permanent residents, temporary residents and people claiming asylum are different groups. Admissions are a flow during a period, not the number of people currently living here.",
+    limitation: "Raw provincial counts are not adjusted for population and do not establish what caused rents, wages or service pressures to change.",
+    action: "Explore population and immigration", href: "/population", stages: ["Everyone", "Renter", "Starting work"] as LifeStage[],
+  };
+  if (/energy|electric|oil|natural gas/.test(text)) return {
+    title: "What this means for energy and the future",
+    impact: "Energy production, electricity and prices connect to utility bills, regional jobs and the transition to lower emissions. Production and export totals are not your household energy price.",
+    different: "Energy-producing regions, commuters and households using different heating systems can experience different effects.",
+    limitation: "Check the fuel, units and observation period. One energy measure does not establish household costs or environmental outcomes.",
+    action: "Explore energy evidence", href: "/energy", stages: ["Everyone", "Homeowner"] as LifeStage[],
+  };
+  if (/international.*trade|merchandise.*trade|export|import/.test(text)) return {
+    title: "What this means for industries and jobs",
+    impact: "Trade data show how Canadian industries connect to demand abroad and imported supplies. Changes can reach jobs, business investment and prices, with different effects by industry and region.",
+    different: "Export-oriented workers and businesses using imported inputs can experience the same change differently.",
+    limitation: "A trade total may reflect prices as well as quantities. It is not proof that every region or household benefits.",
+    action: "Explore trade and industries", href: "/trade", stages: ["Everyone", "Starting work"] as LifeStage[],
+  };
   if (/labour|employment|wage/.test(text)) return {
     title: "What this means for finding work",
     impact: "Employment, participation and unemployment together help explain the competition for jobs. A national improvement may not reach your age group or local industry.",

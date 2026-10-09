@@ -3,7 +3,8 @@ import { parseComparableProvinceValue, rankComparableProvinceValues } from "@/li
 import type { NormalizedRelease, ReleaseHubPayload } from "@/lib/release-hub";
 import type { LifeSeries } from "@/lib/life-series";
 
-export type ProvinceExplorerCategoryId = "jobs" | "rent" | "vacancy" | "prices" | "homes" | "newcomers" | "youth-jobs" | "youth-wages" | "primary-care";
+export type ProvinceExplorerCategoryId = "jobs" | "rent" | "vacancy" | "prices" | "homes" | "newcomers" | "youth-jobs" | "youth-wages" | "primary-care" | "mental-health" | "community-belonging" | "tuition" | "food-insecurity" | "poverty" | "life-satisfaction" | `release:${string}` | `bill:${string}`;
+export type MapTheme = "economy" | "housing" | "society" | "immigration" | "government" | "trade" | "energy";
 
 export type ProvinceExplorerValue = {
   province: string;
@@ -17,6 +18,8 @@ export type ProvinceExplorerValue = {
   intensity: number;
   direction: "up" | "down" | "neutral";
   href: string;
+  changeDisplay?: string;
+  changePeriod?: string;
 };
 
 export type ProvinceExplorerCategory = {
@@ -34,12 +37,19 @@ export type ProvinceExplorerCategory = {
   lowColor: string;
   highColor: string;
   values: ProvinceExplorerValue[];
+  theme?: MapTheme;
+  measureId?: ProvinceExplorerCategoryId;
+  headline?: string;
+  whyItMatters?: string;
+  cadence?: string;
+  national?: { display: string; label: string; note: string; href: string; kind: "metric" | "legislation" | "report"; changeDisplay?: string; changePeriod?: string; metrics?: { label: string; display: string; changeDisplay?: string }[] };
 };
 
 export type ProvinceExplorerData = {
   generatedAt: string;
   defaultProvince: string;
   categories: ProvinceExplorerCategory[];
+  defaultCategory?: ProvinceExplorerCategoryId;
 };
 
 type CategoryDefinition = Omit<ProvinceExplorerCategory, "source" | "period" | "releaseDate" | "releaseHref" | "values"> & {
@@ -170,6 +180,7 @@ function buildCategory(definition: CategoryDefinition, release: NormalizedReleas
     period: release.referencePeriod,
     releaseDate: release.releaseDate,
     releaseHref: release.href,
+    sourceUrl: release.sourceUrl,
     highMeaning: definition.highMeaning,
     lowColor: definition.lowColor,
     highColor: definition.highColor,
@@ -198,6 +209,12 @@ export function buildLifeMapCategories(series: LifeSeries[]): ProvinceExplorerCa
     { id: "youth-jobs" as const, label: "Youth jobs", question: "Where is entering work harder?", highMeaning: "pressure" as const, lowColor: "#22d3ee", highColor: "#fb7185", href: "/work" },
     { id: "youth-wages" as const, label: "Youth pay", question: "What do young employees earn per hour?", highMeaning: "neutral" as const, lowColor: "#38bdf8", highColor: "#a78bfa", href: "/work" },
     { id: "primary-care" as const, label: "Care access", question: "Do young adults have a regular healthcare provider?", highMeaning: "positive" as const, lowColor: "#f59e0b", highColor: "#2dd4bf", href: "/quality-of-life" },
+    { id: "mental-health" as const, label: "Mental health", question: "How are young adults feeling?", highMeaning: "positive" as const, lowColor: "#c084fc", highColor: "#2dd4bf", href: "/quality-of-life" },
+    { id: "community-belonging" as const, label: "Belonging", question: "Do young adults feel connected to their community?", highMeaning: "positive" as const, lowColor: "#fbbf24", highColor: "#34d399", href: "/quality-of-life" },
+    { id: "tuition" as const, label: "Tuition", question: "What does university tuition cost?", highMeaning: "pressure" as const, lowColor: "#67e8f9", highColor: "#fb923c", href: "/work" },
+    { id: "food-insecurity" as const, label: "Food access", question: "Who is struggling to afford food?", highMeaning: "pressure" as const, lowColor: "#2dd4bf", highColor: "#fb7185", href: "/quality-of-life" },
+    { id: "poverty" as const, label: "Poverty", question: "Who is below the essential-cost threshold?", highMeaning: "pressure" as const, lowColor: "#67e8f9", highColor: "#f472b6", href: "/quality-of-life" },
+    { id: "life-satisfaction" as const, label: "Life satisfaction", question: "How do Canadians rate their lives?", highMeaning: "positive" as const, lowColor: "#a78bfa", highColor: "#34d399", href: "/quality-of-life" },
   ];
   return layers.flatMap((layer) => {
     const dataset = series.find((item) => item.id === layer.id && item.status === "loaded");
@@ -208,7 +225,14 @@ export function buildLifeMapCategories(series: LifeSeries[]): ProvinceExplorerCa
       const province = provinces.find((item) => item.name === row.geography);
       const point = row.points.find((item) => item.period === period);
       if (!province || !point || !Number.isFinite(point.value)) return [];
-      return [{ province, value: point.value }];
+      const previousDate = new Date(period);
+      const months = dataset.cadence === "Monthly" ? 1 : dataset.cadence === "Quarterly" ? 3 : dataset.cadence === "Annual" ? 12 : 0;
+      previousDate.setUTCMonth(previousDate.getUTCMonth() - months);
+      const previousPeriod = previousDate.toISOString().slice(0, 10);
+      const previous = months ? row.points.find((item) => item.period === previousPeriod) : undefined;
+      const difference = previous ? point.value - previous.value : undefined;
+      const changeDisplay = difference === undefined ? undefined : `${difference > 0 ? "+" : ""}${difference.toFixed(dataset.unit === "$/hour" ? 2 : dataset.unit === "$" ? 0 : 1)}${dataset.unit === "%" ? " percentage points" : dataset.unit === "$/hour" ? " CAD/hr" : dataset.unit === "$" ? " CAD" : " points"}`;
+      return [{ province, value: point.value, changeDisplay, changePeriod: previous ? previousPeriod : undefined }];
     }).sort((a, b) => b.value - a.value);
     if (rows.length < 4) return [];
     const minimum = Math.min(...rows.map((row) => row.value));
@@ -217,11 +241,14 @@ export function buildLifeMapCategories(series: LifeSeries[]): ProvinceExplorerCa
     return [{
       ...layer, context: `${dataset.title} · ${dataset.cohort}. ${dataset.implication} ${dataset.limitation}`,
       source: "Statistics Canada", sourceUrl: dataset.sourceUrl, cohort: dataset.cohort,
-      period: new Intl.DateTimeFormat("en-CA", { month: dataset.cadence === "Monthly" ? "long" : undefined, year: "numeric", timeZone: "UTC" }).format(new Date(period)),
+      whyItMatters: dataset.implication, cadence: dataset.cadence,
+      theme: dataset.topic === "community" ? "society" : "economy",
+      period: new Intl.DateTimeFormat("en-CA", { month: ["Monthly", "Quarterly"].includes(dataset.cadence) ? "long" : undefined, year: "numeric", timeZone: "UTC" }).format(new Date(period)),
       releaseDate: "", releaseHref: layer.href,
       values: rows.map((row) => ({
         province: row.province.name, slug: row.province.slug, abbr: row.province.abbr, value: row.value,
-        display: dataset.unit === "$/hour" ? `$${row.value.toFixed(2)}/hr` : `${row.value.toFixed(1)}%`,
+        display: dataset.unit === "$/hour" ? `$${row.value.toFixed(2)}/hr` : dataset.unit === "$" ? `$${Math.round(row.value).toLocaleString("en-CA")}` : `${row.value.toFixed(1)}${dataset.unit}`,
+        changeDisplay: row.changeDisplay, changePeriod: row.changePeriod,
         note: `${dataset.cohort}. Same observation period across provinces; highest-to-lowest rank is not a personal outcome.`,
         rank: 1 + rows.filter((other) => other.value > row.value).length, rankOutOf: rows.length,
         intensity: range > 0 ? (row.value - minimum) / range : .5, direction: "neutral" as const, href: layer.href,

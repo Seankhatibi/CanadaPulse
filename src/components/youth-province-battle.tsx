@@ -18,7 +18,7 @@ const categoryIcons = {
   prices: CircleDollarSign,
   homes: Building2,
   newcomers: Users,
-} satisfies Record<ProvinceExplorerCategoryId, typeof Home>;
+} as Partial<Record<ProvinceExplorerCategoryId, typeof Home>>;
 
 function clampIncome(value: number) {
   return Math.round(Math.min(200_000, Math.max(30_000, value)) / 5_000) * 5_000;
@@ -104,7 +104,7 @@ function ProvinceSnapshot({
 
       <div className="mt-6 divide-y divide-white/10 border-y border-white/10">
         {signals.map(({ category, value, other }) => {
-          const Icon = categoryIcons[category.id];
+          const Icon = categoryIcons[category.id] ?? CircleDollarSign;
           const label = outcomeLabel(category, value, other);
           const favourable = label === "Lower pressure" || label === "Stronger pipeline";
           return (

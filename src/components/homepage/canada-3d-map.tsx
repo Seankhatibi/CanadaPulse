@@ -78,7 +78,7 @@ export function Canada3DMap({
       const value = provinceSlug ? valueByProvince.get(provinceSlug) : undefined;
       const fill = value
         ? lowColor.clone().lerp(highColor, value.intensity)
-        : new THREE.Color(0x243238);
+        : new THREE.Color(category.national ? 0x155e75 : 0x243238);
       const parsed = loader.parse(`<svg xmlns="http://www.w3.org/2000/svg"><path d="${location.path}" /></svg>`);
 
       for (const path of parsed.paths) {

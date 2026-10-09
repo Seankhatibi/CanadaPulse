@@ -2,11 +2,13 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { mapThemes, mapTheme, everydayReading } from "@/lib/map-topics";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, BriefcaseBusiness, Building2, CircleDollarSign, DoorOpen, Home, Minus, WalletCards, Users, HeartPulse } from "lucide-react";
 import { ShareStatButton } from "@/components/share-stat-button";
 import { CanadaFlatMap } from "@/components/homepage/canada-flat-map";
-import type { ProvinceExplorerCategoryId, ProvinceExplorerData } from "@/lib/province-explorer-data";
+import type { MapTheme, ProvinceExplorerCategoryId, ProvinceExplorerData } from "@/lib/province-explorer-data";
 
 const Canada3DMap = dynamic(() => import("@/components/homepage/canada-3d-map").then((module) => module.Canada3DMap), {
   ssr: false,
@@ -23,7 +25,7 @@ const icons = {
   prices: CircleDollarSign,
   homes: Building2,
   newcomers: Users,
-} satisfies Record<ProvinceExplorerCategoryId, typeof Home>;
+} as Partial<Record<ProvinceExplorerCategoryId, typeof Home>>;
 
 const youthSignalLabels: Partial<Record<ProvinceExplorerCategoryId, string>> = {
   jobs: "Job pressure",
@@ -38,7 +40,7 @@ const youthSignalLabels: Partial<Record<ProvinceExplorerCategoryId, string>> = {
 function categoryMeaning(categoryId: ProvinceExplorerCategoryId, highMeaning: "pressure" | "positive" | "neutral") {
   if (categoryId === "vacancy") return { low: "Tighter market", high: "More choice" };
   if (highMeaning === "pressure") return { low: "Less pressure", high: "More pressure" };
-  if (highMeaning === "positive") return { low: "Fewer", high: "More" };
+  if (highMeaning === "positive") return { low: "Lower value", high: "Higher value" };
   return { low: "Lower value", high: "Higher value" };
 }
 
@@ -77,7 +79,10 @@ export function ProvinceExplorer({
   hero?: boolean;
   initialView?: "list" | "2d" | "3d";
 }) {
-  const startingCategory = data.categories.find((item) => item.id === initialCategory) ?? data.categories[0];
+  const router = useRouter();
+  const startingCategory = data.categories.find((item) => item.id === initialCategory) ?? data.categories.find((item) => item.id === data.defaultCategory) ?? data.categories[0];
+  const [manualTopic, setManualTopic] = useState(Boolean(initialCategory));
+  const [lens, setLens] = useState<MapTheme | "latest">(initialCategory && startingCategory ? mapTheme(startingCategory) : "latest");
   const startingProvince = (startingCategory?.values.some((value) => value.slug === initialProvince)
     ? initialProvince
     : data.defaultProvince) ?? startingCategory?.values[0]?.slug ?? "ontario";
@@ -86,10 +91,12 @@ export function ProvinceExplorer({
   const [hoveredSlug, setHoveredSlug] = useState<string | null>(null);
   const [income, setIncome] = useState(initialIncome);
   const [mapMode, setMapMode] = useState<"list" | "2d" | "3d">(initialView);
-  const category = data.categories.find((item) => item.id === categoryId) ?? data.categories[0];
+  const category = data.categories.find((item) => item.id === (hero && !manualTopic ? data.defaultCategory : categoryId)) ?? data.categories[0];
+  const availableLayers = data.categories.filter((item) => lens === "latest" ? item.id.startsWith("release:") || item.id.startsWith("bill:") : mapTheme(item) === lens);
 
   const selected = useMemo(() => {
     if (!category) return null;
+    if (category.national) return { province: "Canada", slug: "canada", abbr: "CA", display: category.national.display, note: category.national.note, href: category.national.href, value: 0, rank: 0, rankOutOf: 0, intensity: 0, direction: "neutral" as const, changeDisplay: category.national.changeDisplay, changePeriod: category.national.changePeriod };
     return category.values.find((value) => value.slug === provinceSlug)
       ?? category.values.find((value) => value.slug === hoveredSlug)
       ?? category.values[0];
@@ -100,11 +107,22 @@ export function ProvinceExplorer({
   useEffect(() => {
     if (!category || !selected) return;
     const url = new URL(window.location.href);
-    url.searchParams.set("province", selected.slug);
-    url.searchParams.set("topic", category.id);
+    if (selected.slug !== "canada") url.searchParams.set("province", selected.slug);
+    else url.searchParams.delete("province");
+    if (!hero || manualTopic) url.searchParams.set("topic", category.id);
+    else url.searchParams.delete("topic");
     url.searchParams.delete("income");
     window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
-  }, [category, income, selected]);
+  }, [category, income, selected, hero, manualTopic]);
+
+  useEffect(() => {
+    if (!hero) return;
+    let refreshedAt = Date.now();
+    const refresh = () => { if (document.visibilityState === "visible" && Date.now() - refreshedAt >= 600000) { refreshedAt = Date.now(); router.refresh(); } };
+    const timer = window.setInterval(refresh, 600000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", refresh); };
+  }, [hero, router]);
 
   if (!category || !selected || !visible) return null;
 
@@ -112,7 +130,7 @@ export function ProvinceExplorer({
   const selectedValue = selected;
   const DirectionIcon = selectedValue.direction === "up" ? ArrowUp : selectedValue.direction === "down" ? ArrowDown : Minus;
   const legend = categoryMeaning(category.id, category.highMeaning);
-  const selectedProvinceValues = data.categories.flatMap((item) => {
+  const selectedProvinceValues = data.categories.filter((item) => !hero || (!item.id.startsWith("release:") && !item.id.startsWith("bill:"))).flatMap((item) => {
     const value = item.values.find((candidate) => candidate.slug === selected.slug);
     return value ? [{ category: item, value }] : [];
   });
@@ -128,44 +146,53 @@ export function ProvinceExplorer({
   const compareProvince = selectedValue.slug === "alberta" ? "ontario" : "alberta";
   const compareUrl = `/compare?left=${encodeURIComponent(selectedValue.slug)}&right=${compareProvince}&income=${income}`;
 
+  function chooseCategory(id: ProvinceExplorerCategoryId) { setCategoryId(id); setManualTopic(true); setHoveredSlug(null); if (data.categories.find((item) => item.id === id)?.national && mapMode === "list") setMapMode("3d"); }
+  function chooseLens(next: MapTheme | "latest") {
+    setLens(next); setHoveredSlug(null);
+    if (next === "latest") { setManualTopic(false); setCategoryId(data.defaultCategory ?? data.categories[0].id); }
+    else { const first = data.categories.find((item) => mapTheme(item) === next && !item.id.startsWith("release:") && !item.id.startsWith("bill:")) ?? data.categories.find((item) => mapTheme(item) === next); if (first) chooseCategory(first.id); }
+  }
+  function calendar(value: string) { return /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(value)) : value; }
+
   function renderHeader() {
     return (
       <div className="px-4 py-6 sm:px-8 lg:px-9 lg:py-8">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
           <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" aria-hidden="true" />
-          Official province rows | checked {checkedAt(data.generatedAt)} ET
+          Official evidence | checked {checkedAt(data.generatedAt)} ET
         </div>
         <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-red-300">Your Canada right now</p>
         <Heading className={`mt-2 font-black leading-tight ${hero ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl"}`}>{hero ? "Your life, mapped across Canada." : "Can you build a life in your province?"}</Heading>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">Choose a layer. Tap a province. See what jobs, pay, rent and services mean for daily life. Each layer uses its own measure and observation period.</p>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">The newest verified release first. Explore the economy, government and society—and what they mean for your life.</p>
 
-        <div className={`mt-6 grid gap-2 ${hero ? "grid-cols-3" : "grid-cols-2"}`} aria-label="Map data category">
-          {data.categories.map((item) => {
-            const Icon = icons[item.id];
-            const active = item.id === category.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setCategoryId(item.id)}
-                aria-pressed={active}
-                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border px-2.5 text-xs font-black transition sm:text-sm ${active ? "border-white bg-white text-stone-950" : "border-white/15 bg-white/5 text-slate-300 hover:border-white/40 hover:bg-white/10"}`}
-              >
-                <Icon className="size-4 shrink-0" aria-hidden="true" />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {hero ? <>
+          <div className="mt-5 flex flex-wrap gap-2" aria-label="Explore Canada by topic">
+            <button onClick={() => chooseLens("latest")} aria-pressed={lens === "latest"} className={`flex min-h-11 gap-4 items-center justify-between rounded-xl border px-3 text-left text-sm font-bold ${lens === "latest" ? "border-cyan-200 bg-cyan-200 text-slate-950" : "border-white/20 bg-white/5"}`}><span>✦ Latest update</span><span className="text-[10px] uppercase tracking-wider">{!manualTopic ? "Following new releases" : "Browse releases"}</span></button>
+            {mapThemes.map((theme) => <button key={theme.id} onClick={() => chooseLens(theme.id)} aria-pressed={lens === theme.id} disabled={!data.categories.some((item) => mapTheme(item) === theme.id)} className={`min-h-11 rounded-xl border px-3 text-left text-sm font-bold transition disabled:opacity-35 ${lens === theme.id ? "border-cyan-200 bg-white/15 text-cyan-100" : "border-white/15 bg-white/5 hover:bg-white/10"}`}>{theme.label}</button>)}
+          </div>
+
+        </> : <div className="mt-6 grid grid-cols-2 gap-2" aria-label="Map data category">{data.categories.map((item) => { const Icon = icons[item.id] ?? CircleDollarSign; return <button key={item.id} onClick={() => chooseCategory(item.id)} aria-pressed={item.id === category.id} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border px-3 text-sm font-bold ${item.id === category.id ? "bg-white text-stone-950" : "border-white/15"}`}><Icon className="size-4 shrink-0" aria-hidden="true" /><span>{item.label}</span></button>; })}</div>}
+
       </div>
     );
+  }
+
+  function renderLayerPicker(id: string) {
+    return <div className="px-4 pb-4 pt-5 sm:px-8 lg:px-9">          <label htmlFor={id} className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">{lens === "latest" ? "Verified releases & parliamentary updates" : mapThemes.find((theme) => theme.id === lens)?.description}</label>
+          <select id={id} value={category.id} onChange={(event) => chooseCategory(event.target.value as ProvinceExplorerCategoryId)} className="mt-2 min-h-12 w-full rounded-lg border border-white/20 bg-[#112c30] px-3 text-sm font-bold text-white">
+            {availableLayers.map((item) => <option key={item.id} value={item.id}>{item.releaseDate ? `${calendar(item.releaseDate)} · ` : ""}{item.label}</option>)}
+          </select>
+          {lens === "latest" ? <p className="mt-2 text-[11px] leading-5 text-slate-400">Newest publication date first; same-day data releases use editorial relevance. Selecting a release pins that view. “Latest update” resumes following new releases.</p> : null}
+    </div>;
   }
 
   function renderDetails(selectId: string) {
     return (
       <div className="border-t border-white/10 px-4 py-6 sm:px-8 lg:px-9 lg:py-7">
+        {category.headline ? <p className="mb-3 text-xs font-bold uppercase tracking-wider text-cyan-300">{category.national?.kind === "legislation" ? "Parliamentary update" : category.national?.kind === "report" ? "Official report" : "Data release"} · {calendar(category.releaseDate)}</p> : null}
+        {category.headline ? <h2 className="mb-4 text-xl font-bold leading-snug">{category.headline}</h2> : null}
         <p className="text-sm font-black text-cyan-300">{category.question}</p>
-        <label htmlFor={selectId} className="mt-5 block text-xs font-black uppercase tracking-[0.14em] text-slate-400">Province</label>
+        {!category.national ? <><label htmlFor={selectId} className="mt-5 block text-xs font-black uppercase tracking-[0.14em] text-slate-400">Province</label>
         <select
           id={selectId}
           value={selectedValue.slug}
@@ -175,14 +202,16 @@ export function ProvinceExplorer({
           {category.values.slice().sort((left, right) => left.province.localeCompare(right.province)).map((value) => (
             <option key={value.slug} value={value.slug}>{value.province}</option>
           ))}
-        </select>
+        </select></> : <p className="mt-3 text-xs leading-5 text-slate-400">Canada-level context. No provincial values are assigned to this layer.</p>}
 
         <div className="mt-5 border-y border-white/10 py-5">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">{selectedValue.province}</p>
           <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-            <p className="font-mono text-5xl font-black">{selectedValue.display}</p>
-            <p className="pb-1 font-mono text-sm font-black text-slate-300">#{selectedValue.rank} of {selectedValue.rankOutOf}</p>
+            <p className={`font-mono font-black ${category.national && category.national.kind !== "metric" ? "text-2xl" : "text-4xl sm:text-5xl"}`}>{selectedValue.display}</p>
+            {!category.national ? <p className="pb-1 font-mono text-sm font-black text-slate-300">#{selectedValue.rank} of {selectedValue.rankOutOf}</p> : null}
           </div>
+          {selectedValue.changeDisplay ? <p className="mt-3 text-sm font-bold text-cyan-200">{selectedValue.changeDisplay}{selectedValue.changePeriod ? ` vs ${calendar(selectedValue.changePeriod)}` : " · see source comparison"}</p> : null}
+          <p className="mt-3 text-xs text-slate-400">Observation: {category.period}{category.cohort ? ` · ${category.cohort}` : ""}</p>
           <div className="mt-3 flex items-start gap-2 text-sm leading-6 text-slate-300">
             <DirectionIcon className="mt-1 size-4 shrink-0 text-cyan-300" aria-hidden="true" />
             <span>{selectedValue.note}</span>
@@ -209,17 +238,17 @@ export function ProvinceExplorer({
           </div>
         ) : null}
 
-        {hero ? <details className="mt-4 text-sm"><summary className="cursor-pointer font-bold text-cyan-300">What this measures & why it matters</summary><p className="mt-2 leading-6 text-slate-300">{category.context}</p></details> : <p className="mt-4 text-sm leading-6 text-slate-300">{category.context}</p>}
+        {hero ? <><div className="mt-4 rounded-xl border border-cyan-200/15 bg-cyan-200/5 p-4"><h3 className="text-xs font-bold uppercase tracking-wider text-cyan-200">In plain English</h3><p className="mt-2 text-sm leading-6 text-slate-200">{category.national ? category.whyItMatters ?? category.context : everydayReading(category, selectedValue.value, selectedValue.display)}</p></div><details className="mt-4 text-sm"><summary className="cursor-pointer font-bold text-cyan-300">Context & limits</summary><p className="mt-2 leading-6 text-slate-300">{category.context}</p></details></> : <p className="mt-4 text-sm leading-6 text-slate-300">{category.context}</p>}
         <p className="mt-3 text-[11px] font-semibold text-slate-500">{category.source} | {category.period}</p>
-        {category.sourceUrl ? <a href={category.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-cyan-300">Official table & cohort definition ↗</a> : null}
+        {category.sourceUrl ? <a href={category.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex min-h-11 items-center text-xs font-bold text-cyan-300">Official source & definition ↗</a> : null}
 
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
           <Link href={selectedValue.href} className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-md bg-red-600 px-4 text-sm font-black text-white hover:bg-red-500">
-            Explore {category.cohort ? "this evidence" : selectedValue.abbr}
+            Explore {category.national || category.cohort ? "this evidence" : selectedValue.abbr}
             <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
           <ShareStatButton
-            text={`${selectedValue.province}: ${selectedValue.display} for ${category.label.toLowerCase()}, ranked #${selectedValue.rank} of ${selectedValue.rankOutOf}. ${selectedValue.note}`}
+            text={`${selectedValue.province}: ${selectedValue.display} · ${category.question} · ${category.period}. ${category.national ? selectedValue.note : `Ranked #${selectedValue.rank} of ${selectedValue.rankOutOf}. ${selectedValue.note}`}`}
           />
         </div>
       </div>
@@ -229,42 +258,44 @@ export function ProvinceExplorer({
   return (
     <section className="-mx-3 overflow-hidden bg-[#071315] text-white sm:-mx-6" aria-label="Province explorer" data-selected-province={selectedValue.slug} data-selected-topic={category.id} data-income={income} data-compact={compact || undefined}>
       {!secondaryHeading && !hero ? <h1 className="sr-only">Can you build a life in your province?</h1> : null}
+      {hero ? <div className="border-b border-white/10">{renderHeader()}</div> : null}
       <div className="lg:grid lg:grid-cols-[0.72fr_1.28fr]">
         <div className={`hidden border-r border-white/10 lg:block ${compact ? "min-h-[640px]" : "min-h-[760px]"}`}>
-          {renderHeader()}
+          {hero ? renderLayerPicker("map-layer-desktop") : renderHeader()}
           {renderDetails("explorer-province-desktop")}
         </div>
 
         <div>
-          <div className="border-b border-white/10 lg:hidden">{renderHeader()}<div className="flex items-center justify-between gap-3 px-4 pb-4"><span className="font-bold">{selectedValue.province}</span><span className="font-mono text-2xl font-bold">{selectedValue.display}</span></div></div>
-          <div className="flex flex-wrap gap-2 p-4" aria-label="Choose explorer view">{(["list", "2d", "3d"] as const).map((mode) => <button key={mode} type="button" aria-pressed={mapMode === mode} onClick={() => setMapMode(mode)} className={`min-h-11 rounded-lg border px-4 text-sm font-bold ${mapMode === mode ? "bg-white text-stone-950" : "border-white/25 text-white"}`}>{mode === "list" ? "Ranked list" : mode === "2d" ? "2D map" : "3D map"}</button>)}</div>
+          <div className="border-b border-white/10 lg:hidden">{hero ? renderLayerPicker("map-layer-mobile") : renderHeader()}<div className="flex items-center justify-between gap-3 px-4 pb-4"><span className="font-bold">{selectedValue.province}</span><span className="font-mono text-2xl font-bold">{selectedValue.display}</span></div></div>
+          <div className="flex flex-wrap gap-2 p-4" aria-label="Choose explorer view">{(category.national ? ["2d", "3d"] as const : ["list", "2d", "3d"] as const).map((mode) => <button key={mode} type="button" aria-pressed={mapMode === mode} onClick={() => setMapMode(mode)} className={`min-h-11 rounded-lg border px-4 text-sm font-bold ${mapMode === mode ? "bg-white text-stone-950" : "border-white/25 text-white"}`}>{mode === "list" ? "Ranked list" : mode === "2d" ? "2D map" : "3D map"}</button>)}</div>
           <div className={`relative ${mapMode === "list" ? "max-h-[560px] overflow-auto" : "h-[420px] sm:h-[600px]"}`}>
-            {mapMode === "list" ? <div className="grid gap-2 p-4">{category.values.map((value) => <button key={value.slug} onClick={() => setProvinceSlug(value.slug)} aria-pressed={value.slug === selectedValue.slug} className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border p-3 text-left ${value.slug === selectedValue.slug ? "border-teal-200 bg-white/15" : "border-white/15"}`}><span className="text-sm">#{value.rank} {value.province}</span><span className="font-mono font-bold">{value.display}</span></button>)}<p className="text-xs leading-6 text-slate-400">Ranks describe the highest values, not an overall quality-of-life grade. Raw home and newcomer counts are not adjusted for population.</p></div> : mapMode === "2d" ? <CanadaFlatMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} /> : <Canada3DMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} onHover={setHoveredSlug} /> }
+            {mapMode === "list" && !category.national ? <div className="grid gap-2 p-4">{category.values.map((value) => <button key={value.slug} onClick={() => setProvinceSlug(value.slug)} aria-pressed={value.slug === selectedValue.slug} className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border p-3 text-left ${value.slug === selectedValue.slug ? "border-teal-200 bg-white/15" : "border-white/15"}`}><span className="text-sm">#{value.rank} {value.province}</span><span className="font-mono font-bold">{value.display}</span></button>)}<p className="text-xs leading-6 text-slate-400">Ranks describe the highest values, not an overall quality-of-life grade. Raw home and newcomer counts are not adjusted for population.</p></div> : mapMode === "2d" ? <CanadaFlatMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} /> : <Canada3DMap category={category} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} onHover={setHoveredSlug} /> }
             {mapMode !== "list" ? <><div className="pointer-events-none absolute left-4 top-4 bg-[#071315]/88 px-3 py-2 backdrop-blur-sm sm:left-6 sm:top-6">
-              <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">{visible.province}</p>
+              <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">{category.national ? "Canada-level evidence" : visible.province}</p>
               <p className="mt-1 font-mono text-2xl font-black">{visible.display}</p>
-              <p className="mt-1 text-[10px] text-slate-300">{category.cohort ?? "General population / survey coverage"} · {category.period}</p>
+              <p className="mt-1 text-[10px] text-slate-300">{category.national ? category.national.label : category.cohort ?? "General population / survey coverage"} · {category.period}</p>
             </div>
-            <div className="pointer-events-none absolute inset-x-4 bottom-4 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.08em] text-slate-400 sm:inset-x-6 sm:bottom-6">
+            {!category.national ? <div className="pointer-events-none absolute inset-x-4 bottom-4 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.08em] text-slate-400 sm:inset-x-6 sm:bottom-6">
               <span>{legend.low}</span>
               <span className="h-1.5 flex-1 rounded-full" style={{ background: `linear-gradient(90deg, ${category.lowColor}, ${category.highColor})` }} />
               <span>{legend.high}</span>
-            </div></> : null}
+            </div> : <div className="pointer-events-none absolute inset-x-4 bottom-4 rounded-lg bg-[#071315]/85 px-3 py-2 text-center text-xs text-cyan-100">One Canada-level view · provincial colours do not represent separate values</div>}</> : null}
           </div>
-          <p className="px-4 pb-4 text-[11px] leading-5 text-slate-400">Colour compares values within this layer. Raised edges are decorative. Grey means no comparable observation. Smaller provinces are labelled when selected.</p>
+          {!category.national ? <p className="px-4 pb-4 text-[11px] leading-5 text-slate-400">Colour compares values within this layer. Raised edges are decorative. Grey means no comparable observation. Smaller provinces are labelled when selected.</p> : null}
           <p className="px-4 pb-4 text-[11px] leading-5 text-slate-400">Geography: <a className="underline underline-offset-2 hover:text-white" href="https://geo.statcan.gc.ca/geo_wa/rest/services/2021/Cartographic_boundary_files/MapServer/0" target="_blank" rel="noreferrer">Statistics Canada’s official province and territory boundaries</a> · Lambert projection · coastlines generalized for display. 3D uses a raised vector fallback when WebGL is unavailable.</p>
           <div className="lg:hidden">{renderDetails("explorer-province-mobile")}</div>
         </div>
       </div>
 
+      {category.national?.metrics?.length ? <div className="grid gap-px border-t border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4" aria-label="More evidence from this release">{category.national.metrics.map((metric) => <div key={metric.label} className="bg-[#0b1b1e] p-5"><p className="text-xs font-bold text-slate-400">{metric.label}</p><p className="mt-2 font-mono text-2xl font-bold">{metric.display}</p>{metric.changeDisplay ? <p className="mt-2 text-xs text-cyan-200">{metric.changeDisplay}</p> : null}</div>)}</div> : null}
       <div className="grid border-t border-white/10 sm:grid-cols-2 lg:grid-cols-6">
-        {selectedProvinceValues.map(({ category: item, value }) => {
-          const Icon = icons[item.id];
+        {selectedProvinceValues.slice(0, hero ? 6 : selectedProvinceValues.length).map(({ category: item, value }) => {
+          const Icon = icons[item.id] ?? CircleDollarSign;
           return (
             <button
               key={item.id}
               type="button"
-              onClick={() => setCategoryId(item.id)}
+              onClick={() => { chooseCategory(item.id); if (hero) setLens(mapTheme(item)); }}
               className={`flex items-start justify-between gap-3 border-b border-white/10 px-4 text-left transition hover:bg-white/5 sm:px-6 lg:border-b-0 lg:border-r ${compact ? "min-h-24 py-4" : "min-h-28 py-5"} ${item.id === category.id ? "bg-white/10" : ""}`}
             >
               <span>
