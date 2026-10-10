@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, BriefcaseBusiness, Building2, CircleDollarSign, DoorOpen, Home, Minus, WalletCards, Users, HeartPulse } from "lucide-react";
 import { ShareStatButton } from "@/components/share-stat-button";
 import { CanadaFlatMap } from "@/components/homepage/canada-flat-map";
-import { mapTitle, simpleMetricLabel, rankingReading } from "@/lib/map-language";
+import { mapTitle, simpleMetricLabel, rankingReading, simpleFigure, simpleBillStatus } from "@/lib/map-language";
 import { provinces } from "@/lib/province-directory";
 import type { MapTheme, ProvinceExplorerCategoryId, ProvinceExplorerData } from "@/lib/province-explorer-data";
 
@@ -200,14 +200,14 @@ export function ProvinceExplorer({
         <div className="mt-5 border-y border-white/10 py-5">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">{selectedValue.province}</p>
           <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-            <p className={`font-mono font-black ${category.national && category.national.kind !== "metric" ? "text-2xl" : "text-4xl sm:text-5xl"}`}>{selectedValue.display}</p>
+            <p className={`font-mono font-black ${category.national && category.national.kind !== "metric" ? "text-2xl" : "text-4xl sm:text-5xl"}`}>{simpleFigure(selectedValue.display)}</p>
             {!category.national ? <p className="pb-1 font-mono text-sm font-black text-slate-300">#{selectedValue.rank} of {selectedValue.rankOutOf}</p> : null}
           </div>
           {selectedValue.changeDisplay ? <p className="mt-3 text-sm font-bold text-cyan-200">{selectedValue.changeDisplay}{selectedValue.changePeriod ? ` vs ${periodLabel(selectedValue.changePeriod)}` : " · see source comparison"}</p> : null}
           <p className="mt-3 text-xs text-slate-400">Data for: {category.period}{category.cohort ? ` · ${category.cohort}` : ""}</p>
           <div className="mt-3 flex items-start gap-2 text-sm leading-6 text-slate-300">
             <DirectionIcon className="mt-1 size-4 shrink-0 text-cyan-300" aria-hidden="true" />
-            <span>{selectedValue.note}</span>
+            <span>{category.national?.kind === "legislation" ? simpleBillStatus(selectedValue.note) : selectedValue.note}</span>
           </div>
         </div>
 
@@ -241,7 +241,7 @@ export function ProvinceExplorer({
             <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
           <ShareStatButton
-            text={`${selectedValue.province}: ${selectedValue.display} · ${category.question} · ${category.period}. ${category.national ? selectedValue.note : `Ranked #${selectedValue.rank} of ${selectedValue.rankOutOf}. ${selectedValue.note}`}`}
+            text={`${selectedValue.province}: ${simpleFigure(selectedValue.display)} · ${category.question} · ${category.period}. ${category.national ? selectedValue.note : `Ranked #${selectedValue.rank} of ${selectedValue.rankOutOf}. ${selectedValue.note}`}`}
           />
         </div>
       </div>
@@ -259,7 +259,7 @@ export function ProvinceExplorer({
         </div>
 
         <div>
-          <div className="border-b border-white/10 lg:hidden">{hero ? renderLayerPicker("map-layer-mobile") : renderHeader()}<div className="flex items-center justify-between gap-3 px-4 pb-4"><span className="font-bold">{selectedValue.province}</span><span className="font-mono text-2xl font-bold">{selectedValue.display}</span></div></div>
+          <div className="border-b border-white/10 lg:hidden">{hero ? renderLayerPicker("map-layer-mobile") : renderHeader()}<div className="flex items-center justify-between gap-3 px-4 pb-4"><span className="font-bold">{selectedValue.province}</span><span className="font-mono text-2xl font-bold">{simpleFigure(selectedValue.display)}</span></div></div>
           <div className="border-b border-white/10 p-4 sm:p-5">
             <div className="flex items-start justify-between gap-4">
               <div><h2 className="text-lg font-bold">{category.national ? "Canada-wide update" : "Canada & province rankings"}</h2><p className="mt-1 text-xs text-slate-400">{category.period}{category.cohort ? ` · ${category.cohort}` : ""}</p></div>
@@ -268,10 +268,10 @@ export function ProvinceExplorer({
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-cyan-200/20 bg-cyan-200/5 p-3" aria-label="Canada overall">
                 <p className="text-xs font-bold text-cyan-200">{category.canada?.label ?? "Canada overall"}</p>
-                <p className={`mt-1 font-mono font-black ${category.national?.kind && category.national.kind !== "metric" ? "text-lg" : "text-2xl"}`}>{category.national?.display ?? category.canada?.display ?? "Not available"}</p>
-                <p className="mt-1 text-[11px] leading-5 text-slate-300">{category.national ? category.national.kind === "metric" ? simpleMetricLabel(category.national.label) : category.national.note : category.canada ? "Official national figure · not an average of the map’s provinces" : "The source does not provide an overall figure for this view."}</p>
+                <p className={`mt-1 font-mono font-black ${category.national?.kind && category.national.kind !== "metric" ? "text-lg" : "text-2xl"}`}>{simpleFigure(category.national?.display ?? category.canada?.display ?? "Not available")}</p>
+                <p className="mt-1 text-[11px] leading-5 text-slate-300">{category.national ? category.national.kind === "metric" ? simpleMetricLabel(category.national.label) : simpleBillStatus(category.national.note) : category.canada ? "Official national figure · not an average of the map’s provinces" : "The source does not provide an overall figure for this view."}</p>
               </div>
-              {!category.national ? <div className="rounded-xl border border-white/20 bg-white/5 p-3" aria-label="Selected province ranking"><p className="text-xs font-bold text-slate-300">{selectedValue.province}</p><p className="mt-1 font-mono text-2xl font-black">{selectedValue.display} <span className="text-sm text-cyan-200">#{selectedValue.rank} of {selectedValue.rankOutOf}</span></p><p className="mt-1 text-[11px] text-slate-400">Ranked from highest to lowest value</p></div> : null}
+              {!category.national ? <div className="rounded-xl border border-white/20 bg-white/5 p-3" aria-label="Selected province ranking"><p className="text-xs font-bold text-slate-300">{selectedValue.province}</p><p className="mt-1 font-mono text-2xl font-black">{simpleFigure(selectedValue.display)} <span className="text-sm text-cyan-200">#{selectedValue.rank} of {selectedValue.rankOutOf}</span></p><p className="mt-1 text-[11px] text-slate-400">Ranked from highest to lowest value</p></div> : null}
             </div>
           </div>
           <div className="h-[360px] sm:h-[570px] px-2 pt-3" aria-label="Map with values and ranks"><CanadaFlatMap category={{ ...category, label: mapTitle(category) }} selectedProvince={selectedValue.slug} onSelect={setProvinceSlug} /></div>
@@ -288,7 +288,7 @@ export function ProvinceExplorer({
         </div>
       </div>
 
-      {category.national?.metrics?.length ? <div className="grid gap-px border-t border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4" aria-label="More evidence from this release">{category.national.metrics.map((metric) => <div key={metric.label} className="bg-[#0b1b1e] p-5"><p className="text-xs font-bold text-slate-400">{simpleMetricLabel(metric.label)}</p><p className="mt-2 font-mono text-2xl font-bold">{metric.display}</p>{metric.changeDisplay ? <p className="mt-2 text-xs text-cyan-200">{metric.changeDisplay}</p> : null}</div>)}</div> : null}
+      {category.national?.metrics?.length ? <div className="grid gap-px border-t border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4" aria-label="More evidence from this release">{category.national.metrics.map((metric) => <div key={metric.label} className="bg-[#0b1b1e] p-5"><p className="text-xs font-bold text-slate-400">{simpleMetricLabel(metric.label)}</p><p className="mt-2 font-mono text-2xl font-bold">{simpleFigure(metric.display)}</p>{metric.changeDisplay ? <p className="mt-2 text-xs text-cyan-200">{metric.changeDisplay}</p> : null}</div>)}</div> : null}
       <div className="grid border-t border-white/10 sm:grid-cols-2 lg:grid-cols-6">
         {overviewValues.map(({ category: item, value }) => {
           const Icon = icons[item.id] ?? CircleDollarSign;

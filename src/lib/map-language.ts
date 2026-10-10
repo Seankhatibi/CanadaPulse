@@ -16,6 +16,7 @@ export function mapTitle(category: ProvinceExplorerCategory): string {
   if (measure) return measure;
   const title = category.headline ?? category.label;
   const known: [RegExp, string][] = [
+    [/labour force survey/i, "Jobs in Canada"],
     [/gross domestic product|\bgdp\b/i, "Canada’s economic output (GDP)"],
     [/annual wholesale/i, "What wholesalers sell"],
     [/farm product prices/i, "Prices farmers receive"],
@@ -72,4 +73,24 @@ export function simpleMetricLabel(label: string): string {
 
 export function rankingReading(category: ProvinceExplorerCategory): string {
   return `#1 means the highest ${category.highMeaning === "pressure" ? "rate or cost—not the best outcome" : "value—not an overall grade"}. Equal values share a rank. Canada is the overall comparison, not a ranked province.`;
+}
+
+export function simpleFigure(display: string): string {
+  if (display === "Parliamentary bill") return "Proposed law";
+  if (display === "Royal assent") return "Approved as law";
+  const units: Record<string, string> = { k: "thousand", m: "million", b: "billion", t: "trillion" };
+  return display.replace(/^([~$]?[+-]?\d+(?:\.\d+)?)([kmbt])$/i, (_, value: string, suffix: string) => `${value} ${units[suffix.toLowerCase()]}`);
+}
+
+export function simpleBillStatus(status: string): string {
+  const statuses: Record<string, string> = {
+    "At consideration in committee in the House of Commons": "A House of Commons committee is reviewing it",
+    "At consideration in committee in the Senate": "A Senate committee is reviewing it",
+    "At second reading in the House of Commons": "The House of Commons is debating the main idea",
+    "At second reading in the Senate": "The Senate is debating the main idea",
+    "At third reading in the House of Commons": "The House of Commons is considering its final approval",
+    "At third reading in the Senate": "The Senate is considering its final approval",
+    "Royal assent": "Approved as law; check when its provisions take effect",
+  };
+  return statuses[status] ?? status;
 }

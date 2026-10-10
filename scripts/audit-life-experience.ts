@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { comparableScale, barWidth } from "../src/lib/chart-integrity";
 import { calculateBudget } from "../src/lib/budget";
 import { buildLifeMapCategories, buildProvinceExplorerData } from "../src/lib/province-explorer-data";
-import { mapTitle, rankingReading } from "../src/lib/map-language";
+import { mapTitle, rankingReading, simpleFigure } from "../src/lib/map-language";
 import type { LifeSeries } from "../src/lib/life-series";
 import { normalizeBill } from "../src/lib/policy-data";
 import { buildStateOfCanadaMap, newestVerifiedReleases } from "../src/lib/state-map-data";
@@ -84,3 +84,7 @@ assert.ok(rankingReading(nationalJobs).includes("not the best outcome"));
 assert.ok(rankingReading(nationalJobs).includes("Equal values share a rank"));
 assert.equal(buildProvinceExplorerData({ ...hubFixture, todayQueue: [{ ...provincialJobs, chartPayloads: [] }] }).categories[0].canada, undefined, "Missing national data must remain missing");
 console.log("Plain-language map audit passed: understandable titles, exact national benchmarks and honest ranks.");
+
+assert.equal(simpleFigure("$2.37T"), "$2.37 trillion");
+assert.equal(simpleFigure("6.5%"), "6.5%");
+assert.equal(simpleFigure("$20.00/hr"), "$20.00/hr");
