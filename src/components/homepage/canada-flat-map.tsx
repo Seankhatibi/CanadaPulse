@@ -1,24 +1,36 @@
 "use client";
 import canadaMap from "@/lib/canada-boundaries.json";
-export type CanadaMapCategory = { label: string; question?: string; period?: string; lowColor: string; highColor: string; national?: unknown; values: { slug: string; abbr: string; intensity: number; display: string; province?: string }[] };
+export type CanadaMapCategory = { label: string; question?: string; period?: string; lowColor: string; highColor: string; national?: unknown; values: { slug: string; abbr: string; intensity: number; display: string; province?: string; rank?: number | null; rankOutOf?: number }[] };
 type MapLocation = { id: string; path: string; name: string; labelAnchor: { x: number; y: number } };
 function blend(low: string, high: string, intensity: number) {
   const fraction = Math.max(0, Math.min(1, intensity));
   const channels = [1, 3, 5].map((offset) => Math.round(parseInt(low.slice(offset, offset + 2), 16) * (1 - fraction) + parseInt(high.slice(offset, offset + 2), 16) * fraction));
   return `rgb(${channels.join(",")})`;
 }
-export function CanadaFlatMap({ category, selectedProvince, onSelect, raised = false }: { category: CanadaMapCategory; selectedProvince: string; onSelect: (slug: string) => void; raised?: boolean }) {
-  return <svg viewBox={canadaMap.viewBox} className="h-full w-full p-5" style={raised ? { transform: "perspective(1000px) rotateX(16deg) scale(.94)", filter: "drop-shadow(0 22px 12px rgba(0,0,0,.55))" } : undefined} role="group" aria-label={`${raised ? "Raised 3D-style" : "2D"} Canada map: ${category.label}. ${category.national ? "Canada-level context; no provincial values assigned." : "Use Tab and Enter to choose a province."}`}>
-    <title>{category.question ?? category.label}</title><desc>Statistics Canada 2021 province and territory cartographic boundaries, Lambert projection. Coastlines generalized for display; uniform geographic scale.</desc>
-    {raised ? <g aria-hidden="true">{[14, 10, 6].map((depth) => <g key={depth} transform={`translate(0 ${depth})`}>{canadaMap.locations.map((location: MapLocation) => <path key={location.id} d={location.path} fill="#142e35" stroke="#051115" strokeWidth="3" />)}</g>)}</g> : null}
+const callouts: Record<string, { x: number; y: number }> = {
+  pe: { x: 1070, y: 570 }, nb: { x: 1070, y: 700 }, ns: { x: 1070, y: 830 },
+  ab: { x: 198, y: 548 }, sk: { x: 314, y: 638 }, mb: { x: 438, y: 582 },
+};
+export function CanadaFlatMap({ category, selectedProvince, onSelect }: { category: CanadaMapCategory; selectedProvince: string; onSelect: (slug: string) => void; raised?: boolean }) {
+  return <svg viewBox="-20 -20 1180 920" className="h-full w-full" role="group" aria-label={`Canada ranking map: ${category.label}. ${category.national ? "Canada-wide update; provincial rankings are not available." : "Each label shows the value and rank. Use Tab and Enter to choose a province."}`}>
+    <title>{category.question ?? category.label}</title><desc>Official Statistics Canada province and territory boundaries. #1 is the highest value; tied values share a rank. Grey areas have no comparable data.</desc>
     {canadaMap.locations.map((location: MapLocation) => {
       const value = category.values.find((item) => item.abbr.toLowerCase() === location.id);
-      return <path key={location.id} data-map-province={value?.slug} d={location.path} fill={value ? blend(category.lowColor, category.highColor, value.intensity) : category.national ? blend(category.lowColor, category.highColor, .35) : "#334155"} stroke={value?.slug === selectedProvince ? "#ffffff" : category.national ? "#67b6c7" : "#071315"} strokeWidth={value?.slug === selectedProvince ? 5 : 1.5} role={value ? "button" : "img"} tabIndex={value ? 0 : undefined} aria-label={value ? `${value.province ?? value.slug}: ${value.display}, ${category.period ?? "See source details"}` : `${location.name}: ${category.national ? "Canada-level context, no provincial value assigned" : "data unavailable"}`} aria-pressed={value ? value.slug === selectedProvince : undefined} onClick={value ? () => onSelect(value.slug) : undefined} onKeyDown={value ? (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(value.slug); } } : undefined} className={value ? "cursor-pointer focus:fill-white" : ""}><title>{value ? `${value.province ?? value.slug}: ${value.display}` : `${location.name}: ${category.national ? "Canada-level context" : "unavailable"}`}</title></path>;
+      const label = value ? `${value.province ?? location.name}: ${value.display}, rank ${value.rank ?? "unavailable"} of ${value.rankOutOf ?? category.values.length}, ${category.period ?? "see source"}` : `${location.name}: ${category.national ? "Canada-wide update; no provincial ranking" : "no comparable data"}`;
+      return <path key={location.id} data-map-province={location.id} d={location.path} fill={value ? blend(category.lowColor, category.highColor, value.intensity) : category.national ? blend(category.lowColor, category.highColor, .35) : "#334155"} stroke={value?.slug === selectedProvince ? "#ffffff" : "#071315"} strokeWidth={value?.slug === selectedProvince ? 5 : 1.5} role={value ? "button" : "img"} tabIndex={value ? 0 : undefined} aria-label={label} aria-pressed={value ? value.slug === selectedProvince : undefined} onClick={value ? () => onSelect(value.slug) : undefined} onKeyDown={value ? (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(value.slug); } } : undefined} className={value ? "cursor-pointer focus:stroke-white focus:outline-none" : ""}><title>{label}</title></path>;
     })}
-    {raised ? <g aria-hidden="true" pointerEvents="none">{category.values.map((value) => {
-      const anchor = canadaMap.locations.find((location) => location.id === value.abbr.toLowerCase())?.labelAnchor;
-      if (!anchor || (["NB", "NS", "PE"].includes(value.abbr) && value.slug !== selectedProvince)) return null;
-      return <g key={value.slug} transform={`translate(${anchor.x} ${anchor.y})`}><rect x="-46" y="-25" width="92" height="48" rx="5" fill="#061b20" fillOpacity=".94" stroke={value.slug === selectedProvince ? "#ffffff" : "#39717a"} /><text textAnchor="middle" y="-7" fill="#b8f6ed" fontSize="14" fontWeight="700">{value.abbr}</text><text textAnchor="middle" y="13" fill="white" fontSize="16" fontWeight="700">{value.display}</text></g>;
+    {!category.national ? <g aria-hidden="true" pointerEvents="none">{canadaMap.locations.map((location: MapLocation) => {
+      const value = category.values.find((item) => item.abbr.toLowerCase() === location.id);
+      const anchor = location.labelAnchor;
+      const position = callouts[location.id] ?? anchor;
+      return <g key={location.id}>
+        {["pe", "nb", "ns"].includes(location.id) ? <path d={`M ${anchor.x} ${anchor.y} L 960 ${position.y} L ${position.x - 57} ${position.y}`} fill="none" stroke="#b8d3d7" strokeWidth="2" /> : null}
+        <g transform={`translate(${position.x} ${position.y})`}>
+          <rect x="-57" y="-39" width="114" height="78" rx="9" fill="#071b20" fillOpacity=".96" stroke={value?.slug === selectedProvince ? "white" : "#53777d"} strokeWidth="2" />
+          <text textAnchor="middle" y="-16" fill="#b8f6ed" fontSize="20" fontWeight="700">{location.id.toUpperCase()}{value?.rank ? ` · #${value.rank}` : ""}</text>
+          <text textAnchor="middle" y="12" fill="white" fontSize={value && value.display.length > 9 ? "16" : "22"} fontWeight="700">{value?.display ?? "No data"}</text>
+        </g>
+      </g>;
     })}</g> : null}
   </svg>;
 }

@@ -2,6 +2,7 @@ import { provinces } from "@/lib/province-directory";
 import { parseComparableProvinceValue, rankComparableProvinceValues } from "@/lib/province-values";
 import type { NormalizedRelease, ReleaseHubPayload } from "@/lib/release-hub";
 import type { LifeSeries } from "@/lib/life-series";
+import { buildReleaseIntelligence } from "@/lib/release-intelligence";
 
 export type ProvinceExplorerCategoryId = "jobs" | "rent" | "vacancy" | "prices" | "homes" | "newcomers" | "youth-jobs" | "youth-wages" | "primary-care" | "mental-health" | "community-belonging" | "tuition" | "food-insecurity" | "poverty" | "life-satisfaction" | `release:${string}` | `bill:${string}`;
 export type MapTheme = "economy" | "housing" | "society" | "immigration" | "government" | "trade" | "energy";
@@ -42,6 +43,7 @@ export type ProvinceExplorerCategory = {
   headline?: string;
   whyItMatters?: string;
   cadence?: string;
+  canada?: { value: number; display: string; label: string; period: string };
   national?: { display: string; label: string; note: string; href: string; kind: "metric" | "legislation" | "report"; changeDisplay?: string; changePeriod?: string; metrics?: { label: string; display: string; changeDisplay?: string }[] };
 };
 
@@ -171,6 +173,13 @@ function buildCategory(definition: CategoryDefinition, release: NormalizedReleas
     } satisfies ProvinceExplorerValue];
   });
 
+  const nationalPatterns: Partial<Record<ProvinceExplorerCategoryId, RegExp>> = {
+    jobs: /^Unemployment rate$/i, rent: /^Average two-bedroom rent$/i,
+    vacancy: /^Rental vacancy rate$/i, prices: /^All-items$/i,
+    newcomers: /^Permanent residents admitted$/i, homes: /^Housing starts$/i,
+  };
+  const nationalPattern = nationalPatterns[definition.id];
+  const nationalMetric = nationalPattern ? buildReleaseIntelligence(release).metrics.find((metric) => nationalPattern.test(metric.label) && metric.provenance !== "qualitative" && Number.isFinite(metric.value)) : undefined;
   return {
     id: definition.id,
     label: definition.label,
@@ -185,6 +194,7 @@ function buildCategory(definition: CategoryDefinition, release: NormalizedReleas
     lowColor: definition.lowColor,
     highColor: definition.highColor,
     values: provinceValues,
+    canada: nationalMetric ? { value: nationalMetric.value, display: nationalMetric.display, label: "Canada", period: nationalMetric.period ?? release.referencePeriod } : undefined,
   };
 }
 
@@ -238,6 +248,8 @@ export function buildLifeMapCategories(series: LifeSeries[]): ProvinceExplorerCa
     const minimum = Math.min(...rows.map((row) => row.value));
     const maximum = Math.max(...rows.map((row) => row.value));
     const range = maximum - minimum;
+    const nationalPoint = national?.points.find((point) => point.period === period);
+    const format = (value: number) => dataset.unit === "$/hour" ? `$${value.toFixed(2)}/hr` : dataset.unit === "$" ? `$${Math.round(value).toLocaleString("en-CA")}` : `${value.toFixed(1)}${dataset.unit}`;
     return [{
       ...layer, context: `${dataset.title} · ${dataset.cohort}. ${dataset.implication} ${dataset.limitation}`,
       source: "Statistics Canada", sourceUrl: dataset.sourceUrl, cohort: dataset.cohort,
@@ -245,6 +257,7 @@ export function buildLifeMapCategories(series: LifeSeries[]): ProvinceExplorerCa
       theme: dataset.topic === "community" ? "society" : "economy",
       period: new Intl.DateTimeFormat("en-CA", { month: ["Monthly", "Quarterly"].includes(dataset.cadence) ? "long" : undefined, year: "numeric", timeZone: "UTC" }).format(new Date(period)),
       releaseDate: "", releaseHref: layer.href,
+      canada: nationalPoint && Number.isFinite(nationalPoint.value) ? { value: nationalPoint.value, display: format(nationalPoint.value), label: national!.geography, period } : undefined,
       values: rows.map((row) => ({
         province: row.province.name, slug: row.province.slug, abbr: row.province.abbr, value: row.value,
         display: dataset.unit === "$/hour" ? `$${row.value.toFixed(2)}/hr` : dataset.unit === "$" ? `$${Math.round(row.value).toLocaleString("en-CA")}` : `${row.value.toFixed(1)}${dataset.unit}`,

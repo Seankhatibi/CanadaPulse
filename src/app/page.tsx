@@ -133,7 +133,6 @@ export default async function Home({ searchParams }: { searchParams: HomeSearchP
         initialProvince={state.province}
         initialIncome={income}
         hero
-        initialView="3d"
         compact
       />
       <DailyLifeDashboard series={lifeSeries} releases={releaseHub.todayQueue} initialProvince={state.province} />

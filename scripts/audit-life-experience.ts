@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { comparableScale, barWidth } from "../src/lib/chart-integrity";
 import { calculateBudget } from "../src/lib/budget";
-import { buildLifeMapCategories } from "../src/lib/province-explorer-data";
+import { buildLifeMapCategories, buildProvinceExplorerData } from "../src/lib/province-explorer-data";
+import { mapTitle, rankingReading } from "../src/lib/map-language";
 import type { LifeSeries } from "../src/lib/life-series";
 import { normalizeBill } from "../src/lib/policy-data";
 import { buildStateOfCanadaMap, newestVerifiedReleases } from "../src/lib/state-map-data";
@@ -39,6 +40,8 @@ assert.ok(!mapLayer.values.some((value) => value.province === "Quebec"));
 assert.equal(mapLayer.values.find((value) => value.province === "Ontario")?.value, 0);
 assert.equal(mapLayer.cohort, "15–24 years");
 assert.equal(mapLayer.period, "September 2026");
+assert.equal(mapLayer.canada?.value, 13, "Canada must use its source observation, not the province average");
+assert.equal(mapLayer.canada?.display, "13.0%");
 assert.deepEqual(buildLifeMapCategories([{ ...mapDataset, status: "unavailable" }]), []);
 console.log("Map audit passed: shared periods, actual cohorts, zero values and missing-source handling.");
 
@@ -67,3 +70,17 @@ const social = { ...mapDataset, id: "mental-health", topic: "community" as const
 assert.equal(buildLifeMapCategories([social])[0].theme, "society");
 assert.equal(buildLifeMapCategories([social])[0].values[0].changeDisplay, undefined, "Do not imply comparability across survey redesigns");
 console.log("State-map audit passed: latest GDP default, national scope, archived/error exclusion, policy stages and valid period changes.");
+
+const provincialJobs = { ...releaseFixture,
+  provinceBreakdown: ["Ontario", "Alberta", "British Columbia", "Manitoba"].map((province, index) => ({ province, value: `${index * 2}%`, note: "Official province observation.", score: 0 })),
+  chartPayloads: [{ title: "National jobs", kind: "metric-strip" as const, points: [{ label: "Unemployment rate", value: 6.5, display: "6.5%", direction: "neutral" as const, plainEnglish: "Canada unemployment rate.", provenance: "official" as const, period: "September 2026" }] }],
+};
+const nationalJobs = buildProvinceExplorerData({ ...hubFixture, todayQueue: [provincialJobs] }).categories[0];
+assert.equal(nationalJobs.canada?.display, "6.5%", "Do not use employment totals as an unemployment benchmark");
+assert.equal(mapTitle(nationalJobs), "People looking for work");
+assert.equal(mapTitle({ ...nationalJobs, id: "release:jobs", measureId: "jobs", headline: "Labour Force Survey, September 2026" }), "People looking for work");
+assert.equal(mapTitle(gdpLayer), "Canada’s economic output (GDP)");
+assert.ok(rankingReading(nationalJobs).includes("not the best outcome"));
+assert.ok(rankingReading(nationalJobs).includes("Equal values share a rank"));
+assert.equal(buildProvinceExplorerData({ ...hubFixture, todayQueue: [{ ...provincialJobs, chartPayloads: [] }] }).categories[0].canada, undefined, "Missing national data must remain missing");
+console.log("Plain-language map audit passed: understandable titles, exact national benchmarks and honest ranks.");

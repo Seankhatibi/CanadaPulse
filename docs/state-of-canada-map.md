@@ -10,6 +10,12 @@ The clean homepage URL follows this default. Selecting a layer pins it through `
 
 ## Geography and interpretation
 
+The homepage has one flat map with provincial values and highest-to-lowest ranks directly on the geography. The separate 3D and ranked-list controls have been removed. Atlantic callouts keep smaller provinces visible; a matching province key provides full names, readable values and touch/keyboard selection. All 13 provinces and territories are present, with missing observations explicitly marked rather than ranked.
+
+The Canada comparison comes from the source's national observation for the same measure, not an unweighted average of province values. Life-series national rows retain their coverage (including territory exclusions). Canada is a benchmark, not a fourteenth ranked province. Source reports without provincial data keep the national-only view.
+
+Everyday titles replace official report names in the main layer selector, headings and topic cards. The original title and detailed scope remain in the expandable source information. For example, “Labour Force Survey” becomes “People looking for work”, “Consumer Price Index” becomes “How fast prices are rising”, and GDP becomes “Canada’s economic output (GDP)”.
+
 Existing single-measure province mappings can colour the official Canada boundaries. National or source-specific releases instead use a uniform Canada-level context view and keep `values` empty. A GDP total, industry series, report or bill status is never copied into each province. Supporting national metrics are individual cards, without a shared comparative scale. Detailed source coverage and complete tables remain available through the release link.
 
 Political views show the latest recorded event, bill number, official status and completed stage. Royal assent is not labelled implementation. Title-based discovery does not claim the bill's actual effects or political sentiment.
